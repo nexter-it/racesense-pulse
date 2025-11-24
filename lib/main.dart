@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'theme.dart';
 import 'pages/feed_page.dart';
 import 'pages/profile_page.dart';
 import 'pages/new_post_page.dart';
 import 'pages/activity_detail_page.dart';
+import 'pages/auth_gate.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
   runApp(const RacesensePulseApp());
 }
 
@@ -18,7 +22,7 @@ class RacesensePulseApp extends StatelessWidget {
       title: 'Racesense Pulse',
       debugShowCheckedModeBanner: false,
       theme: buildPulseTheme(),
-      home: const _RootShell(),
+      home: const AuthGate(), // AuthGate gestisce login/home automaticamente
       routes: {
         ActivityDetailPage.routeName: (_) => const ActivityDetailPage(),
         NewPostPage.routeName: (_) => const NewPostPage(),
@@ -28,14 +32,14 @@ class RacesensePulseApp extends StatelessWidget {
 }
 
 /// Shell con bottom navigation stile Strava: Feed / Nuova / Profilo
-class _RootShell extends StatefulWidget {
-  const _RootShell();
+class RootShell extends StatefulWidget {
+  const RootShell({super.key});
 
   @override
-  State<_RootShell> createState() => _RootShellState();
+  State<RootShell> createState() => _RootShellState();
 }
 
-class _RootShellState extends State<_RootShell> {
+class _RootShellState extends State<RootShell> {
   int _index = 0;
 
   @override

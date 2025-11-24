@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../theme.dart';
 import '../widgets/pulse_background.dart';
 import '../widgets/pulse_chip.dart';
+import '../services/auth_service.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
@@ -52,13 +53,34 @@ class ProfilePage extends StatelessWidget {
                 ),
                 const Spacer(),
                 IconButton(
-                  icon: const Icon(Icons.settings_outlined, size: 26),
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Le impostazioni profilo arriveranno presto.'),
+                  icon: const Icon(Icons.logout, size: 26),
+                  onPressed: () async {
+                    final shouldLogout = await showDialog<bool>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        backgroundColor: const Color(0xFF1a1a1a),
+                        title: const Text('Logout', style: TextStyle(color: kFgColor)),
+                        content: const Text(
+                          'Sei sicuro di voler uscire?',
+                          style: TextStyle(color: kMutedColor),
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pop(false),
+                            child: const Text('Annulla', style: TextStyle(color: kMutedColor)),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pop(true),
+                            child: const Text('Logout', style: TextStyle(color: kErrorColor)),
+                          ),
+                        ],
                       ),
                     );
+
+                    if (shouldLogout == true) {
+                      final authService = AuthService();
+                      await authService.signOut();
+                    }
                   },
                 )
               ],
