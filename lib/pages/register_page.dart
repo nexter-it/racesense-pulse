@@ -53,8 +53,10 @@ class _RegisterPageState extends State<RegisterPage> {
         _nameController.text.trim(),
       );
 
-      // Il routing viene gestito automaticamente da AuthGate
-      // Non serve navigare manualmente
+      // Torna al LoginPage, AuthGate rileverà l'autenticazione e reindirizzerà alla home
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);

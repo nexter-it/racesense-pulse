@@ -5,10 +5,12 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:fl_chart/fl_chart.dart';
-
+import 'package:firebase_auth/firebase_auth.dart';
 
 import '../theme.dart';
 import '../widgets/pulse_background.dart';
+import '../widgets/session_metadata_dialog.dart';
+import '../services/session_service.dart';
 
 class SessionRecapPage extends StatelessWidget {
   final List<Position> gpsTrack;
@@ -104,6 +106,82 @@ class SessionRecapPage extends StatelessWidget {
     return (1000 / avgMs).round(); // Hz
   }
 
+  Future<void> _handleSaveSession(BuildContext context) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Devi effettuare il login per salvare la sessione'),
+          backgroundColor: kErrorColor,
+        ),
+      );
+      return;
+    }
+
+    // Mostra dialog per metadata
+    final metadata = await showDialog<SessionMetadata>(
+      context: context,
+      builder: (context) => SessionMetadataDialog(gpsTrack: gpsTrack),
+    );
+
+    if (metadata == null) return; // Utente ha annullato
+
+    // Mostra loading
+    if (!context.mounted) return;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(kBrandColor),
+        ),
+      ),
+    );
+
+    try {
+      final sessionService = SessionService();
+      await sessionService.saveSession(
+        userId: user.uid,
+        trackName: metadata.trackName,
+        location: metadata.location,
+        locationCoords: metadata.locationCoords,
+        isPublic: metadata.isPublic,
+        gpsTrack: gpsTrack,
+        laps: laps,
+        totalDuration: totalDuration,
+        speedHistory: speedHistory,
+        gForceHistory: gForceHistory,
+        gpsAccuracyHistory: gpsAccuracyHistory,
+        timeHistory: timeHistory,
+      );
+
+      if (!context.mounted) return;
+      Navigator.of(context).pop(); // Chiudi loading
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('✓ Sessione salvata con successo!'),
+          backgroundColor: kBrandColor,
+        ),
+      );
+
+      // Torna alla home dopo 1 secondo
+      await Future.delayed(const Duration(seconds: 1));
+      if (!context.mounted) return;
+      Navigator.of(context).popUntil((route) => route.isFirst);
+    } catch (e) {
+      if (!context.mounted) return;
+      Navigator.of(context).pop(); // Chiudi loading
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Errore: $e'),
+          backgroundColor: kErrorColor,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -177,14 +255,7 @@ class SessionRecapPage extends StatelessWidget {
           ),
           const Spacer(),
           ElevatedButton.icon(
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Sessione salvata!'),
-                  backgroundColor: kBrandColor,
-                ),
-              );
-            },
+            onPressed: () => _handleSaveSession(context),
             icon: const Icon(Icons.save),
             label: const Text('Salva'),
             style: ElevatedButton.styleFrom(

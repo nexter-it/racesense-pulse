@@ -5,6 +5,8 @@ import '../widgets/pulse_background.dart';
 import '../widgets/pulse_chip.dart';
 import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
+import '../services/session_service.dart';
+import '../models/session_model.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -13,54 +15,98 @@ class ProfilePage extends StatefulWidget {
   State<ProfilePage> createState() => _ProfilePageState();
 }
 
-class _ProfilePageState extends State<ProfilePage> {
+class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
   final FirestoreService _firestoreService = FirestoreService();
+  final SessionService _sessionService = SessionService();
+
   String _userName = '';
   String _userTag = '';
   bool _isLoading = true;
 
+  UserStats _userStats = UserStats.empty();
+  List<SessionModel> _recentSessions = [];
+
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadUserData();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // Ricarica dati quando l'app torna in primo piano
+      _loadUserData();
+    }
   }
 
   Future<void> _loadUserData() async {
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
+    if (user == null) {
+      print('❌ ProfilePage: Nessun utente loggato');
+      return;
+    }
+
+    print('🔄 ProfilePage: Caricamento dati per ${user.uid}');
 
     try {
-      // Carica dati con cache
-      final userData = await _firestoreService.getUserDataWithCache(user.uid);
+      // Inizializza stats se non esistono (ora senza read extra)
+      await _firestoreService.initializeStatsIfNeeded(user.uid);
 
-      if (userData != null && mounted) {
+      // 1) dati utente (con cache locale) + 2) ultime sessioni
+      final results = await Future.wait([
+        _firestoreService.getUserDataWithCache(user.uid),
+        _sessionService.getUserSessions(user.uid, limit: 5),
+      ]);
+
+      final userData = results[0] as Map<String, dynamic>?;
+      final sessions = results[1] as List<SessionModel>;
+
+      // Stats direttamente dal doc utente
+      final stats = (userData != null && userData['stats'] != null)
+          ? UserStats.fromMap(userData['stats'] as Map<String, dynamic>)
+          : UserStats.empty();
+
+      print(
+          '✅ ProfilePage: Dati caricati - Stats: ${stats.totalSessions} sessioni, Sessioni: ${sessions.length}');
+
+      if (mounted) {
+        final fullName = userData?['fullName'] ?? user.displayName ?? 'Utente';
+
+        // Crea tag dalle iniziali del nome
+        String tag;
+        final nameParts = fullName.split(' ');
+        if (nameParts.length >= 2) {
+          tag = nameParts[0][0].toUpperCase() + nameParts[1][0].toUpperCase();
+        } else if (nameParts.isNotEmpty && nameParts[0].length >= 2) {
+          tag = nameParts[0].substring(0, 2).toUpperCase();
+        } else {
+          tag = 'US';
+        }
+
         setState(() {
-          _userName = userData['fullName'] ?? 'Utente';
-          // Crea tag dalle iniziali del nome
-          final nameParts = _userName.split(' ');
-          if (nameParts.length >= 2) {
-            _userTag = nameParts[0][0].toUpperCase() +
-                       nameParts[1][0].toUpperCase();
-          } else if (nameParts.isNotEmpty) {
-            _userTag = nameParts[0].substring(0, 2).toUpperCase();
-          } else {
-            _userTag = 'US';
-          }
+          _userName = fullName;
+          _userTag = tag;
+          _userStats = stats;
+          _recentSessions = sessions;
           _isLoading = false;
         });
-      } else {
-        // Fallback se non ci sono dati in Firestore
-        setState(() {
-          _userName = user.displayName ?? 'Utente';
-          _userTag = _userName.substring(0, 2).toUpperCase();
-          _isLoading = false;
-        });
+        print('✅ ProfilePage: UI aggiornata');
       }
     } catch (e) {
+      print('❌ ProfilePage: Errore caricamento dati - $e');
       // In caso di errore, usa i dati di Firebase Auth
       if (mounted) {
+        final user = FirebaseAuth.instance.currentUser;
         setState(() {
-          _userName = user.displayName ?? 'Utente';
+          _userName = user?.displayName ?? 'Utente';
           _userTag = _userName.length >= 2
               ? _userName.substring(0, 2).toUpperCase()
               : 'US';
@@ -70,29 +116,14 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
+  String _formatDuration(Duration d) {
+    final minutes = d.inMinutes;
+    final seconds = d.inSeconds % 60;
+    return '$minutes:${seconds.toString().padLeft(2, '0')}';
+  }
+
   @override
   Widget build(BuildContext context) {
-
-    final List<Map<String, dynamic>> _mockActivities = [
-      {
-        'title': 'Track day Misano',
-        'subtitle': '12 giri · Best 1:48.3',
-        'value': 'Moto',
-      },
-      {
-        'title': 'Corsa di recupero',
-        'subtitle': '5 km · 4:50/km',
-        'value': '25:00',
-      },
-      {
-        'title': 'Interval training',
-        'subtitle': '10 × 400m',
-        'value': '45:00',
-      },
-    ];
-
-    final recent = _mockActivities.take(3).toList();
-
     return PulseBackground(
       withTopPadding: true,
       child: Column(
@@ -120,7 +151,8 @@ class _ProfilePageState extends State<ProfilePage> {
                       context: context,
                       builder: (context) => AlertDialog(
                         backgroundColor: const Color(0xFF1a1a1a),
-                        title: const Text('Logout', style: TextStyle(color: kFgColor)),
+                        title: const Text('Logout',
+                            style: TextStyle(color: kFgColor)),
                         content: const Text(
                           'Sei sicuro di voler uscire?',
                           style: TextStyle(color: kMutedColor),
@@ -128,11 +160,13 @@ class _ProfilePageState extends State<ProfilePage> {
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.of(context).pop(false),
-                            child: const Text('Annulla', style: TextStyle(color: kMutedColor)),
+                            child: const Text('Annulla',
+                                style: TextStyle(color: kMutedColor)),
                           ),
                           TextButton(
                             onPressed: () => Navigator.of(context).pop(true),
-                            child: const Text('Logout', style: TextStyle(color: kErrorColor)),
+                            child: const Text('Logout',
+                                style: TextStyle(color: kErrorColor)),
                           ),
                         ],
                       ),
@@ -156,31 +190,44 @@ class _ProfilePageState extends State<ProfilePage> {
                       valueColor: AlwaysStoppedAnimation<Color>(kBrandColor),
                     ),
                   )
-                : ListView(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    children: [
-                      _ProfileHeader(name: _userName, tag: _userTag),
-                      const SizedBox(height: 18),
-
-                      _ProfileStats(),
-                      const SizedBox(height: 18),
-
-                      const _ProfileHighlights(),
-                      const SizedBox(height: 26),
-
-                      const Text(
-                        'Ultime attività',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w900,
-                          fontSize: 18,
-                          letterSpacing: 0.4,
+                : RefreshIndicator(
+                    onRefresh: _loadUserData,
+                    color: kBrandColor,
+                    child: ListView(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
+                      children: [
+                        _ProfileHeader(name: _userName, tag: _userTag),
+                        const SizedBox(height: 18),
+                        _ProfileStats(stats: _userStats),
+                        const SizedBox(height: 18),
+                        _ProfileHighlights(stats: _userStats),
+                        const SizedBox(height: 26),
+                        const Text(
+                          'Ultime attività',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w900,
+                            fontSize: 18,
+                            letterSpacing: 0.4,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 12),
-
-                      ...recent.map((a) => _MiniActivityCard(activity: a)),
-                      const SizedBox(height: 30),
-                    ],
+                        const SizedBox(height: 12),
+                        if (_recentSessions.isEmpty)
+                          Center(
+                            child: Padding(
+                              padding: const EdgeInsets.all(32),
+                              child: Text(
+                                'Nessuna sessione registrata',
+                                style: TextStyle(color: kMutedColor),
+                              ),
+                            ),
+                          )
+                        else
+                          ..._recentSessions
+                              .map((session) => _SessionCard(session: session)),
+                        const SizedBox(height: 30),
+                      ],
+                    ),
                   ),
           ),
         ],
@@ -302,6 +349,10 @@ class _ProfileHeader extends StatelessWidget {
 ============================================================ */
 
 class _ProfileStats extends StatelessWidget {
+  final UserStats stats;
+
+  const _ProfileStats({required this.stats});
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -312,12 +363,21 @@ class _ProfileStats extends StatelessWidget {
         border: Border.all(color: kLineColor),
       ),
       child: Row(
-        children: const [
-          _ProfileStatItem(label: 'Sessioni', value: '42'),
-          SizedBox(width: 14),
-          _ProfileStatItem(label: 'Distanza totale', value: '728 km'),
-          SizedBox(width: 14),
-          _ProfileStatItem(label: 'PB circuiti', value: '9'),
+        children: [
+          _ProfileStatItem(
+            label: 'Sessioni',
+            value: '${stats.totalSessions}',
+          ),
+          const SizedBox(width: 14),
+          _ProfileStatItem(
+            label: 'Distanza totale',
+            value: '${stats.totalDistanceKm.toStringAsFixed(0)} km',
+          ),
+          const SizedBox(width: 14),
+          _ProfileStatItem(
+            label: 'PB circuiti',
+            value: '${stats.personalBests}',
+          ),
         ],
       ),
     );
@@ -366,10 +426,23 @@ class _ProfileStatItem extends StatelessWidget {
 ============================================================ */
 
 class _ProfileHighlights extends StatelessWidget {
-  const _ProfileHighlights();
+  final UserStats stats;
+
+  const _ProfileHighlights({required this.stats});
+
+  String _formatDuration(Duration d) {
+    final minutes = d.inMinutes;
+    final seconds = d.inSeconds % 60;
+    final millis = (d.inMilliseconds % 1000) ~/ 10;
+    return '$minutes:${seconds.toString().padLeft(2, '0')}.${millis.toString().padLeft(2, '0')}';
+  }
 
   @override
   Widget build(BuildContext context) {
+    final bestLapText = stats.bestLapEver != null
+        ? '${_formatDuration(stats.bestLapEver!)}${stats.bestLapTrack != null ? ' · ${stats.bestLapTrack}' : ''}'
+        : 'Nessun record';
+
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -379,31 +452,33 @@ class _ProfileHighlights extends StatelessWidget {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: const [
-          Text(
+        children: [
+          const Text(
             'Highlights',
             style: TextStyle(
               fontSize: 17,
               fontWeight: FontWeight.w900,
             ),
           ),
-          SizedBox(height: 12),
+          const SizedBox(height: 12),
           _HighlightRow(
             icon: Icons.emoji_events_outlined,
             label: 'Best lap assoluto',
-            value: '1:48.3 · Misano',
+            value: bestLapText,
           ),
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
           _HighlightRow(
-            icon: Icons.local_fire_department_outlined,
-            label: 'Streak attività',
-            value: '7 giorni consecutivi',
+            icon: Icons.flag_outlined,
+            label: 'Giri totali',
+            value: '${stats.totalLaps} giri',
           ),
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
           _HighlightRow(
             icon: Icons.insights_outlined,
-            label: 'Ultimo mese',
-            value: '12 sessioni · 210 km',
+            label: 'Distanza media',
+            value: stats.totalSessions > 0
+                ? '${(stats.totalDistanceKm / stats.totalSessions).toStringAsFixed(1)} km/sessione'
+                : '0 km',
           ),
         ],
       ),
@@ -447,22 +522,39 @@ class _HighlightRow extends StatelessWidget {
 }
 
 /* ============================================================
-    CARD ULTIMA ATTIVITÀ
+    CARD SESSIONE
 ============================================================ */
 
-class _MiniActivityCard extends StatelessWidget {
-  final Map<String, dynamic> activity;
+class _SessionCard extends StatelessWidget {
+  final SessionModel session;
 
-  const _MiniActivityCard({
+  const _SessionCard({
     super.key,
-    required this.activity,
+    required this.session,
   });
+
+  String _formatDuration(Duration d) {
+    final minutes = d.inMinutes;
+    final seconds = d.inSeconds % 60;
+    return '$minutes:${seconds.toString().padLeft(2, '0')}';
+  }
+
+  String _formatDate(DateTime date) {
+    final now = DateTime.now();
+    final diff = now.difference(date);
+
+    if (diff.inDays == 0) return 'Oggi';
+    if (diff.inDays == 1) return 'Ieri';
+    if (diff.inDays < 7) return '${diff.inDays} giorni fa';
+
+    return '${date.day}/${date.month}/${date.year}';
+  }
 
   @override
   Widget build(BuildContext context) {
-    final title = activity['title'] ?? '';
-    final subtitle = activity['subtitle'] ?? '';
-    final value = activity['value'] ?? '';
+    final bestLapText = session.bestLap != null
+        ? 'Best ${_formatDuration(session.bestLap!)}'
+        : '';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -476,49 +568,78 @@ class _MiniActivityCard extends StatelessWidget {
         children: [
           // Icona attività
           Container(
-            width: 38,
-            height: 38,
+            width: 42,
+            height: 42,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: kBrandColor.withOpacity(0.18),
             ),
-            child: const Icon(Icons.timeline_outlined, color: kBrandColor, size: 20),
+            child:
+                const Icon(Icons.track_changes, color: kBrandColor, size: 22),
           ),
           const SizedBox(width: 12),
 
-          // Info attività
+          // Info sessione
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  title,
+                  session.trackName,
                   style: const TextStyle(
                     fontWeight: FontWeight.w800,
                     fontSize: 15,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                if (subtitle.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 2),
-                    child: Text(
-                      subtitle,
-                      style: const TextStyle(fontSize: 12, color: kMutedColor),
+                const SizedBox(height: 2),
+                Text(
+                  '${session.lapCount} giri · ${session.distanceKm.toStringAsFixed(1)} km${bestLapText.isNotEmpty ? ' · $bestLapText' : ''}',
+                  style: const TextStyle(fontSize: 12, color: kMutedColor),
+                ),
+                const SizedBox(height: 2),
+                Row(
+                  children: [
+                    Icon(
+                      session.isPublic ? Icons.public : Icons.lock_outline,
+                      size: 12,
+                      color: kMutedColor,
                     ),
-                  ),
+                    const SizedBox(width: 4),
+                    Text(
+                      _formatDate(session.dateTime),
+                      style: TextStyle(
+                          fontSize: 11, color: kMutedColor.withOpacity(0.7)),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
 
-          if (value.isNotEmpty)
-            Text(
-              value,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: Colors.white70,
+          // Velocità max
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                '${session.maxSpeedKmh.toStringAsFixed(0)}',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                  color: kBrandColor,
+                ),
               ),
-            ),
+              const Text(
+                'km/h',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  color: kMutedColor,
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );

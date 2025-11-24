@@ -4,6 +4,9 @@ import '../widgets/pulse_background.dart';
 import '../widgets/pulse_chip.dart';
 import 'activity_detail_page.dart';
 
+import '../services/session_service.dart';
+import '../models/session_model.dart';
+
 import 'dart:math' as math;
 
 class PulseActivity {
@@ -95,6 +98,35 @@ List<Offset> _generateFakeTrack({
   return result;
 }
 
+/// Converte il displayPath salvato nel doc sessione in una path 2D per il painter.
+/// Usa lat come Y e lon come X, la scala la gestisce già il painter.
+List<Offset> _buildTrack2dFromSession(SessionModel session) {
+  final raw = session.displayPath;
+
+  // se non c'è path o è vuota → fallback estetico
+  if (raw == null || raw.isEmpty) {
+    return _generateFakeTrack(rotationDeg: 0);
+  }
+
+  final points = <Offset>[];
+
+  for (final m in raw) {
+    final lat = m['lat'];
+    final lon = m['lon'];
+
+    if (lat != null && lon != null) {
+      points.add(Offset(lon, lat)); // X = lon, Y = lat
+    }
+  }
+
+  // se per qualche motivo abbiamo meno di 2 punti, facciamo comunque fallback
+  if (points.length < 2) {
+    return _generateFakeTrack(rotationDeg: 0);
+  }
+
+  return points;
+}
+
 final _mockActivities = <PulseActivity>[
   PulseActivity(
     id: '1',
@@ -148,6 +180,8 @@ class FeedPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final sessionService = SessionService();
+
     return PulseBackground(
       withTopPadding: true,
       child: Column(
@@ -169,13 +203,54 @@ class FeedPage extends StatelessWidget {
             ),
           ),
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8)
-                  .copyWith(bottom: 24),
-              itemCount: _mockActivities.length,
-              itemBuilder: (context, index) {
-                final activity = _mockActivities[index];
-                return _ActivityCard(activity: activity);
+            child: FutureBuilder<List<SessionModel>>(
+              future: sessionService.getPublicSessions(limit: 20),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(
+                    child: CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(kBrandColor),
+                    ),
+                  );
+                }
+
+                if (snapshot.hasError) {
+                  return Center(
+                    child: Text(
+                      'Errore nel caricamento delle attività',
+                      style: const TextStyle(color: kErrorColor),
+                    ),
+                  );
+                }
+
+                final sessions = snapshot.data ?? [];
+
+                if (sessions.isEmpty) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(32),
+                      child: Text(
+                        'Ancora nessuna attività pubblica',
+                        style: TextStyle(color: kMutedColor),
+                      ),
+                    ),
+                  );
+                }
+
+                return ListView.builder(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8)
+                          .copyWith(bottom: 24),
+                  itemCount: sessions.length,
+                  itemBuilder: (context, index) {
+                    final session = sessions[index];
+                    final track2d = _buildTrack2dFromSession(session);
+                    return _ActivityCard(
+                      session: session,
+                      track2d: track2d,
+                    );
+                  },
+                );
               },
             ),
           ),
@@ -275,13 +350,17 @@ class _TopBar extends StatelessWidget {
 ============================================================ */
 
 class _ActivityCard extends StatelessWidget {
-  final PulseActivity activity;
+  final SessionModel session;
+  final List<Offset> track2d;
 
-  const _ActivityCard({required this.activity});
+  const _ActivityCard({
+    required this.session,
+    required this.track2d,
+  });
 
   String _timeAgo() {
     final now = DateTime.now();
-    final diff = now.difference(activity.date);
+    final diff = now.difference(session.dateTime);
 
     if (diff.inMinutes < 60) {
       return '${diff.inMinutes} min fa';
@@ -295,7 +374,17 @@ class _ActivityCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isPb = activity.isPb;
+    final sessionType = 'Sessione';
+    final pilotName = 'Pilota'; // placeholder per ora
+    final pilotTag = session.userId.substring(0, 3).toUpperCase();
+
+    final circuitName = session.trackName;
+    final city = session.location;
+    final bestLapText =
+        session.bestLap != null ? _formatLap(session.bestLap!) : '--:--';
+    final laps = session.lapCount;
+    final distanceKm = session.distanceKm;
+    final isPb = false; // se un domani salvi isPb nella sessione, cambialo qui.
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
@@ -305,6 +394,22 @@ class _ActivityCard extends StatelessWidget {
         child: InkWell(
           borderRadius: BorderRadius.circular(20),
           onTap: () {
+            final activity = PulseActivity(
+              id: session.sessionId,
+              pilotName: pilotName,
+              pilotTag: pilotTag,
+              circuitName: circuitName,
+              city: city,
+              country: '—', // se vuoi puoi splittare da location "Roma, Italia"
+              bestLap: bestLapText,
+              sessionType: sessionType,
+              laps: laps,
+              date: session.dateTime,
+              isPb: isPb,
+              distanceKm: distanceKm,
+              track2d: track2d,
+            );
+
             Navigator.of(context).pushNamed(
               ActivityDetailPage.routeName,
               arguments: activity,
@@ -335,14 +440,14 @@ class _ActivityCard extends StatelessWidget {
                   // ----- HEADER PILOTA -----
                   Row(
                     children: [
-                      _AvatarInitials(tag: activity.pilotTag),
+                      _AvatarInitials(tag: pilotTag),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              activity.pilotName,
+                              pilotName,
                               style: const TextStyle(
                                 fontWeight: FontWeight.w900,
                                 fontSize: 15,
@@ -350,7 +455,7 @@ class _ActivityCard extends StatelessWidget {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              '@${activity.pilotTag}',
+                              '@${pilotTag}',
                               style: const TextStyle(
                                 color: kMutedColor,
                                 fontSize: 12,
@@ -407,7 +512,7 @@ class _ActivityCard extends StatelessWidget {
                             child: CustomPaint(
                               painter: _MiniTrackPainter(
                                 isPb: isPb,
-                                path: activity.track2d,
+                                path: track2d,
                               ),
                               child: const SizedBox.expand(),
                             ),
@@ -425,7 +530,7 @@ class _ActivityCard extends StatelessWidget {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      activity.circuitName,
+                                      circuitName,
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                       style: const TextStyle(
@@ -435,7 +540,7 @@ class _ActivityCard extends StatelessWidget {
                                     ),
                                     const SizedBox(height: 2),
                                     Text(
-                                      '${activity.city}, ${activity.country}',
+                                      city,
                                       style: const TextStyle(
                                         color: kMutedColor,
                                         fontSize: 12,
@@ -458,7 +563,7 @@ class _ActivityCard extends StatelessWidget {
                                     ),
                                   ),
                                   Text(
-                                    activity.bestLap,
+                                    bestLapText,
                                     style: TextStyle(
                                       fontSize: 17,
                                       fontWeight: FontWeight.w900,
@@ -505,19 +610,19 @@ class _ActivityCard extends StatelessWidget {
                     children: [
                       PulseChip(
                         icon: Icons.flag_outlined,
-                        label: Text('${activity.laps} giri'),
+                        label: Text('${laps} giri'),
                       ),
                       PulseChip(
                         icon: Icons.speed,
                         label: Text(
-                          '${activity.distanceKm.toStringAsFixed(1)} km',
+                          '${distanceKm.toStringAsFixed(1)} km',
                         ),
                       ),
                       PulseChip(
                         icon: Icons.sports_motorsports_outlined,
-                        label: Text(activity.sessionType),
+                        label: Text(sessionType),
                       ),
-                      // if (activity.isPb)
+                      // if (isPb)
                       //   const PulseChip(
                       //     label: Text('PB RACESENSE PULSE'),
                       //     icon: Icons.star_outline,
@@ -532,6 +637,13 @@ class _ActivityCard extends StatelessWidget {
       ),
     );
   }
+}
+
+String _formatLap(Duration d) {
+  final m = d.inMinutes;
+  final s = d.inSeconds % 60;
+  final ms = (d.inMilliseconds % 1000) ~/ 10;
+  return '$m:${s.toString().padLeft(2, '0')}.${ms.toString().padLeft(2, '0')}';
 }
 
 /* ============================================================
@@ -642,13 +754,19 @@ class _MiniTrackPainter extends CustomPainter {
         if (p.dy > maxY) maxY = p.dy;
       }
 
-      final width = (maxX - minX).abs().clamp(1.0, double.infinity).toDouble();
-      final height = (maxY - minY).abs().clamp(1.0, double.infinity).toDouble();
+      // differenza reale in coordinate "mondo" (lat/lon)
+      final width = (maxX - minX).abs();
+      final height = (maxY - minY).abs();
 
       const padding = 18.0;
       final usableW = w - 2 * padding;
       final usableH = h - 2 * padding;
-      final scale = math.min(usableW / width, usableH / height);
+
+      // evita solo il caso patologico "tutti i punti identici"
+      final safeWidth = width == 0 ? 1.0 : width;
+      final safeHeight = height == 0 ? 1.0 : height;
+
+      final scale = math.min(usableW / safeWidth, usableH / safeHeight);
 
       final centerX = (minX + maxX) / 2;
       final centerY = (minY + maxY) / 2;

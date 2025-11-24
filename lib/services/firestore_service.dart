@@ -17,6 +17,14 @@ class FirestoreService {
         'fullName': fullName,
         'email': email,
         'createdAt': FieldValue.serverTimestamp(),
+        'stats': {
+          'totalSessions': 0,
+          'totalDistanceKm': 0.0,
+          'totalLaps': 0,
+          'bestLapEver': null,
+          'bestLapTrack': null,
+          'personalBests': 0,
+        },
       });
     } catch (e) {
       throw 'Errore nella creazione del profilo: $e';
@@ -65,6 +73,26 @@ class FirestoreService {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('cached_user_data');
+    } catch (e) {
+      // Ignora errori
+    }
+  }
+
+  // Inizializza stats per utenti esistenti che non le hanno
+  // Inizializza stats per utenti esistenti che non le hanno
+  Future<void> initializeStatsIfNeeded(String userId) async {
+    try {
+      // Nessuna read: set + merge è idempotente
+      await _firestore.collection('users').doc(userId).set({
+        'stats': {
+          'totalSessions': FieldValue.increment(0),
+          'totalDistanceKm': FieldValue.increment(0),
+          'totalLaps': FieldValue.increment(0),
+          'bestLapEver': null,
+          'bestLapTrack': null,
+          'personalBests': FieldValue.increment(0),
+        },
+      }, SetOptions(merge: true));
     } catch (e) {
       // Ignora errori
     }

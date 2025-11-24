@@ -27,7 +27,7 @@ class _GpsWaitPageState extends State<GpsWaitPage> {
   int _elapsedSeconds = 0;
 
   // Soglia “fix buono” (puoi tarare)
-  static const double _targetAccuracy = 3.0; // metri
+  static const double _targetAccuracy = 20.0; // metri
   static const double _worstAccuracy = 60.0; // per grafica/progress
 
   @override
