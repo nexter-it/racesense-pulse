@@ -1,7 +1,9 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'firestore_service.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirestoreService _firestoreService = FirestoreService();
 
   // Stream per monitorare lo stato di autenticazione
   Stream<User?> get authStateChanges => _auth.authStateChanges();
@@ -41,6 +43,15 @@ class AuthService {
       await credential.user?.updateDisplayName(displayName.trim());
       await credential.user?.reload();
 
+      // Crea documento utente in Firestore
+      if (credential.user != null) {
+        await _firestoreService.createUserDocument(
+          userId: credential.user!.uid,
+          fullName: displayName.trim(),
+          email: email.trim(),
+        );
+      }
+
       return credential;
     } on FirebaseAuthException catch (e) {
       throw _handleAuthException(e);
@@ -49,6 +60,8 @@ class AuthService {
 
   // Logout
   Future<void> signOut() async {
+    // Pulisci la cache locale
+    await _firestoreService.clearCache();
     await _auth.signOut();
   }
 

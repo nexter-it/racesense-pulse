@@ -1,16 +1,77 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../theme.dart';
 import '../widgets/pulse_background.dart';
 import '../widgets/pulse_chip.dart';
 import '../services/auth_service.dart';
+import '../services/firestore_service.dart';
 
-class ProfilePage extends StatelessWidget {
+class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
 
   @override
+  State<ProfilePage> createState() => _ProfilePageState();
+}
+
+class _ProfilePageState extends State<ProfilePage> {
+  final FirestoreService _firestoreService = FirestoreService();
+  String _userName = '';
+  String _userTag = '';
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    try {
+      // Carica dati con cache
+      final userData = await _firestoreService.getUserDataWithCache(user.uid);
+
+      if (userData != null && mounted) {
+        setState(() {
+          _userName = userData['fullName'] ?? 'Utente';
+          // Crea tag dalle iniziali del nome
+          final nameParts = _userName.split(' ');
+          if (nameParts.length >= 2) {
+            _userTag = nameParts[0][0].toUpperCase() +
+                       nameParts[1][0].toUpperCase();
+          } else if (nameParts.isNotEmpty) {
+            _userTag = nameParts[0].substring(0, 2).toUpperCase();
+          } else {
+            _userTag = 'US';
+          }
+          _isLoading = false;
+        });
+      } else {
+        // Fallback se non ci sono dati in Firestore
+        setState(() {
+          _userName = user.displayName ?? 'Utente';
+          _userTag = _userName.substring(0, 2).toUpperCase();
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      // In caso di errore, usa i dati di Firebase Auth
+      if (mounted) {
+        setState(() {
+          _userName = user.displayName ?? 'Utente';
+          _userTag = _userName.length >= 2
+              ? _userName.substring(0, 2).toUpperCase()
+              : 'US';
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    const pilotName = 'Luca Martini';
-    const pilotTag = 'LMC';
 
     final List<Map<String, dynamic>> _mockActivities = [
       {
@@ -89,32 +150,38 @@ class ProfilePage extends StatelessWidget {
 
           // ---------- BODY ----------
           Expanded(
-            child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              children: [
-                _ProfileHeader(name: pilotName, tag: pilotTag),
-                const SizedBox(height: 18),
+            child: _isLoading
+                ? const Center(
+                    child: CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(kBrandColor),
+                    ),
+                  )
+                : ListView(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    children: [
+                      _ProfileHeader(name: _userName, tag: _userTag),
+                      const SizedBox(height: 18),
 
-                _ProfileStats(),
-                const SizedBox(height: 18),
+                      _ProfileStats(),
+                      const SizedBox(height: 18),
 
-                const _ProfileHighlights(),
-                const SizedBox(height: 26),
+                      const _ProfileHighlights(),
+                      const SizedBox(height: 26),
 
-                const Text(
-                  'Ultime attività',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w900,
-                    fontSize: 18,
-                    letterSpacing: 0.4,
+                      const Text(
+                        'Ultime attività',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w900,
+                          fontSize: 18,
+                          letterSpacing: 0.4,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      ...recent.map((a) => _MiniActivityCard(activity: a)),
+                      const SizedBox(height: 30),
+                    ],
                   ),
-                ),
-                const SizedBox(height: 12),
-
-                ...recent.map((a) => _MiniActivityCard(activity: a)),
-                const SizedBox(height: 30),
-              ],
-            ),
           ),
         ],
       ),
