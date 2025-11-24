@@ -1,0 +1,735 @@
+import 'package:flutter/material.dart';
+import '../theme.dart';
+import '../widgets/pulse_background.dart';
+import '../widgets/pulse_chip.dart';
+import 'activity_detail_page.dart';
+
+import 'dart:math' as math;
+
+class PulseActivity {
+  final String id;
+  final String pilotName;
+  final String pilotTag;
+  final String circuitName;
+  final String city;
+  final String country;
+  final String bestLap;
+  final String sessionType; // es: "Gara", "Practice"
+  final int laps;
+  final DateTime date;
+  final bool isPb; // personal best
+  final double distanceKm;
+  final List<Offset> track2d;
+
+  const PulseActivity({
+    required this.id,
+    required this.pilotName,
+    required this.pilotTag,
+    required this.circuitName,
+    required this.city,
+    required this.country,
+    required this.bestLap,
+    required this.sessionType,
+    required this.laps,
+    required this.date,
+    required this.isPb,
+    required this.distanceKm,
+    required this.track2d,
+  });
+}
+
+List<Offset> _generateFakeTrack({
+  double scaleX = 120,
+  double scaleY = 80,
+  int samplesPerSegment = 12,
+  double rotationDeg = 0,
+}) {
+  final List<Offset> result = [];
+
+  // Layout normalizzato del circuito (rettilinei + curve)
+  // coordinate in [-1, 1]
+  final List<Offset> base = [
+    const Offset(-1.0, -0.1), // start rettilineo principale
+    const Offset(-0.3, -0.6), // curva 1
+    const Offset(0.3, -0.65), // breve rettilineo alto
+    const Offset(0.9, -0.2), // fine rettilineo alto curva 2
+    const Offset(1.0, 0.2), // discesa lato destro
+    const Offset(0.4, 0.7), // curva bassa destra
+    const Offset(-0.2, 0.6), // rettilineo basso
+    const Offset(-0.9, 0.2), // curva bassa sinistra
+    const Offset(-1.0, -0.1), // chiusura vicino allo start
+  ];
+
+  final rot = rotationDeg * math.pi / 180.0;
+  final cosR = math.cos(rot);
+  final sinR = math.sin(rot);
+
+  for (int i = 0; i < base.length - 1; i++) {
+    final p0 = base[i];
+    final p1 = base[i + 1];
+
+    for (int j = 0; j < samplesPerSegment; j++) {
+      final t = j / samplesPerSegment;
+
+      // interpolazione lineare tra i due punti (rettilineo/curva spezzata)
+      final nx = p0.dx + (p1.dx - p0.dx) * t;
+      final ny = p0.dy + (p1.dy - p0.dy) * t;
+
+      // scala
+      double x = nx * scaleX;
+      double y = ny * scaleY;
+
+      // piccola irregolarità per evitare forme troppo "perfette"
+      final noise = (i.isEven ? 1 : -1) * 0.03;
+      x += noise * scaleX * (math.sin(t * math.pi));
+      y += noise * scaleY * (math.cos(t * math.pi));
+
+      // rotazione globale
+      final xr = x * cosR - y * sinR;
+      final yr = x * sinR + y * cosR;
+
+      result.add(Offset(xr, yr));
+    }
+  }
+
+  return result;
+}
+
+final _mockActivities = <PulseActivity>[
+  PulseActivity(
+    id: '1',
+    pilotName: 'Luca Martini',
+    pilotTag: 'LMC',
+    circuitName: 'Autodromo di Monza',
+    city: 'Monza',
+    country: 'IT',
+    bestLap: '1:59.432',
+    sessionType: 'Gara',
+    laps: 18,
+    isPb: true,
+    distanceKm: 104.3,
+    date: DateTime.now().subtract(const Duration(hours: 2)),
+    track2d: _generateFakeTrack(rotationDeg: 5), // 👈
+  ),
+  PulseActivity(
+    id: '2',
+    pilotName: 'Sara Rossi',
+    pilotTag: 'SRS',
+    circuitName: 'Mugello Circuit',
+    city: 'Scarperia',
+    country: 'IT',
+    bestLap: '2:05.210',
+    sessionType: 'Practice',
+    laps: 12,
+    isPb: false,
+    distanceKm: 67.8,
+    date: DateTime.now().subtract(const Duration(days: 1, hours: 3)),
+    track2d: _generateFakeTrack(rotationDeg: -12), // 👈
+  ),
+  PulseActivity(
+    id: '3',
+    pilotName: 'Marco Bianchi',
+    pilotTag: 'MB9',
+    circuitName: 'Circuit de Barcelona-Catalunya',
+    city: 'Barcelona',
+    country: 'ES',
+    bestLap: '1:52.001',
+    sessionType: 'Qualifica',
+    laps: 10,
+    isPb: true,
+    distanceKm: 54.0,
+    date: DateTime.now().subtract(const Duration(days: 2, hours: 5)),
+    track2d: _generateFakeTrack(rotationDeg: 25), // 👈
+  ),
+];
+
+class FeedPage extends StatelessWidget {
+  const FeedPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return PulseBackground(
+      withTopPadding: true,
+      child: Column(
+        children: [
+          const _TopBar(),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4),
+            child: Row(
+              children: const [
+                Text(
+                  'Attività recenti',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Color.fromARGB(255, 255, 255, 255),
+                    letterSpacing: 0.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: ListView.builder(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8)
+                  .copyWith(bottom: 24),
+              itemCount: _mockActivities.length,
+              itemBuilder: (context, index) {
+                final activity = _mockActivities[index];
+                return _ActivityCard(activity: activity);
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/* ============================================================
+    TOP BAR
+============================================================ */
+
+class _TopBar extends StatelessWidget {
+  const _TopBar();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
+      child: Row(
+        children: [
+          // RACESENSE PULSE logo
+          Text.rich(
+            TextSpan(
+              style: const TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 1.1,
+              ),
+              children: const [
+                TextSpan(
+                  text: 'RACESENSE ',
+                  style: TextStyle(color: kBrandColor),
+                ),
+                TextSpan(
+                  text: 'PULSE',
+                  style: TextStyle(color: kPulseColor),
+                ),
+              ],
+            ),
+          ),
+          const Spacer(),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: const Color.fromRGBO(142, 133, 255, 0.18),
+              borderRadius: BorderRadius.circular(999),
+              // border: Border.all(
+              //   color: kPulseColor.withOpacity(0.9),
+              //   width: 1.2,
+              // ),
+              boxShadow: [
+                BoxShadow(
+                  color: kPulseColor.withOpacity(0.2),
+                  blurRadius: 10,
+                  spreadRadius: 1,
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: kPulseColor,
+                    boxShadow: [
+                      BoxShadow(
+                        color: kPulseColor.withOpacity(0.8),
+                        blurRadius: 10,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 6),
+                const Text(
+                  'BETA',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.9,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/* ============================================================
+    ACTIVITY CARD
+============================================================ */
+
+class _ActivityCard extends StatelessWidget {
+  final PulseActivity activity;
+
+  const _ActivityCard({required this.activity});
+
+  String _timeAgo() {
+    final now = DateTime.now();
+    final diff = now.difference(activity.date);
+
+    if (diff.inMinutes < 60) {
+      return '${diff.inMinutes} min fa';
+    } else if (diff.inHours < 24) {
+      return '${diff.inHours} h fa';
+    } else {
+      final days = diff.inDays;
+      return '$days g fa';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isPb = activity.isPb;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(20),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: () {
+            Navigator.of(context).pushNamed(
+              ActivityDetailPage.routeName,
+              arguments: activity,
+            );
+          },
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              color: const Color(0xFF10121A),
+              border: Border.all(
+                color: kLineColor.withOpacity(0.9),
+                width: 1.2,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.6),
+                  blurRadius: 18,
+                  spreadRadius: -4,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(14.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // ----- HEADER PILOTA -----
+                  Row(
+                    children: [
+                      _AvatarInitials(tag: activity.pilotTag),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              activity.pilotName,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w900,
+                                fontSize: 15,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              '@${activity.pilotTag}',
+                              style: const TextStyle(
+                                color: kMutedColor,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(999),
+                          color: const Color.fromRGBO(255, 255, 255, 0.06),
+                          border:
+                              Border.all(color: kLineColor.withOpacity(0.8)),
+                        ),
+                        child: Text(
+                          _timeAgo(),
+                          style: const TextStyle(
+                            color: kMutedColor,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  // ----- HERO / TRACK PREVIEW -----
+                  Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: kLineColor),
+                      gradient: const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Color.fromRGBO(255, 255, 255, 0.10),
+                          Color.fromRGBO(255, 255, 255, 0.03),
+                        ],
+                      ),
+                    ),
+                    child: Column(
+                      children: [
+                        ClipRRect(
+                          borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(20),
+                          ),
+                          child: Container(
+                            height: 140,
+                            color: const Color.fromRGBO(6, 7, 12, 1),
+                            child: CustomPaint(
+                              painter: _MiniTrackPainter(
+                                isPb: isPb,
+                                path: activity.track2d,
+                              ),
+                              child: const SizedBox.expand(),
+                            ),
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      activity.circuitName,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w900,
+                                        fontSize: 15,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      '${activity.city}, ${activity.country}',
+                                      style: const TextStyle(
+                                        color: kMutedColor,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  const Text(
+                                    'BEST LAP',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      letterSpacing: 1.0,
+                                      color: kMutedColor,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  Text(
+                                    activity.bestLap,
+                                    style: TextStyle(
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.w900,
+                                      color: isPb ? kPulseColor : Colors.white,
+                                    ),
+                                  ),
+                                  if (isPb) ...[
+                                    const SizedBox(height: 2),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 6,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        borderRadius:
+                                            BorderRadius.circular(999),
+                                        color: kPulseColor.withOpacity(0.12),
+                                      ),
+                                      child: const Text(
+                                        'PB',
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w800,
+                                          color: kPulseColor,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 10),
+
+                  // ----- CHIPS INFO -----
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      PulseChip(
+                        icon: Icons.flag_outlined,
+                        label: Text('${activity.laps} giri'),
+                      ),
+                      PulseChip(
+                        icon: Icons.speed,
+                        label: Text(
+                          '${activity.distanceKm.toStringAsFixed(1)} km',
+                        ),
+                      ),
+                      PulseChip(
+                        icon: Icons.sports_motorsports_outlined,
+                        label: Text(activity.sessionType),
+                      ),
+                      // if (activity.isPb)
+                      //   const PulseChip(
+                      //     label: Text('PB RACESENSE PULSE'),
+                      //     icon: Icons.star_outline,
+                      //   ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/* ============================================================
+    AVATAR
+============================================================ */
+
+class _AvatarInitials extends StatelessWidget {
+  final String tag;
+
+  const _AvatarInitials({required this.tag});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 44,
+      height: 44,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: const Color.fromRGBO(10, 12, 18, 1),
+        border: Border.all(color: kBrandColor, width: 1.4),
+        boxShadow: [
+          BoxShadow(
+            color: kBrandColor.withOpacity(0.4),
+            blurRadius: 10,
+            spreadRadius: 1,
+          ),
+        ],
+      ),
+      child: Center(
+        child: Text(
+          tag,
+          style: const TextStyle(
+            fontWeight: FontWeight.w900,
+            fontSize: 13,
+            letterSpacing: 1.1,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/* ============================================================
+    MINI TRACK PAINTER (placeholder estetico)
+============================================================ */
+
+class _MiniTrackPainter extends CustomPainter {
+  final bool isPb;
+  final List<Offset> path;
+
+  _MiniTrackPainter({
+    required this.isPb,
+    required this.path,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+    // background grid-ish
+    final bgPaint = Paint()..color = const Color.fromRGBO(12, 14, 22, 1);
+    canvas.drawRect(Offset.zero & size, bgPaint);
+
+    final gridPaint = Paint()
+      ..color = Colors.white.withOpacity(0.05)
+      ..strokeWidth = 1;
+    const gridCount = 7;
+    final dx = size.width / gridCount;
+    final dy = size.height / gridCount;
+    for (int i = 1; i < gridCount; i++) {
+      canvas.drawLine(
+          Offset(dx * i, 0), Offset(dx * i, size.height), gridPaint);
+      canvas.drawLine(Offset(0, dy * i), Offset(size.width, dy * i), gridPaint);
+    }
+
+    // outer glow
+    // final glowPaint = Paint()
+    //   ..color = kBrandColor.withOpacity(0.45)
+    //   ..style = PaintingStyle.stroke
+    //   ..strokeWidth = 10
+    //   ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 16);
+
+    final trackPaint = Paint()
+      ..color = Colors.white
+      ..strokeWidth = 3.5
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    final accentPaint = Paint()
+      ..color = isPb ? kPulseColor : kBrandColor
+      ..strokeWidth = 4.5
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    // circuito fittizio
+    // se abbiamo una path, usiamola; altrimenti fallback minimale
+    if (path.isNotEmpty) {
+      // calcola bounding box
+      double minX = path.first.dx;
+      double maxX = path.first.dx;
+      double minY = path.first.dy;
+      double maxY = path.first.dy;
+
+      for (final p in path) {
+        if (p.dx < minX) minX = p.dx;
+        if (p.dx > maxX) maxX = p.dx;
+        if (p.dy < minY) minY = p.dy;
+        if (p.dy > maxY) maxY = p.dy;
+      }
+
+      final width = (maxX - minX).abs().clamp(1.0, double.infinity).toDouble();
+      final height = (maxY - minY).abs().clamp(1.0, double.infinity).toDouble();
+
+      const padding = 18.0;
+      final usableW = w - 2 * padding;
+      final usableH = h - 2 * padding;
+      final scale = math.min(usableW / width, usableH / height);
+
+      final centerX = (minX + maxX) / 2;
+      final centerY = (minY + maxY) / 2;
+
+      final trackPath = Path();
+      final List<Offset> canvasPoints = [];
+
+      for (int i = 0; i < path.length; i++) {
+        final p = path[i];
+
+        final cx = w / 2 + (p.dx - centerX) * scale;
+        final cy = h / 2 - (p.dy - centerY) * scale; // inverti Y per lo schermo
+
+        final c = Offset(cx, cy);
+        canvasPoints.add(c);
+
+        if (i == 0) {
+          trackPath.moveTo(c.dx, c.dy);
+        } else {
+          trackPath.lineTo(c.dx, c.dy);
+        }
+      }
+
+      canvas.drawPath(trackPath, trackPaint);
+      canvas.drawPath(trackPath, accentPaint);
+
+      // start/finish line approssimata sui primi punti
+      if (canvasPoints.length >= 2) {
+        final s = canvasPoints.first;
+        final e = canvasPoints[1];
+        final startPaint = Paint()
+          ..color = Colors.white
+          ..strokeWidth = 3;
+        canvas.drawLine(s, e, startPaint);
+      }
+
+      // PB marker glow (punto circa a 1/3 del giro)
+      // if (isPb && canvasPoints.length > 5) {
+      //   final idx = (canvasPoints.length / 3).floor();
+      //   final p = canvasPoints[idx];
+      //   final pbPaint = Paint()
+      //     ..color = kPulseColor.withOpacity(0.7)
+      //     ..style = PaintingStyle.fill
+      //     ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 14);
+      //   canvas.drawCircle(p, 12, pbPaint);
+      // }
+    } else {
+      // fallback: piccola curva standard se la path è vuota
+      final basePath = Path();
+      basePath.moveTo(w * 0.18, h * 0.80);
+      basePath.quadraticBezierTo(w * 0.05, h * 0.40, w * 0.32, h * 0.18);
+      basePath.quadraticBezierTo(w * 0.70, h * 0.02, w * 0.86, h * 0.30);
+      basePath.quadraticBezierTo(w * 0.98, h * 0.58, w * 0.56, h * 0.86);
+      basePath.quadraticBezierTo(w * 0.34, h * 0.97, w * 0.18, h * 0.80);
+
+      canvas.drawPath(basePath, trackPaint);
+      canvas.drawPath(basePath, accentPaint);
+    }
+
+    // start/finish line
+    // final startPaint = Paint()
+    //   ..color = Colors.white
+    //   ..strokeWidth = 3;
+    // canvas.drawLine(
+    //   Offset(w * 0.20, h * 0.78),
+    //   Offset(w * 0.24, h * 0.83),
+    //   startPaint,
+    // );
+
+    // PB marker glow
+    if (isPb) {
+      final pbPaint = Paint()
+        ..color = kPulseColor.withOpacity(0.7)
+        ..style = PaintingStyle.fill
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 14);
+      canvas.drawCircle(Offset(w * 0.55, h * 0.32), 12, pbPaint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _MiniTrackPainter oldDelegate) {
+    return oldDelegate.isPb != isPb;
+  }
+}

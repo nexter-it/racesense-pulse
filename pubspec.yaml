@@ -1,0 +1,38 @@
+name: racesense_pulse
+description: "Racesense Pulse - social racing app"
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.2.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.6
+  google_fonts: ^6.2.1
+  intl: ^0.19.0
+
+  # Tracking
+  geolocator: ^13.0.1
+  sensors_plus: ^5.0.0
+
+  # Mappa OpenStreetMap
+  flutter_map: ^7.0.2
+  latlong2: ^0.9.1
+
+  # Grafici
+  fl_chart: ^0.69.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/images/logonexter.png

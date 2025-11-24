@@ -1,0 +1,207 @@
+import 'package:flutter/material.dart';
+
+import '../theme.dart';
+import '../widgets/pulse_background.dart';
+import '../widgets/pulse_chip.dart';
+import 'live_session_page.dart';
+
+import 'gps_wait_page.dart';
+
+class NewPostPage extends StatelessWidget {
+  static const routeName = '/new';
+
+  const NewPostPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return PulseBackground(
+      withTopPadding: true,
+      child: Column(
+        children: [
+          const SizedBox(height: 8),
+
+          // HEADER
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
+            child: Row(
+              children: [
+                const Text(
+                  'Nuova attività',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0.8,
+                  ),
+                ),
+                const Spacer(),
+                const PulseChip(
+                  label: Text('AUTO LAP'),
+                  icon: Icons.flag_outlined,
+                ),
+              ],
+            ),
+          ),
+
+          // BODY
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // CARD 1 — Tracking Live
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(20),
+                      gradient: LinearGradient(
+                        colors: [
+                          const Color(0xFF1C1C1E),
+                          const Color(0xFF151515),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      border: Border.all(color: kLineColor),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.25),
+                          blurRadius: 12,
+                          spreadRadius: -2,
+                        )
+                      ],
+                    ),
+                    child: const Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.speed, color: kBrandColor, size: 20),
+                            SizedBox(width: 8),
+                            Text(
+                              'Tracking live',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w900,
+                                fontSize: 18,
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 12),
+                        Text(
+                          '• GPS a 1Hz (auto smoothing) + IMU\n'
+                          '• Riconoscimento start/finish automatico\n'
+                          '• Tempi, giri, delta, velocità e G-force\n'
+                          '• Recap finale con tracciato e grafici',
+                          style: TextStyle(
+                            fontSize: 13,
+                            height: 1.45,
+                            color: kMutedColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // CARD 2 — Dispositivi esterni
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(20),
+                      gradient: LinearGradient(
+                        colors: [
+                          const Color(0xFF121212),
+                          const Color(0xFF0D0D0D),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      border: Border.all(color: kLineColor),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Row(
+                          children: [
+                            Icon(Icons.bluetooth, color: kBrandColor, size: 20),
+                            SizedBox(width: 8),
+                            Text(
+                              'Dispositivi esterni',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w900,
+                                fontSize: 18,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'Collega moduli esterni come sensori GPS ad alta frequenza, IMU professionali o sistemi CAN-BUS.',
+                          style: TextStyle(
+                            fontSize: 13,
+                            height: 1.45,
+                            color: kMutedColor,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Bottone con icona Bluetooth
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            onPressed: () {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Funzione in arrivo: scansione dispositivi Bluetooth.',
+                                  ),
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.bluetooth_searching),
+                            label: const Text('Collega dispositivo'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const Spacer(),
+
+                  // MAIN BUTTON — Inizia Registrazione
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        await Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const GpsWaitPage(),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.play_circle_outline),
+                      label: const Text(
+                        'Inizia registrazione',
+                        style: TextStyle(fontSize: 17),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 16,
+                          horizontal: 24,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 18),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
