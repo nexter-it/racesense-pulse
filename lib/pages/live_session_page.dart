@@ -9,11 +9,14 @@ import 'package:latlong2/latlong.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 
 import '../theme.dart';
+import '../models/track_definition.dart';
 import '../widgets/pulse_background.dart';
 import 'session_recap_page.dart';
 
 class LiveSessionPage extends StatefulWidget {
-  const LiveSessionPage({super.key});
+  final TrackDefinition? trackDefinition;
+
+  const LiveSessionPage({super.key, this.trackDefinition});
 
   @override
   State<LiveSessionPage> createState() => _LiveSessionPageState();
@@ -54,6 +57,7 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
   Position? _finishLineEnd;
   Offset? _finishLineStartLocal;
   Offset? _finishLineEndLocal;
+  bool _finishLineConfiguredFromTrack = false;
 
   // Parametri "gate" del traguardo (in metri, in coordinate locali)
   Offset?
@@ -385,6 +389,55 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
     return _lastLocalSmoothed!;
   }
 
+  Position _positionFromLatLng(LatLng point) {
+    return Position(
+      longitude: point.longitude,
+      latitude: point.latitude,
+      timestamp: DateTime.now(),
+      accuracy: 1.0,
+      altitude: 0.0,
+      altitudeAccuracy: 1.0,
+      heading: 0.0,
+      headingAccuracy: 1.0,
+      speed: 0.0,
+      speedAccuracy: 0.0,
+      floor: null,
+      isMocked: true,
+    );
+  }
+
+  void _configureFinishLineFromTrackIfNeeded() {
+    if (_finishLineConfiguredFromTrack) return;
+    if (widget.trackDefinition == null) return;
+    if (_originLat == null || _originLon == null) return;
+
+    final track = widget.trackDefinition!;
+
+    final startPos = _positionFromLatLng(track.finishLineStart);
+    final endPos = _positionFromLatLng(track.finishLineEnd);
+
+    final startLocal = _toLocalMeters(startPos);
+    final endLocal = _toLocalMeters(endPos);
+
+    final dir = endLocal - startLocal;
+    final length = dir.distance;
+    if (length < 0.5) {
+      return;
+    }
+
+    final dirUnit = Offset(dir.dx / length, dir.dy / length);
+    final normalUnit = Offset(-dirUnit.dy, dirUnit.dx);
+
+    _finishLineStart = startPos;
+    _finishLineEnd = endPos;
+    _finishLineStartLocal = startLocal;
+    _finishLineEndLocal = endLocal;
+    _finishDirUnit = dirUnit;
+    _finishNormalUnit = normalUnit;
+    _finishLength = length;
+    _finishLineConfiguredFromTrack = true;
+  }
+
   // ============================================================
   // GESTIONE DATI GPS (reali o simulati)
   // ============================================================
@@ -395,6 +448,7 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
 
     // Coordinate locali in metri
     _initLocalOriginIfNeeded(pos);
+    _configureFinishLineFromTrackIfNeeded();
     final localRaw = _toLocalMeters(pos);
 
     // Salvo i valori precedenti PRIMA di aggiornare lo smoothing
@@ -464,6 +518,9 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
   // FINISH LINE VIRTUALE + GATE (radiale, non tangente)
   // ============================================================
   void _defineFinishLine() {
+    if (_finishLineConfiguredFromTrack || widget.trackDefinition != null) {
+      return;
+    }
     if (_gpsTrack.length < 5 || _originLat == null || _originLon == null)
       return;
 

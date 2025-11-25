@@ -6,11 +6,13 @@ import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_map/flutter_map.dart';
 
 import '../theme.dart';
 import '../widgets/pulse_background.dart';
 import '../widgets/session_metadata_dialog.dart';
 import '../services/session_service.dart';
+import '../models/session_model.dart';
 
 class SessionRecapPage extends StatelessWidget {
   final List<Position> gpsTrack;
@@ -95,7 +97,7 @@ class SessionRecapPage extends StatelessWidget {
 
     for (int i = 1; i < timeHistory.length; i++) {
       final diff = timeHistory[i].inMilliseconds - timeHistory[i - 1].inMilliseconds;
-      if (diff > 0 && diff < 5000) { // Ignora outlier (> 5 sec)
+      if (diff > 0 && diff < 5000) {
         sumMs += diff;
         totalIntervals++;
       }
@@ -103,7 +105,7 @@ class SessionRecapPage extends StatelessWidget {
 
     if (totalIntervals == 0) return 0;
     final avgMs = sumMs / totalIntervals;
-    return (1000 / avgMs).round(); // Hz
+    return (1000 / avgMs).round();
   }
 
   Future<void> _handleSaveSession(BuildContext context) async {
@@ -184,6 +186,49 @@ class SessionRecapPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final distance = _calculateDistance();
+    final maxSpeed = _getMaxSpeed();
+    final avgSpeed = _getAvgSpeed();
+    final maxGForce = _getMaxGForce();
+    final avgGpsAccuracy = _getAvgGpsAccuracy();
+    final gpsSampleRate = _getGpsSampleRate();
+
+    // Convert to LapModel list for compatibility with widgets
+    final lapModels = laps.asMap().entries.map((entry) {
+      final index = entry.key;
+      final duration = entry.value;
+
+      // Calculate avg/max speed for this lap
+      Duration lapStart = Duration.zero;
+      for (int i = 0; i < index; i++) {
+        lapStart += laps[i];
+      }
+      final lapEnd = lapStart + duration;
+
+      final lapSpeedData = <double>[];
+      for (int j = 0; j < timeHistory.length; j++) {
+        if (timeHistory[j] >= lapStart && timeHistory[j] <= lapEnd) {
+          if (j < speedHistory.length) {
+            lapSpeedData.add(speedHistory[j]);
+          }
+        }
+      }
+
+      final avgSpeedKmh = lapSpeedData.isNotEmpty
+          ? lapSpeedData.reduce((a, b) => a + b) / lapSpeedData.length
+          : 0.0;
+      final maxSpeedKmh = lapSpeedData.isNotEmpty
+          ? lapSpeedData.reduce(math.max)
+          : 0.0;
+
+      return LapModel(
+        lapIndex: index,
+        duration: duration,
+        avgSpeedKmh: avgSpeedKmh,
+        maxSpeedKmh: maxSpeedKmh,
+      );
+    }).toList();
+
     return Scaffold(
       body: PulseBackground(
         withTopPadding: true,
@@ -195,36 +240,77 @@ class SessionRecapPage extends StatelessWidget {
             // Contenuto scrollabile
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                    // Pannello circuito + grafico combinato
-                    _SessionOverviewPanel(
-                      gpsTrack: gpsTrack,
-                      smoothPath: smoothPath,
-                      speedHistory: speedHistory,
-                      gForceHistory: gForceHistory,
-                      gpsAccuracyHistory: gpsAccuracyHistory,
-                      timeHistory: timeHistory,
-                      laps: laps, // ⬅️ AGGIUNTO
+                  children: [
+                    // Hero Stats Cards
+                    _HeroStatsGrid(
+                      totalDuration: totalDuration,
+                      bestLap: bestLap,
+                      distance: distance,
+                      lapCount: laps.length,
                     ),
-
                     const SizedBox(height: 24),
 
-                    // Statistiche principali (box che avevi già)
-                    _buildMainStats(),
-
+                    // Session Info Card
+                    _SessionInfoCard(dateTime: DateTime.now()),
                     const SizedBox(height: 24),
 
-                    // Dati tecnici
-                    _buildTechnicalData(),
-
+                    // Telemetria interattiva con circuito
+                    if (gpsTrack.isNotEmpty && laps.isNotEmpty)
+                      _SessionOverviewPanel(
+                        gpsTrack: gpsTrack,
+                        smoothPath: smoothPath,
+                        speedHistory: speedHistory,
+                        gForceHistory: gForceHistory,
+                        gpsAccuracyHistory: gpsAccuracyHistory,
+                        timeHistory: timeHistory,
+                        laps: laps,
+                      ),
                     const SizedBox(height: 24),
 
-                    // Lista giri dettagliata
-                    _buildLapList(),
+                    // Lap Times List
+                    if (laps.isNotEmpty)
+                      _LapTimesList(
+                        laps: lapModels,
+                        bestLap: bestLap,
+                      ),
+                    const SizedBox(height: 24),
 
+                    // Mappa OpenStreetMap
+                    if (smoothPath.isNotEmpty)
+                      _MapSection(
+                        path: smoothPath,
+                        trackName: 'Sessione Live',
+                      ),
+                    const SizedBox(height: 24),
+
+                    // Technical Data
+                    _TechnicalDataSection(
+                      maxSpeedKmh: maxSpeed,
+                      avgSpeedKmh: avgSpeed,
+                      maxGForce: maxGForce,
+                      avgGpsAccuracy: avgGpsAccuracy,
+                      gpsSampleRateHz: gpsSampleRate,
+                      gpsDataCount: gpsTrack.length,
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Action Button
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () => _handleSaveSession(context),
+                        icon: const Icon(Icons.save),
+                        label: const Text('SALVA SESSIONE'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: kBrandColor,
+                          foregroundColor: Colors.black,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                        ),
+                      ),
+                    ),
                     const SizedBox(height: 32),
                   ],
                 ),
@@ -238,539 +324,789 @@ class SessionRecapPage extends StatelessWidget {
 
   Widget _buildHeader(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.symmetric(horizontal: 16).copyWith(bottom: 10),
       child: Row(
         children: [
           IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new, size: 18),
             onPressed: () => Navigator.of(context).pop(),
-            icon: const Icon(Icons.close, size: 28),
           ),
-          const SizedBox(width: 8),
-          const Text(
-            'SESSIONE',
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const Spacer(),
-          ElevatedButton.icon(
-            onPressed: () => _handleSaveSession(context),
-            icon: const Icon(Icons.save),
-            label: const Text('Salva'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: kBrandColor,
-              foregroundColor: Colors.black,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            ),
+          const SizedBox(width: 6),
+          const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'RACESENSE PULSE',
+                style: TextStyle(
+                  fontSize: 11,
+                  letterSpacing: 1.2,
+                  color: kMutedColor,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              Text(
+                'Riepilogo Sessione',
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
+}
 
-    Widget _buildMainStats() {
-    final distance = _calculateDistance();
-    final maxSpeed = _getMaxSpeed();
-    final avgSpeed = _getAvgSpeed();
-    final maxGForce = _getMaxGForce();
+// Copy all widgets from activity_detail_page.dart
 
-    // Calculate worst lap (slowest)
-    Duration? worstLap;
-    if (laps.isNotEmpty) {
-      worstLap = laps.reduce((a, b) => a > b ? a : b);
-    }
+/* -------------------------------------------------------------
+   HERO STATS GRID - Premium stats showcase
+------------------------------------------------------------- */
 
-    // Calculate average lap time
-    Duration? avgLap;
-    if (laps.isNotEmpty) {
-      final totalMs = laps.fold<int>(0, (sum, lap) => sum + lap.inMilliseconds);
-      avgLap = Duration(milliseconds: totalMs ~/ laps.length);
-    }
+class _HeroStatsGrid extends StatelessWidget {
+  final Duration totalDuration;
+  final Duration? bestLap;
+  final double distance;
+  final int lapCount;
+
+  const _HeroStatsGrid({
+    required this.totalDuration,
+    required this.bestLap,
+    required this.distance,
+    required this.lapCount,
+  });
+
+  String _formatDuration(Duration d) {
+    final m = d.inMinutes;
+    final s = d.inSeconds % 60;
+    final ms = (d.inMilliseconds % 1000) ~/ 10;
+    return '$m:${s.toString().padLeft(2, '0')}.${ms.toString().padLeft(2, '0')}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bestLapStr = bestLap != null
+        ? _formatDuration(bestLap!)
+        : '--:--';
+    final totalTimeStr = _formatDuration(totalDuration);
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Hero stat card with gradient background
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                kBrandColor.withOpacity(0.15),
-                kBrandColor.withOpacity(0.05),
-              ],
-            ),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: kBrandColor.withOpacity(0.3), width: 1.5),
-          ),
-          child: Column(
-            children: [
-              const Text(
-                'BEST LAP',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: kMutedColor,
-                  letterSpacing: 2,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                bestLap != null ? _formatDuration(bestLap!) : '--:--.--',
-                style: const TextStyle(
-                  fontSize: 48,
-                  fontWeight: FontWeight.w900,
-                  color: kBrandColor,
-                  height: 1.1,
-                ),
-              ),
-              if (avgLap != null) ...[
-                const SizedBox(height: 4),
-                Text(
-                  'Media: ${_formatDuration(avgLap)}',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: kMutedColor.withOpacity(0.8),
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
-
-        const SizedBox(height: 20),
-
-        const Text(
-          'STATISTICHE',
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w700,
-            color: kMutedColor,
-            letterSpacing: 2,
-          ),
-        ),
-        const SizedBox(height: 12),
-        GridView.count(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisCount: 3,
-          crossAxisSpacing: 10,
-          mainAxisSpacing: 10,
-          childAspectRatio: 1.1,
+        Row(
           children: [
-            _buildCompactStatCard(
-              'Tempo',
-              _formatDuration(totalDuration),
-              Icons.timer_outlined,
+            Expanded(
+              child: _PremiumStatCard(
+                label: "BEST LAP",
+                value: bestLapStr,
+                icon: Icons.timer,
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF8E85FF), Color(0xFF6B5FFF)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                highlight: true,
+              ),
             ),
-            _buildCompactStatCard(
-              'Giri',
-              '${laps.length}',
-              Icons.replay,
-            ),
-            _buildCompactStatCard(
-              'Distanza',
-              '${distance.toStringAsFixed(1)} km',
-              Icons.straighten,
-            ),
-            _buildCompactStatCard(
-              'Vel. Max',
-              '${maxSpeed.toStringAsFixed(0)}',
-              Icons.speed,
-              subtitle: 'km/h',
-            ),
-            _buildCompactStatCard(
-              'Vel. Media',
-              '${avgSpeed.toStringAsFixed(0)}',
-              Icons.trending_up,
-              subtitle: 'km/h',
-            ),
-            _buildCompactStatCard(
-              'G-Force',
-              maxGForce.toStringAsFixed(2),
-              Icons.flash_on,
-              subtitle: 'max',
+            const SizedBox(width: 12),
+            Expanded(
+              child: _PremiumStatCard(
+                label: "TEMPO TOTALE",
+                value: totalTimeStr,
+                icon: Icons.access_time,
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF1A1A20), Color(0xFF0F0F15)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
             ),
           ],
         ),
-
-        if (worstLap != null) ...[
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: const Color(0xFF0F0F12),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: kLineColor.withOpacity(0.5)),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                Column(
-                  children: [
-                    const Text(
-                      'GIRO PIÙ LENTO',
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: kMutedColor,
-                        letterSpacing: 1.2,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      _formatDuration(worstLap),
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.redAccent,
-                      ),
-                    ),
-                  ],
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: _PremiumStatCard(
+                label: "DISTANZA",
+                value: "${distance.toStringAsFixed(1)} km",
+                icon: Icons.route,
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF1A1A20), Color(0xFF0F0F15)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
-                if (bestLap != null && worstLap != bestLap)
-                  Column(
-                    children: [
-                      const Text(
-                        'DIFFERENZA',
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: kMutedColor,
-                          letterSpacing: 1.2,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '+${_formatDuration(Duration(milliseconds: worstLap.inMilliseconds - bestLap!.inMilliseconds))}',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                          color: kMutedColor,
-                        ),
-                      ),
-                    ],
-                  ),
-              ],
+              ),
             ),
-          ),
-        ],
+            const SizedBox(width: 12),
+            Expanded(
+              child: _PremiumStatCard(
+                label: "GIRI",
+                value: lapCount.toString(),
+                icon: Icons.refresh,
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF1A1A20), Color(0xFF0F0F15)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+            ),
+          ],
+        ),
       ],
     );
   }
+}
 
-  Widget _buildCompactStatCard(String label, String value, IconData icon, {String? subtitle}) {
+class _PremiumStatCard extends StatelessWidget {
+  final String label;
+  final String value;
+  final IconData icon;
+  final Gradient gradient;
+  final bool highlight;
+
+  const _PremiumStatCard({
+    required this.label,
+    required this.value,
+    required this.icon,
+    required this.gradient,
+    this.highlight = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: const Color(0xFF10121A),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: kLineColor),
+        borderRadius: BorderRadius.circular(20),
+        gradient: gradient,
+        border: Border.all(
+          color: highlight ? kPulseColor : kLineColor,
+          width: highlight ? 1.5 : 1,
+        ),
+        boxShadow: highlight
+            ? [
+                BoxShadow(
+                  color: kPulseColor.withOpacity(0.15),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                )
+              ]
+            : null,
       ),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: kBrandColor, size: 22),
+          Row(
+            children: [
+              Icon(
+                icon,
+                size: 16,
+                color: highlight ? kPulseColor : kMutedColor,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 10,
+                  color: highlight ? kPulseColor : kMutedColor,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ],
+          ),
           const SizedBox(height: 8),
           Text(
-            label,
-            style: const TextStyle(
-              fontSize: 10,
-              color: kMutedColor,
-              fontWeight: FontWeight.w600,
-            ),
-            textAlign: TextAlign.center,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 4),
-          Text(
             value,
-            style: const TextStyle(
-              fontSize: 18,
+            style: TextStyle(
+              fontSize: 20,
               fontWeight: FontWeight.w900,
-              color: kFgColor,
+              color: highlight ? kPulseColor : kFgColor,
             ),
-            textAlign: TextAlign.center,
           ),
-          if (subtitle != null)
-            Text(
-              subtitle,
-              style: TextStyle(
-                fontSize: 9,
-                color: kMutedColor.withOpacity(0.6),
-              ),
-            ),
         ],
       ),
     );
   }
+}
 
-  Widget _buildStatCard(String label, String value, IconData icon) {
+/* -------------------------------------------------------------
+   SESSION INFO CARD
+------------------------------------------------------------- */
+
+class _SessionInfoCard extends StatelessWidget {
+  final DateTime dateTime;
+
+  const _SessionInfoCard({required this.dateTime});
+
+  @override
+  Widget build(BuildContext context) {
+    final dateStr = '${dateTime.day}/${dateTime.month}/${dateTime.year}';
+    final timeStr = '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
+
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            const Color(0xFF1a1a1a),
-            const Color(0xFF121212),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
+        color: const Color(0xFF0A0A0F),
         border: Border.all(color: kLineColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Row(
             children: [
-              Icon(icon, color: kBrandColor, size: 20),
+              const Icon(Icons.info_outline, size: 16, color: kBrandColor),
               const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  label,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: kMutedColor,
-                    fontWeight: FontWeight.w600,
-                  ),
+              const Text(
+                'INFORMAZIONI SESSIONE',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: kBrandColor,
+                  letterSpacing: 0.8,
                 ),
               ),
             ],
           ),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w900,
-              color: kFgColor,
-            ),
+          const SizedBox(height: 16),
+          _InfoRow(
+            icon: Icons.calendar_today_outlined,
+            label: 'Data',
+            value: dateStr,
+          ),
+          const SizedBox(height: 12),
+          _InfoRow(
+            icon: Icons.schedule_outlined,
+            label: 'Ora',
+            value: timeStr,
+          ),
+          const SizedBox(height: 12),
+          const _InfoRow(
+            icon: Icons.track_changes_outlined,
+            label: 'Tipo',
+            value: 'Sessione Live',
           ),
         ],
       ),
     );
   }
+}
 
-  Widget _buildTechnicalData() {
-    final maxGForce = _getMaxGForce();
-    final avgGpsAccuracy = _getAvgGpsAccuracy();
-    final gpsSampleRate = _getGpsSampleRate();
+class _InfoRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'DATI TECNICI',
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w900,
-            color: kMutedColor,
-            letterSpacing: 1.5,
-          ),
-        ),
-        const SizedBox(height: 16),
+  const _InfoRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
 
-        Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                const Color(0xFF1a1a1a),
-                const Color(0xFF121212),
-              ],
-            ),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: kLineColor),
-          ),
-          child: Column(
-            children: [
-              _buildTechRow('Punti GPS raccolti', '${gpsTrack.length}', Icons.location_on),
-              const Divider(color: kLineColor, height: 24),
-              _buildTechRow('Frequenza GPS media', '$gpsSampleRate Hz', Icons.settings_input_antenna),
-              const Divider(color: kLineColor, height: 24),
-              _buildTechRow('Precisione GPS media', '${avgGpsAccuracy.toStringAsFixed(1)} m', Icons.gps_fixed),
-              const Divider(color: kLineColor, height: 24),
-              _buildTechRow('G-Force massima', '${maxGForce.toStringAsFixed(2)} g', Icons.speed),
-              const Divider(color: kLineColor, height: 24),
-              _buildTechRow('Campioni velocità', '${speedHistory.length}', Icons.data_usage),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildTechRow(String label, String value, IconData icon) {
+  @override
+  Widget build(BuildContext context) {
     return Row(
       children: [
-        Icon(icon, color: kBrandColor.withOpacity(0.7), size: 20),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Text(
-            label,
-            style: const TextStyle(
-              fontSize: 14,
-              color: kMutedColor,
-            ),
+        Icon(icon, size: 16, color: kMutedColor),
+        const SizedBox(width: 10),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 13,
+            color: kMutedColor,
           ),
         ),
+        const Spacer(),
         Text(
           value,
           style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w900,
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
             color: kFgColor,
           ),
         ),
       ],
     );
   }
+}
 
-  Widget _buildLapList() {
-    if (laps.isEmpty) return const SizedBox.shrink();
+/* -------------------------------------------------------------
+   LAP TIMES LIST
+------------------------------------------------------------- */
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'TEMPI GIRI DETTAGLIATI',
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w900,
-            color: kMutedColor,
-            letterSpacing: 1.5,
-          ),
-        ),
-        const SizedBox(height: 12),
+class _LapTimesList extends StatelessWidget {
+  final List<LapModel> laps;
+  final Duration? bestLap;
 
-        ...laps.asMap().entries.map((entry) {
-          final index = entry.key;
-          final lap = entry.value;
-          final isBest = bestLap != null && lap == bestLap;
+  const _LapTimesList({
+    required this.laps,
+    required this.bestLap,
+  });
 
-          // Calcola differenza con best lap
-          String delta = '--';
-          if (bestLap != null && lap != bestLap) {
-            final diff = lap.inMilliseconds - bestLap!.inMilliseconds;
-            delta = '+${(diff / 1000).toStringAsFixed(3)}';
-          }
+  String _formatDuration(Duration d) {
+    final m = d.inMinutes;
+    final s = d.inSeconds % 60;
+    final ms = (d.inMilliseconds % 1000) ~/ 10;
+    return '$m:${s.toString().padLeft(2, '0')}.${ms.toString().padLeft(2, '0')}';
+  }
 
-          return Container(
-            margin: const EdgeInsets.only(bottom: 8),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              gradient: isBest
-                  ? LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        kBrandColor.withOpacity(0.15),
-                        kBrandColor.withOpacity(0.05),
-                      ],
-                    )
-                  : null,
-              color: isBest ? null : const Color(0xFF1a1a1a),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: isBest ? kBrandColor : kLineColor,
-                width: isBest ? 2 : 1,
-              ),
-            ),
+  @override
+  Widget build(BuildContext context) {
+    final sortedLaps = List<LapModel>.from(laps)
+      ..sort((a, b) => a.lapIndex.compareTo(b.lapIndex));
+
+    final worstLap = laps.isNotEmpty
+        ? laps.reduce((a, b) => a.duration > b.duration ? a : b).duration
+        : null;
+
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        color: const Color(0xFF0A0A0F),
+        border: Border.all(color: kLineColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(20),
             child: Row(
               children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: isBest ? kBrandColor : kLineColor,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Center(
-                    child: Text(
-                      '${index + 1}',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w900,
-                        fontSize: 16,
-                        color: isBest ? Colors.black : kFgColor,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Text(
-                            'Giro ${index + 1}',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w700,
-                              color: isBest ? kBrandColor : kFgColor,
-                              fontSize: 14,
-                            ),
-                          ),
-                          if (isBest) ...[
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: kBrandColor,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: const Text(
-                                'BEST',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w900,
-                                  color: Colors.black,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                      if (!isBest) ...[
-                        const SizedBox(height: 2),
-                        Text(
-                          delta,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: kErrorColor,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                Text(
-                  _formatDuration(lap),
+                const Icon(Icons.list_alt, size: 16, color: kBrandColor),
+                const SizedBox(width: 8),
+                const Text(
+                  'TEMPI SUL GIRO',
                   style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w900,
-                    color: isBest ? kBrandColor : kFgColor,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: kBrandColor,
+                    letterSpacing: 0.8,
                   ),
                 ),
               ],
             ),
-          );
-        }).toList(),
-      ],
+          ),
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: sortedLaps.length,
+            separatorBuilder: (_, __) => const Divider(
+              color: kLineColor,
+              height: 0,
+              indent: 20,
+              endIndent: 20,
+            ),
+            itemBuilder: (context, index) {
+              final lap = sortedLaps[index];
+              final isBest = bestLap != null && lap.duration == bestLap;
+              final isWorst = worstLap != null && lap.duration == worstLap;
+
+              return Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 14,
+                ),
+                decoration: BoxDecoration(
+                  gradient: isBest
+                      ? LinearGradient(
+                          colors: [
+                            kPulseColor.withOpacity(0.08),
+                            Colors.transparent,
+                          ],
+                        )
+                      : null,
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: isBest
+                            ? kPulseColor.withOpacity(0.2)
+                            : const Color(0xFF1A1A20),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: isBest ? kPulseColor : kLineColor,
+                        ),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        '${lap.lapIndex + 1}',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w900,
+                          color: isBest ? kPulseColor : kMutedColor,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _formatDuration(lap.duration),
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w900,
+                              color: isBest ? kPulseColor : kFgColor,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Avg: ${lap.avgSpeedKmh.toStringAsFixed(1)} km/h  •  Max: ${lap.maxSpeedKmh.toStringAsFixed(1)} km/h',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: kMutedColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (isBest)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: kPulseColor.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(999),
+                          border: Border.all(color: kPulseColor),
+                        ),
+                        child: const Text(
+                          'BEST',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w900,
+                            color: kPulseColor,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                    if (!isBest && isWorst)
+                      Icon(
+                        Icons.arrow_downward,
+                        size: 16,
+                        color: kMutedColor.withOpacity(0.5),
+                      ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/* -------------------------------------------------------------
+   MAP SECTION - OpenStreetMap
+------------------------------------------------------------- */
+
+class _MapSection extends StatelessWidget {
+  final List<LatLng> path;
+  final String trackName;
+
+  const _MapSection({
+    required this.path,
+    required this.trackName,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (path.isEmpty) return const SizedBox.shrink();
+
+    // Calculate center and bounds
+    double minLat = path.first.latitude;
+    double maxLat = path.first.latitude;
+    double minLon = path.first.longitude;
+    double maxLon = path.first.longitude;
+
+    for (final p in path) {
+      if (p.latitude < minLat) minLat = p.latitude;
+      if (p.latitude > maxLat) maxLat = p.latitude;
+      if (p.longitude < minLon) minLon = p.longitude;
+      if (p.longitude > maxLon) maxLon = p.longitude;
+    }
+
+    final centerLat = (minLat + maxLat) / 2;
+    final centerLon = (minLon + maxLon) / 2;
+
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        color: const Color(0xFF0A0A0F),
+        border: Border.all(color: kLineColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Row(
+              children: [
+                const Icon(Icons.map_outlined, size: 16, color: kBrandColor),
+                const SizedBox(width: 8),
+                const Text(
+                  'MAPPA TRACCIATO',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: kBrandColor,
+                    letterSpacing: 0.8,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          ClipRRect(
+            borderRadius: const BorderRadius.vertical(
+              bottom: Radius.circular(20),
+            ),
+            child: SizedBox(
+              height: 300,
+              child: FlutterMap(
+                options: MapOptions(
+                  initialCenter: LatLng(centerLat, centerLon),
+                  initialZoom: 15.0,
+                  minZoom: 10.0,
+                  maxZoom: 18.0,
+                ),
+                children: [
+                  TileLayer(
+                    urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    userAgentPackageName: 'com.racesense.pulse',
+                  ),
+                  PolylineLayer(
+                    polylines: [
+                      Polyline(
+                        points: path,
+                        strokeWidth: 4.0,
+                        color: kBrandColor,
+                        borderStrokeWidth: 2.0,
+                        borderColor: Colors.black.withOpacity(0.5),
+                      ),
+                    ],
+                  ),
+                  MarkerLayer(
+                    markers: [
+                      // Start marker
+                      Marker(
+                        point: path.first,
+                        width: 30,
+                        height: 30,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.green,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2),
+                          ),
+                          child: const Icon(
+                            Icons.flag,
+                            size: 16,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                      // End marker
+                      Marker(
+                        point: path.last,
+                        width: 30,
+                        height: 30,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2),
+                          ),
+                          child: const Icon(
+                            Icons.flag_outlined,
+                            size: 16,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/* -------------------------------------------------------------
+   TECHNICAL DATA SECTION
+------------------------------------------------------------- */
+
+class _TechnicalDataSection extends StatelessWidget {
+  final double maxSpeedKmh;
+  final double avgSpeedKmh;
+  final double maxGForce;
+  final double avgGpsAccuracy;
+  final int gpsSampleRateHz;
+  final int gpsDataCount;
+
+  const _TechnicalDataSection({
+    required this.maxSpeedKmh,
+    required this.avgSpeedKmh,
+    required this.maxGForce,
+    required this.avgGpsAccuracy,
+    required this.gpsSampleRateHz,
+    required this.gpsDataCount,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        color: const Color(0xFF0A0A0F),
+        border: Border.all(color: kLineColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.analytics_outlined, size: 16, color: kBrandColor),
+              const SizedBox(width: 8),
+              const Text(
+                'DATI TECNICI',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: kBrandColor,
+                  letterSpacing: 0.8,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: _TechnicalMetric(
+                  icon: Icons.speed,
+                  label: 'Velocità Max',
+                  value: '${maxSpeedKmh.toStringAsFixed(0)} km/h',
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _TechnicalMetric(
+                  icon: Icons.trending_up,
+                  label: 'Velocità Media',
+                  value: '${avgSpeedKmh.toStringAsFixed(0)} km/h',
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _TechnicalMetric(
+                  icon: Icons.center_focus_strong,
+                  label: 'G-Force Max',
+                  value: '${maxGForce.toStringAsFixed(2)} g',
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _TechnicalMetric(
+                  icon: Icons.gps_fixed,
+                  label: 'GPS Accuracy',
+                  value: '${avgGpsAccuracy.toStringAsFixed(1)} m',
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _TechnicalMetric(
+                  icon: Icons.refresh,
+                  label: 'Sample Rate',
+                  value: '$gpsSampleRateHz Hz',
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _TechnicalMetric(
+                  icon: Icons.data_usage,
+                  label: 'Punti GPS',
+                  value: gpsDataCount.toString(),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TechnicalMetric extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+
+  const _TechnicalMetric({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF151520),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: kLineColor.withOpacity(0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 20, color: kBrandColor.withOpacity(0.7)),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 11,
+              color: kMutedColor,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w900,
+              color: kFgColor,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
 
 // ============================================================
-// OVERVIEW: CIRCUITO + GRAFICO COMBINATO (stile RaceBox)
+// OVERVIEW: CIRCUITO + GRAFICO COMBINATO (from activity_detail_page)
 // ============================================================
 
 enum _MetricFocus { speed, gForce, accuracy }
@@ -801,7 +1137,7 @@ class _SessionOverviewPanel extends StatefulWidget {
 class _SessionOverviewPanelState extends State<_SessionOverviewPanel> {
   _MetricFocus _focus = _MetricFocus.speed;
   int _selectedIndex = 0;
-  int _currentLap = 0; // ⬅️ LAP CORRENTE
+  int _currentLap = 0;
 
   String _formatLap(Duration d) {
     final m = d.inMinutes;
@@ -812,7 +1148,6 @@ class _SessionOverviewPanelState extends State<_SessionOverviewPanel> {
 
   @override
   Widget build(BuildContext context) {
-    // Se non ho dati di base → placeholder
     if (widget.timeHistory.length < 2 ||
         widget.speedHistory.isEmpty ||
         widget.gForceHistory.isEmpty ||
@@ -834,34 +1169,27 @@ class _SessionOverviewPanelState extends State<_SessionOverviewPanel> {
       );
     }
 
-    // Nessun giro → usa tutti i dati come fallback
     if (widget.laps.isEmpty) {
-      // Fallback vecchio comportamento: un "lap" unico con tutti i sample
-      widget.laps.add(widget.timeHistory.last); // se vuoi evitare questa riga, puoi gestire diversamente
+      widget.laps.add(widget.timeHistory.last);
     }
 
     final int lapCount = widget.laps.length;
     _currentLap = _currentLap.clamp(0, lapCount - 1);
 
-    // Calcola start/end assoluti (Duration) del giro selezionato
-    Duration lapStart = Duration.zero;
+    Duration lapStartTime = Duration.zero;
     for (int i = 0; i < _currentLap; i++) {
-      lapStart += widget.laps[i];
+      lapStartTime += widget.laps[i];
     }
-    final Duration lapDuration = widget.laps[_currentLap];
-    final Duration lapEnd = lapStart + lapDuration;
+    final Duration lapEndTime = lapStartTime + widget.laps[_currentLap];
 
-    // Indici dei sample che appartengono a questo giro
     final List<int> indices = [];
     for (int i = 0; i < widget.timeHistory.length; i++) {
       final t = widget.timeHistory[i];
-      if (t >= lapStart && t <= lapEnd) {
+      if (t >= lapStartTime && t <= lapEndTime) {
         indices.add(i);
       }
     }
 
-    // Se per qualche motivo non abbiamo abbastanza punti per questo giro,
-    // esci con placeholder "tecnico"
     if (indices.length < 2) {
       return Container(
         height: 320,
@@ -882,9 +1210,7 @@ class _SessionOverviewPanelState extends State<_SessionOverviewPanel> {
     final int len = indices.length;
     _selectedIndex = _selectedIndex.clamp(0, len - 1);
 
-    // Timeline (secondi) relativa all’inizio del giro
-    final baseMs =
-        widget.timeHistory[indices.first].inMilliseconds.toDouble();
+    final baseMs = widget.timeHistory[indices.first].inMilliseconds.toDouble();
     final List<double> xs = List.generate(
       len,
       (j) {
@@ -894,7 +1220,6 @@ class _SessionOverviewPanelState extends State<_SessionOverviewPanel> {
       },
     );
 
-    // Serie (solo campioni del giro)
     final List<FlSpot> speedSpots = List.generate(
       len,
       (j) {
@@ -917,7 +1242,6 @@ class _SessionOverviewPanelState extends State<_SessionOverviewPanel> {
       },
     );
 
-    // Range Y globale
     double minY = speedSpots.first.y;
     double maxY = speedSpots.first.y;
     for (final s in [...speedSpots, ...gSpots, ...accSpots]) {
@@ -929,27 +1253,19 @@ class _SessionOverviewPanelState extends State<_SessionOverviewPanel> {
     final chartMaxY = range > 0 ? maxY + range * 0.1 : maxY + 1;
 
     final cursorX = xs[_selectedIndex];
-
-    // Indice "globale" del sample attualmente selezionato
     final int globalIdx = indices[_selectedIndex];
 
-    // Segmento di traccia GPS solo del giro
     final List<LatLng> lapPath = indices
-        .where((i) => i < widget.gpsTrack.length)
-        .map((i) => LatLng(
-              widget.gpsTrack[i].latitude,
-              widget.gpsTrack[i].longitude,
-            ))
+        .where((i) => i < widget.smoothPath.length)
+        .map((i) => widget.smoothPath[i])
         .toList();
 
-    // Marker posizione corrente
     LatLng? marker;
     if (globalIdx < widget.gpsTrack.length) {
       final p = widget.gpsTrack[globalIdx];
       marker = LatLng(p.latitude, p.longitude);
     }
 
-    // Valori correnti per il cursore
     final double curSpeed = widget.speedHistory[globalIdx];
     final double curG = widget.gForceHistory[globalIdx];
     final double curAcc = widget.gpsAccuracyHistory[globalIdx];
@@ -964,7 +1280,6 @@ class _SessionOverviewPanelState extends State<_SessionOverviewPanel> {
       ),
       child: Column(
         children: [
-          // Barra superiore stile RaceBox con selettore giro
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -992,7 +1307,7 @@ class _SessionOverviewPanelState extends State<_SessionOverviewPanel> {
                     ),
                   ),
                   Text(
-                    _formatLap(lapDuration),
+                    _formatLap(widget.laps[_currentLap]),
                     style: const TextStyle(
                       fontSize: 12,
                       color: kMutedColor,
@@ -1015,17 +1330,12 @@ class _SessionOverviewPanelState extends State<_SessionOverviewPanel> {
               ),
             ],
           ),
-
           const SizedBox(height: 8),
-
-          // Circuito (solo giro corrente)
           _CircuitTrackView(
             path: lapPath,
             marker: marker,
           ),
           const SizedBox(height: 16),
-
-          // Grafico combinato
           SizedBox(
             height: 220,
             child: LineChart(
@@ -1110,8 +1420,7 @@ class _SessionOverviewPanelState extends State<_SessionOverviewPanel> {
                     }
                     final spot = response.lineBarSpots!.first;
                     setState(() {
-                      _selectedIndex =
-                          spot.spotIndex.clamp(0, len - 1); // slider → punto
+                      _selectedIndex = spot.spotIndex.clamp(0, len - 1);
                     });
                   },
                 ),
@@ -1120,18 +1429,13 @@ class _SessionOverviewPanelState extends State<_SessionOverviewPanel> {
                       _focus == _MetricFocus.speed),
                   _buildLine(gSpots, Colors.greenAccent,
                       _focus == _MetricFocus.gForce),
-                  _buildLine(
-                      accSpots,
-                      Colors.blueAccent,
+                  _buildLine(accSpots, Colors.blueAccent,
                       _focus == _MetricFocus.accuracy),
                 ],
               ),
             ),
           ),
-
           const SizedBox(height: 12),
-
-          // Legend / selettore metrica
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
@@ -1139,29 +1443,23 @@ class _SessionOverviewPanelState extends State<_SessionOverviewPanel> {
                 label: 'Speed',
                 color: Colors.redAccent,
                 selected: _focus == _MetricFocus.speed,
-                onTap: () =>
-                    setState(() => _focus = _MetricFocus.speed),
+                onTap: () => setState(() => _focus = _MetricFocus.speed),
               ),
               _metricChip(
                 label: 'G-Force',
                 color: Colors.greenAccent,
                 selected: _focus == _MetricFocus.gForce,
-                onTap: () =>
-                    setState(() => _focus = _MetricFocus.gForce),
+                onTap: () => setState(() => _focus = _MetricFocus.gForce),
               ),
               _metricChip(
                 label: 'Accuracy',
                 color: Colors.blueAccent,
                 selected: _focus == _MetricFocus.accuracy,
-                onTap: () =>
-                    setState(() => _focus = _MetricFocus.accuracy),
+                onTap: () => setState(() => _focus = _MetricFocus.accuracy),
               ),
             ],
           ),
-
           const SizedBox(height: 8),
-
-          // Valori al cursore
           Align(
             alignment: Alignment.centerLeft,
             child: Text(
@@ -1306,7 +1604,6 @@ class _CircuitPainter extends CustomPainter {
       bgPaint,
     );
 
-    // Griglia
     final gridPaint = Paint()
       ..color = Colors.white.withOpacity(0.04)
       ..strokeWidth = 1;
@@ -1320,7 +1617,6 @@ class _CircuitPainter extends CustomPainter {
       canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
     }
 
-    // Bounds lat/lon
     double minLat = path.first.latitude;
     double maxLat = path.first.latitude;
     double minLon = path.first.longitude;
@@ -1349,7 +1645,6 @@ class _CircuitPainter extends CustomPainter {
       return Offset(x, y);
     }
 
-    // Ombra traccia
     final ui.Path shadowPath = ui.Path();
     for (int i = 0; i < path.length; i++) {
       final o = _project(path[i]);
@@ -1366,7 +1661,6 @@ class _CircuitPainter extends CustomPainter {
       ..strokeCap = StrokeCap.round;
     canvas.drawPath(shadowPath.shift(const Offset(2, 2)), shadowPaint);
 
-    // Traccia principale
     final ui.Path trackPath = ui.Path();
     for (int i = 0; i < path.length; i++) {
       final o = _project(path[i]);
@@ -1383,7 +1677,6 @@ class _CircuitPainter extends CustomPainter {
       ..strokeCap = StrokeCap.round;
     canvas.drawPath(trackPath, trackPaint);
 
-    // Marker posizione corrente
     if (marker != null) {
       final o = _project(marker!);
       final markerPaint = Paint()
