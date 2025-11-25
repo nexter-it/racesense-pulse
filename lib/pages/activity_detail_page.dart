@@ -3,113 +3,224 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:latlong2/latlong.dart' as ll;
 import 'package:geolocator/geolocator.dart';
+import 'package:flutter_map/flutter_map.dart';
 
 import '../theme.dart';
 import '../widgets/pulse_background.dart';
 import '../widgets/pulse_chip.dart';
-import 'feed_page.dart';
+import '../models/session_model.dart';
+import '../services/session_service.dart';
 import 'dart:ui' as ui;
 
-class ActivityDetailPage extends StatelessWidget {
+class ActivityDetailPage extends StatefulWidget {
   static const routeName = '/activity';
 
   const ActivityDetailPage({super.key});
 
   @override
+  State<ActivityDetailPage> createState() => _ActivityDetailPageState();
+}
+
+class _ActivityDetailPageState extends State<ActivityDetailPage> {
+  final SessionService _sessionService = SessionService();
+
+  bool _isLoading = true;
+  String? _error;
+
+  // Real data from Firestore
+  List<GpsPoint> _gpsData = [];
+  List<LapModel> _laps = [];
+  late SessionModel _session;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_isLoading) {
+      _loadSessionData();
+    }
+  }
+
+  Future<void> _loadSessionData() async {
+    try {
+      final args = ModalRoute.of(context)!.settings.arguments;
+
+      if (args is! SessionModel) {
+        setState(() {
+          _error = 'Dati sessione non validi';
+          _isLoading = false;
+        });
+        return;
+      }
+
+      _session = args;
+
+      print('📥 Caricamento dettagli sessione: ${_session.sessionId}');
+
+      // Load GPS data and laps in parallel
+      final results = await Future.wait([
+        _sessionService.getSessionGpsData(_session.sessionId),
+        _sessionService.getSessionLaps(_session.sessionId),
+      ]);
+
+      _gpsData = results[0] as List<GpsPoint>;
+      _laps = results[1] as List<LapModel>;
+
+      print('✅ Caricati ${_gpsData.length} punti GPS e ${_laps.length} giri');
+
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      print('❌ Errore caricamento sessione: $e');
+      if (mounted) {
+        setState(() {
+          _error = 'Errore nel caricamento dei dati';
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final PulseActivity activity =
-        ModalRoute.of(context)!.settings.arguments as PulseActivity;
-
-    // Mock dati telemetrici (in futuro arrivano dal DB)
-    // Mock dati telemetrici (in futuro arrivano dal DB)
-    final random = math.Random();
-    final samples = 600; // ~10 minuti a 10 Hz
-
-    final speed = List<double>.generate(
-      samples,
-      (i) => 90 + math.sin(i / 20) * 30 + random.nextDouble() * 4,
-    );
-    final gForce = List<double>.generate(
-      samples,
-      (i) => 1.1 + math.sin(i / 12) * 0.2 + random.nextDouble() * 0.05,
-    );
-    final accuracy = List<double>.generate(
-      samples,
-      (i) => 0.4 + random.nextDouble() * 0.6,
-    );
-
-    final time = List<Duration>.generate(
-      samples,
-      (i) => Duration(milliseconds: i * 100),
-    );
-
-    final mockPath = List<ll.LatLng>.generate(
-      samples,
-      (i) => ll.LatLng(
-        45.0 + math.sin(i / 40) * 0.0018,
-        9.0 + math.cos(i / 40) * 0.0022,
-      ),
-    );
-
-    // 🔹 finto elenco lap: 4 giri uguali sulla durata totale
-    final totalMs = time.last.inMilliseconds;
-    final perLapMs = (totalMs / 4).round();
-    final laps = List<Duration>.generate(
-      4,
-      (_) => Duration(milliseconds: perLapMs),
-    );
-
-    // 🔹 finto gpsTrack a partire dalla path (serve per l’overview combinata)
-    final gpsTrack = mockPath
-        .map(
-          (p) => Position(
-            latitude: p.latitude,
-            longitude: p.longitude,
-            timestamp: DateTime.now(),
-            accuracy: 3,
-            altitude: 0,
-            heading: 0,
-            speed: 0,
-            speedAccuracy: 0,
-            altitudeAccuracy: 0,
-            headingAccuracy: 0,
+    if (_isLoading) {
+      return Scaffold(
+        body: PulseBackground(
+          withTopPadding: true,
+          child: const Center(
+            child: CircularProgressIndicator(color: kBrandColor),
           ),
-        )
+        ),
+      );
+    }
+
+    if (_error != null) {
+      return Scaffold(
+        body: PulseBackground(
+          withTopPadding: true,
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.error_outline, size: 64, color: kErrorColor),
+                const SizedBox(height: 16),
+                Text(
+                  _error!,
+                  style: const TextStyle(color: kMutedColor, fontSize: 16),
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: kBrandColor,
+                    foregroundColor: Colors.black,
+                  ),
+                  child: const Text('Torna indietro'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Extract data from GPS points
+    final List<double> speedHistory = _gpsData.map((p) => p.speedKmh).toList();
+    final List<double> accuracyHistory =
+        _gpsData.map((p) => p.accuracy).toList();
+    final List<Duration> timeHistory = _gpsData
+        .map((p) => Duration(
+            milliseconds: p.timestamp.millisecondsSinceEpoch -
+                _gpsData.first.timestamp.millisecondsSinceEpoch))
         .toList();
 
-    final deviceUsed = "RaceBox Mini S"; // ⬅️ puoi cambiarlo o leggere dal DB
+    // Mock G-Force for now (in the future, load from Firestore if available)
+    final List<double> gForceHistory =
+        List<double>.filled(_gpsData.length, 1.0);
+
+    // Convert GPS to LatLng for visualization
+    final List<ll.LatLng> smoothPath =
+        _gpsData.map((p) => ll.LatLng(p.latitude, p.longitude)).toList();
+
+    // Convert to Position for compatibility
+    final List<Position> gpsTrack = _gpsData
+        .map((p) => Position(
+              latitude: p.latitude,
+              longitude: p.longitude,
+              timestamp: p.timestamp,
+              accuracy: p.accuracy,
+              altitude: 0,
+              heading: 0,
+              speed: p.speedKmh / 3.6, // Convert km/h to m/s
+              speedAccuracy: 0,
+              altitudeAccuracy: 0,
+              headingAccuracy: 0,
+            ))
+        .toList();
+
+    final deviceUsed = "RaceBox Mini S";
 
     return Scaffold(
       body: PulseBackground(
         withTopPadding: true,
         child: Column(
           children: [
-            _TopBar(activity: activity, device: deviceUsed),
+            _TopBar(session: _session, device: deviceUsed),
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // _HeroTrack(activity: activity),
-                    // const SizedBox(height: 20),
-                    _SessionOverviewPanel(
-                      gpsTrack: gpsTrack,
-                      smoothPath: mockPath,
-                      speedHistory: speed,
-                      gForceHistory: gForce,
-                      gpsAccuracyHistory: accuracy,
-                      timeHistory: time,
-                      laps: laps,
+                    // Hero Stats Cards
+                    _HeroStatsGrid(session: _session),
+                    const SizedBox(height: 24),
+
+                    // Session Info Card
+                    _SessionInfoCard(session: _session),
+                    const SizedBox(height: 24),
+
+                    // Telemetria interattiva con circuito
+                    if (gpsTrack.isNotEmpty && _laps.isNotEmpty)
+                      _SessionOverviewPanel(
+                        gpsTrack: gpsTrack,
+                        smoothPath: smoothPath,
+                        speedHistory: speedHistory,
+                        gForceHistory: gForceHistory,
+                        gpsAccuracyHistory: accuracyHistory,
+                        timeHistory: timeHistory,
+                        laps: _laps.map((l) => l.duration).toList(),
+                      ),
+                    const SizedBox(height: 24),
+
+                    // Lap Times List
+                    if (_laps.isNotEmpty)
+                      _LapTimesList(
+                        laps: _laps,
+                        bestLap: _session.bestLap,
+                      ),
+                    const SizedBox(height: 24),
+
+                    // Mappa OpenStreetMap
+                    if (smoothPath.isNotEmpty)
+                      _MapSection(
+                        path: smoothPath,
+                        trackName: _session.trackName,
+                      ),
+                    const SizedBox(height: 24),
+
+                    // Technical Data
+                    _TechnicalDataSection(
+                      session: _session,
+                      gpsDataCount: _gpsData.length,
                     ),
                     const SizedBox(height: 24),
-                    _StatsRow(activity: activity),
 
-                    const SizedBox(height: 24),
-                    // _SectorList(),
-                    // const SizedBox(height: 24),
-                    _ActionsRow(activity: activity),
-                    const SizedBox(height: 24),
+                    // Action Buttons
+                    _ActionsRow(session: _session),
+                    const SizedBox(height: 32),
                   ],
                 ),
               ),
@@ -126,10 +237,10 @@ class ActivityDetailPage extends StatelessWidget {
 ------------------------------------------------------------- */
 
 class _TopBar extends StatelessWidget {
-  final PulseActivity activity;
+  final SessionModel session;
   final String device;
 
-  const _TopBar({required this.activity, required this.device});
+  const _TopBar({required this.session, required this.device});
 
   @override
   Widget build(BuildContext context) {
@@ -155,7 +266,7 @@ class _TopBar extends StatelessWidget {
                 ),
               ),
               Text(
-                activity.circuitName,
+                session.trackName,
                 style: const TextStyle(
                   fontSize: 17,
                   fontWeight: FontWeight.w900,
@@ -179,9 +290,9 @@ class _TopBar extends StatelessWidget {
 ------------------------------------------------------------- */
 
 class _HeroTrack extends StatelessWidget {
-  final PulseActivity activity;
+  final SessionModel session;
 
-  const _HeroTrack({required this.activity});
+  const _HeroTrack({required this.session});
 
   @override
   Widget build(BuildContext context) {
@@ -209,6 +320,7 @@ class _HeroTrack extends StatelessWidget {
               ),
             ),
           ),
+          // Se ti serve riattivare il testo, aggiorna qui da activity.* a session.*
           // Positioned(
           //   left: 16,
           //   bottom: 16,
@@ -219,7 +331,7 @@ class _HeroTrack extends StatelessWidget {
           //         crossAxisAlignment: CrossAxisAlignment.start,
           //         children: [
           //           Text(
-          //             activity.circuitName,
+          //             session.trackName,
           //             style: const TextStyle(
           //               fontWeight: FontWeight.w900,
           //               fontSize: 16,
@@ -227,7 +339,7 @@ class _HeroTrack extends StatelessWidget {
           //           ),
           //           const SizedBox(height: 2),
           //           Text(
-          //             '${activity.city}, ${activity.country}',
+          //             '${session.locationCity}, ${session.locationCountry}',
           //             style: const TextStyle(
           //               color: kMutedColor,
           //               fontSize: 12,
@@ -235,29 +347,7 @@ class _HeroTrack extends StatelessWidget {
           //           ),
           //         ],
           //       ),
-          //       const Spacer(),
-          //       Column(
-          //         crossAxisAlignment: CrossAxisAlignment.end,
-          //         children: [
-          //           const Text(
-          //             'BEST LAP',
-          //             style: TextStyle(
-          //               fontSize: 11,
-          //               letterSpacing: 1,
-          //               color: kMutedColor,
-          //               fontWeight: FontWeight.w700,
-          //             ),
-          //           ),
-          //           Text(
-          //             activity.bestLap,
-          //             style: const TextStyle(
-          //               fontSize: 22,
-          //               fontWeight: FontWeight.w900,
-          //               color: kPulseColor,
-          //             ),
-          //           ),
-          //         ],
-          //       ),
+          //       ...
           //     ],
           //   ),
           // ),
@@ -305,73 +395,740 @@ class _DetailTrackPainter extends CustomPainter {
 }
 
 /* -------------------------------------------------------------
-   STATISTICHE
+   HERO STATS GRID - Premium stats showcase
 ------------------------------------------------------------- */
 
-class _StatsRow extends StatelessWidget {
-  final PulseActivity activity;
+class _HeroStatsGrid extends StatelessWidget {
+  final SessionModel session;
 
-  const _StatsRow({required this.activity});
+  const _HeroStatsGrid({required this.session});
+
+  String _formatDuration(Duration d) {
+    final m = d.inMinutes;
+    final s = d.inSeconds % 60;
+    final ms = (d.inMilliseconds % 1000) ~/ 10;
+    return '$m:${s.toString().padLeft(2, '0')}.${ms.toString().padLeft(2, '0')}';
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    final bestLapStr = session.bestLap != null
+        ? _formatDuration(session.bestLap!)
+        : '--:--';
+    final totalTimeStr = _formatDuration(session.totalDuration);
+
+    return Column(
       children: [
-        _StatCard(label: "GIRI", value: activity.laps.toString()),
-        const SizedBox(width: 12),
-        _StatCard(label: "DISTANZA", value: "${activity.distanceKm} km"),
-        const SizedBox(width: 12),
-        _StatCard(label: "BEST LAP", value: activity.bestLap, highlight: true),
+        Row(
+          children: [
+            Expanded(
+              child: _PremiumStatCard(
+                label: "BEST LAP",
+                value: bestLapStr,
+                icon: Icons.timer,
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF8E85FF), Color(0xFF6B5FFF)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                highlight: true,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _PremiumStatCard(
+                label: "TEMPO TOTALE",
+                value: totalTimeStr,
+                icon: Icons.access_time,
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF1A1A20), Color(0xFF0F0F15)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: _PremiumStatCard(
+                label: "DISTANZA",
+                value: "${session.distanceKm.toStringAsFixed(1)} km",
+                icon: Icons.route,
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF1A1A20), Color(0xFF0F0F15)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _PremiumStatCard(
+                label: "GIRI",
+                value: session.lapCount.toString(),
+                icon: Icons.refresh,
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF1A1A20), Color(0xFF0F0F15)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+            ),
+          ],
+        ),
       ],
     );
   }
 }
 
-class _StatCard extends StatelessWidget {
+class _PremiumStatCard extends StatelessWidget {
   final String label;
   final String value;
+  final IconData icon;
+  final Gradient gradient;
   final bool highlight;
 
-  const _StatCard({
+  const _PremiumStatCard({
     required this.label,
     required this.value,
+    required this.icon,
+    required this.gradient,
     this.highlight = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          color: const Color(0xFF10121A),
-          border: Border.all(
-            color: highlight ? kPulseColor : kLineColor,
-            width: highlight ? 1.4 : 1,
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        gradient: gradient,
+        border: Border.all(
+          color: highlight ? kPulseColor : kLineColor,
+          width: highlight ? 1.5 : 1,
+        ),
+        boxShadow: highlight
+            ? [
+                BoxShadow(
+                  color: kPulseColor.withOpacity(0.15),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                )
+              ]
+            : null,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                icon,
+                size: 16,
+                color: highlight ? kPulseColor : kMutedColor,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 10,
+                  color: highlight ? kPulseColor : kMutedColor,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w900,
+              color: highlight ? kPulseColor : kFgColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/* -------------------------------------------------------------
+   SESSION INFO CARD
+------------------------------------------------------------- */
+
+class _SessionInfoCard extends StatelessWidget {
+  final SessionModel session;
+
+  const _SessionInfoCard({required this.session});
+
+  @override
+  Widget build(BuildContext context) {
+    final dateStr = '${session.dateTime.day}/${session.dateTime.month}/${session.dateTime.year}';
+    final timeStr = '${session.dateTime.hour.toString().padLeft(2, '0')}:${session.dateTime.minute.toString().padLeft(2, '0')}';
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        color: const Color(0xFF0A0A0F),
+        border: Border.all(color: kLineColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.info_outline, size: 16, color: kBrandColor),
+              const SizedBox(width: 8),
+              const Text(
+                'INFORMAZIONI SESSIONE',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: kBrandColor,
+                  letterSpacing: 0.8,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _InfoRow(
+            icon: Icons.location_on_outlined,
+            label: 'Circuito',
+            value: session.trackName,
+          ),
+          const SizedBox(height: 12),
+          _InfoRow(
+            icon: Icons.place_outlined,
+            label: 'Località',
+            value: session.location,
+          ),
+          const SizedBox(height: 12),
+          _InfoRow(
+            icon: Icons.calendar_today_outlined,
+            label: 'Data',
+            value: dateStr,
+          ),
+          const SizedBox(height: 12),
+          _InfoRow(
+            icon: Icons.schedule_outlined,
+            label: 'Ora',
+            value: timeStr,
+          ),
+          const SizedBox(height: 12),
+          _InfoRow(
+            icon: Icons.public_outlined,
+            label: 'Visibilità',
+            value: session.isPublic ? 'Pubblica' : 'Privata',
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InfoRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+
+  const _InfoRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, size: 16, color: kMutedColor),
+        const SizedBox(width: 10),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 13,
+            color: kMutedColor,
           ),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: 11,
-                color: kMutedColor,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w900,
-                color: highlight ? kPulseColor : kFgColor,
-              ),
-            ),
-          ],
+        const Spacer(),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: kFgColor,
+          ),
         ),
+      ],
+    );
+  }
+}
+
+/* -------------------------------------------------------------
+   LAP TIMES LIST
+------------------------------------------------------------- */
+
+class _LapTimesList extends StatelessWidget {
+  final List<LapModel> laps;
+  final Duration? bestLap;
+
+  const _LapTimesList({
+    required this.laps,
+    required this.bestLap,
+  });
+
+  String _formatDuration(Duration d) {
+    final m = d.inMinutes;
+    final s = d.inSeconds % 60;
+    final ms = (d.inMilliseconds % 1000) ~/ 10;
+    return '$m:${s.toString().padLeft(2, '0')}.${ms.toString().padLeft(2, '0')}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final sortedLaps = List<LapModel>.from(laps)
+      ..sort((a, b) => a.lapIndex.compareTo(b.lapIndex));
+
+    final worstLap = laps.isNotEmpty
+        ? laps.reduce((a, b) => a.duration > b.duration ? a : b).duration
+        : null;
+
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        color: const Color(0xFF0A0A0F),
+        border: Border.all(color: kLineColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Row(
+              children: [
+                const Icon(Icons.list_alt, size: 16, color: kBrandColor),
+                const SizedBox(width: 8),
+                const Text(
+                  'TEMPI SUL GIRO',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: kBrandColor,
+                    letterSpacing: 0.8,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: sortedLaps.length,
+            separatorBuilder: (_, __) => const Divider(
+              color: kLineColor,
+              height: 0,
+              indent: 20,
+              endIndent: 20,
+            ),
+            itemBuilder: (context, index) {
+              final lap = sortedLaps[index];
+              final isBest = bestLap != null && lap.duration == bestLap;
+              final isWorst = worstLap != null && lap.duration == worstLap;
+
+              return Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 14,
+                ),
+                decoration: BoxDecoration(
+                  gradient: isBest
+                      ? LinearGradient(
+                          colors: [
+                            kPulseColor.withOpacity(0.08),
+                            Colors.transparent,
+                          ],
+                        )
+                      : null,
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: isBest
+                            ? kPulseColor.withOpacity(0.2)
+                            : const Color(0xFF1A1A20),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: isBest ? kPulseColor : kLineColor,
+                        ),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        '${lap.lapIndex + 1}',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w900,
+                          color: isBest ? kPulseColor : kMutedColor,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _formatDuration(lap.duration),
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w900,
+                              color: isBest ? kPulseColor : kFgColor,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Avg: ${lap.avgSpeedKmh.toStringAsFixed(1)} km/h  •  Max: ${lap.maxSpeedKmh.toStringAsFixed(1)} km/h',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: kMutedColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (isBest)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: kPulseColor.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(999),
+                          border: Border.all(color: kPulseColor),
+                        ),
+                        child: const Text(
+                          'BEST',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w900,
+                            color: kPulseColor,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                    if (!isBest && isWorst)
+                      Icon(
+                        Icons.arrow_downward,
+                        size: 16,
+                        color: kMutedColor.withOpacity(0.5),
+                      ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/* -------------------------------------------------------------
+   MAP SECTION - OpenStreetMap
+------------------------------------------------------------- */
+
+class _MapSection extends StatelessWidget {
+  final List<ll.LatLng> path;
+  final String trackName;
+
+  const _MapSection({
+    required this.path,
+    required this.trackName,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (path.isEmpty) return const SizedBox.shrink();
+
+    // Calculate center and bounds
+    double minLat = path.first.latitude;
+    double maxLat = path.first.latitude;
+    double minLon = path.first.longitude;
+    double maxLon = path.first.longitude;
+
+    for (final p in path) {
+      if (p.latitude < minLat) minLat = p.latitude;
+      if (p.latitude > maxLat) maxLat = p.latitude;
+      if (p.longitude < minLon) minLon = p.longitude;
+      if (p.longitude > maxLon) maxLon = p.longitude;
+    }
+
+    final centerLat = (minLat + maxLat) / 2;
+    final centerLon = (minLon + maxLon) / 2;
+
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        color: const Color(0xFF0A0A0F),
+        border: Border.all(color: kLineColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Row(
+              children: [
+                const Icon(Icons.map_outlined, size: 16, color: kBrandColor),
+                const SizedBox(width: 8),
+                const Text(
+                  'MAPPA TRACCIATO',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: kBrandColor,
+                    letterSpacing: 0.8,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          ClipRRect(
+            borderRadius: const BorderRadius.vertical(
+              bottom: Radius.circular(20),
+            ),
+            child: SizedBox(
+              height: 300,
+              child: FlutterMap(
+                options: MapOptions(
+                  initialCenter: ll.LatLng(centerLat, centerLon),
+                  initialZoom: 15.0,
+                  minZoom: 10.0,
+                  maxZoom: 18.0,
+                ),
+                children: [
+                  TileLayer(
+                    urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    userAgentPackageName: 'com.racesense.pulse',
+                  ),
+                  PolylineLayer(
+                    polylines: [
+                      Polyline(
+                        points: path,
+                        strokeWidth: 4.0,
+                        color: kBrandColor,
+                        borderStrokeWidth: 2.0,
+                        borderColor: Colors.black.withOpacity(0.5),
+                      ),
+                    ],
+                  ),
+                  MarkerLayer(
+                    markers: [
+                      // Start marker
+                      Marker(
+                        point: path.first,
+                        width: 30,
+                        height: 30,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.green,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2),
+                          ),
+                          child: const Icon(
+                            Icons.flag,
+                            size: 16,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                      // End marker
+                      Marker(
+                        point: path.last,
+                        width: 30,
+                        height: 30,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2),
+                          ),
+                          child: const Icon(
+                            Icons.flag_outlined,
+                            size: 16,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/* -------------------------------------------------------------
+   TECHNICAL DATA SECTION
+------------------------------------------------------------- */
+
+class _TechnicalDataSection extends StatelessWidget {
+  final SessionModel session;
+  final int gpsDataCount;
+
+  const _TechnicalDataSection({
+    required this.session,
+    required this.gpsDataCount,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        color: const Color(0xFF0A0A0F),
+        border: Border.all(color: kLineColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.analytics_outlined, size: 16, color: kBrandColor),
+              const SizedBox(width: 8),
+              const Text(
+                'DATI TECNICI',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: kBrandColor,
+                  letterSpacing: 0.8,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: _TechnicalMetric(
+                  icon: Icons.speed,
+                  label: 'Velocità Max',
+                  value: '${session.maxSpeedKmh.toStringAsFixed(0)} km/h',
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _TechnicalMetric(
+                  icon: Icons.trending_up,
+                  label: 'Velocità Media',
+                  value: '${session.avgSpeedKmh.toStringAsFixed(0)} km/h',
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _TechnicalMetric(
+                  icon: Icons.center_focus_strong,
+                  label: 'G-Force Max',
+                  value: '${session.maxGForce.toStringAsFixed(2)} g',
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _TechnicalMetric(
+                  icon: Icons.gps_fixed,
+                  label: 'GPS Accuracy',
+                  value: '${session.avgGpsAccuracy.toStringAsFixed(1)} m',
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _TechnicalMetric(
+                  icon: Icons.refresh,
+                  label: 'Sample Rate',
+                  value: '${session.gpsSampleRateHz} Hz',
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _TechnicalMetric(
+                  icon: Icons.data_usage,
+                  label: 'Punti GPS',
+                  value: gpsDataCount.toString(),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TechnicalMetric extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+
+  const _TechnicalMetric({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF151520),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: kLineColor.withOpacity(0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 20, color: kBrandColor.withOpacity(0.7)),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 11,
+              color: kMutedColor,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w900,
+              color: kFgColor,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -800,9 +1557,9 @@ class _SectorList extends StatelessWidget {
 ------------------------------------------------------------- */
 
 class _ActionsRow extends StatelessWidget {
-  final PulseActivity activity;
+  final SessionModel session;
 
-  const _ActionsRow({required this.activity});
+  const _ActionsRow({required this.session});
 
   @override
   Widget build(BuildContext context) {
@@ -827,7 +1584,7 @@ class _ActionsRow extends StatelessWidget {
             icon: const Icon(Icons.share),
             label: const Text('Condividi'),
             style: OutlinedButton.styleFrom(
-              side: BorderSide(color: kLineColor),
+              side: const BorderSide(color: kLineColor),
               padding: const EdgeInsets.symmetric(vertical: 14),
             ),
           ),
@@ -910,11 +1667,21 @@ class _SessionOverviewPanelState extends State<_SessionOverviewPanel> {
 
     final Duration lapDuration = widget.laps[_currentLap];
 
-// 👉 il grafico usa SEMPRE tutti i sample disponibili
-    final List<int> indices = List<int>.generate(
-      widget.timeHistory.length,
-      (i) => i,
-    );
+    // 👉 Calcola l'intervallo di tempo per questo giro specifico
+    Duration lapStartTime = Duration.zero;
+    for (int i = 0; i < _currentLap; i++) {
+      lapStartTime += widget.laps[i];
+    }
+    final Duration lapEndTime = lapStartTime + widget.laps[_currentLap];
+
+    // 👉 Filtra solo i sample che appartengono a QUESTO giro
+    final List<int> indices = [];
+    for (int i = 0; i < widget.timeHistory.length; i++) {
+      final t = widget.timeHistory[i];
+      if (t >= lapStartTime && t <= lapEndTime) {
+        indices.add(i);
+      }
+    }
 
     if (indices.length < 2) {
       return Container(
@@ -981,7 +1748,11 @@ class _SessionOverviewPanelState extends State<_SessionOverviewPanel> {
     final cursorX = xs[_selectedIndex];
     final int globalIdx = indices[_selectedIndex];
 
-    final List<ll.LatLng> lapPath = widget.smoothPath;
+    // 👉 Percorso GPS solo per questo giro
+    final List<ll.LatLng> lapPath = indices
+        .where((i) => i < widget.smoothPath.length)
+        .map((i) => widget.smoothPath[i])
+        .toList();
 
     ll.LatLng? marker;
     if (globalIdx < widget.gpsTrack.length) {

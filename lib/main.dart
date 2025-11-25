@@ -6,6 +6,7 @@ import 'pages/profile_page.dart';
 import 'pages/new_post_page.dart';
 import 'pages/activity_detail_page.dart';
 import 'pages/auth_gate.dart';
+import 'pages/search_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -46,6 +47,7 @@ class _RootShellState extends State<RootShell> {
   Widget build(BuildContext context) {
     final pages = [
       const FeedPage(),
+      const SearchPage(),
       const NewPostPage(),
       const ProfilePage(),
     ];
@@ -66,6 +68,11 @@ class _RootShellState extends State<RootShell> {
             icon: Icon(Icons.timeline_outlined),
             activeIcon: Icon(Icons.timeline),
             label: 'Feed',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.search_outlined),
+            activeIcon: Icon(Icons.search),
+            label: 'Cerca',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.add_circle_outline),

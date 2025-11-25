@@ -556,15 +556,22 @@ class _SessionCard extends StatelessWidget {
         ? 'Best ${_formatDuration(session.bestLap!)}'
         : '';
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        color: const Color.fromRGBO(255, 255, 255, 0.06),
-        border: Border.all(color: kLineColor),
-      ),
-      child: Row(
+    return GestureDetector(
+      onTap: () {
+        Navigator.of(context).pushNamed(
+          '/activity',
+          arguments: session,
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          color: const Color.fromRGBO(255, 255, 255, 0.06),
+          border: Border.all(color: kLineColor),
+        ),
+        child: Row(
         children: [
           // Icona attività
           Container(
@@ -641,6 +648,7 @@ class _SessionCard extends StatelessWidget {
             ],
           ),
         ],
+      ),
       ),
     );
   }

@@ -394,25 +394,9 @@ class _ActivityCard extends StatelessWidget {
         child: InkWell(
           borderRadius: BorderRadius.circular(20),
           onTap: () {
-            final activity = PulseActivity(
-              id: session.sessionId,
-              pilotName: pilotName,
-              pilotTag: pilotTag,
-              circuitName: circuitName,
-              city: city,
-              country: '—', // se vuoi puoi splittare da location "Roma, Italia"
-              bestLap: bestLapText,
-              sessionType: sessionType,
-              laps: laps,
-              date: session.dateTime,
-              isPb: isPb,
-              distanceKm: distanceKm,
-              track2d: track2d,
-            );
-
             Navigator.of(context).pushNamed(
               ActivityDetailPage.routeName,
-              arguments: activity,
+              arguments: session,
             );
           },
           child: Container(

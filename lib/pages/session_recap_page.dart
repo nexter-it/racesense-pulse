@@ -273,61 +273,238 @@ class SessionRecapPage extends StatelessWidget {
     final distance = _calculateDistance();
     final maxSpeed = _getMaxSpeed();
     final avgSpeed = _getAvgSpeed();
+    final maxGForce = _getMaxGForce();
+
+    // Calculate worst lap (slowest)
+    Duration? worstLap;
+    if (laps.isNotEmpty) {
+      worstLap = laps.reduce((a, b) => a > b ? a : b);
+    }
+
+    // Calculate average lap time
+    Duration? avgLap;
+    if (laps.isNotEmpty) {
+      final totalMs = laps.fold<int>(0, (sum, lap) => sum + lap.inMilliseconds);
+      avgLap = Duration(milliseconds: totalMs ~/ laps.length);
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'STATISTICHE PRINCIPALI',
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w900,
-            color: kMutedColor,
-            letterSpacing: 1.5,
+        // Hero stat card with gradient background
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                kBrandColor.withOpacity(0.15),
+                kBrandColor.withOpacity(0.05),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: kBrandColor.withOpacity(0.3), width: 1.5),
+          ),
+          child: Column(
+            children: [
+              const Text(
+                'BEST LAP',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: kMutedColor,
+                  letterSpacing: 2,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                bestLap != null ? _formatDuration(bestLap!) : '--:--.--',
+                style: const TextStyle(
+                  fontSize: 48,
+                  fontWeight: FontWeight.w900,
+                  color: kBrandColor,
+                  height: 1.1,
+                ),
+              ),
+              if (avgLap != null) ...[
+                const SizedBox(height: 4),
+                Text(
+                  'Media: ${_formatDuration(avgLap)}',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: kMutedColor.withOpacity(0.8),
+                  ),
+                ),
+              ],
+            ],
           ),
         ),
-        const SizedBox(height: 16),
+
+        const SizedBox(height: 20),
+
+        const Text(
+          'STATISTICHE',
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            color: kMutedColor,
+            letterSpacing: 2,
+          ),
+        ),
+        const SizedBox(height: 12),
         GridView.count(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          crossAxisCount: 2,
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
-          childAspectRatio: 1.8,
+          crossAxisCount: 3,
+          crossAxisSpacing: 10,
+          mainAxisSpacing: 10,
+          childAspectRatio: 1.1,
           children: [
-            _buildStatCard(
-              'Tempo Totale',
+            _buildCompactStatCard(
+              'Tempo',
               _formatDuration(totalDuration),
-              Icons.timer,
+              Icons.timer_outlined,
             ),
-            _buildStatCard(
-              'Best Lap',
-              bestLap != null ? _formatDuration(bestLap!) : '--:--',
-              Icons.flash_on,
-            ),
-            _buildStatCard(
+            _buildCompactStatCard(
               'Giri',
               '${laps.length}',
               Icons.replay,
             ),
-            _buildStatCard(
+            _buildCompactStatCard(
               'Distanza',
-              '${distance.toStringAsFixed(2)} km',
+              '${distance.toStringAsFixed(1)} km',
               Icons.straighten,
             ),
-            _buildStatCard(
+            _buildCompactStatCard(
               'Vel. Max',
-              '${maxSpeed.toStringAsFixed(0)} km/h',
+              '${maxSpeed.toStringAsFixed(0)}',
               Icons.speed,
+              subtitle: 'km/h',
             ),
-            _buildStatCard(
+            _buildCompactStatCard(
               'Vel. Media',
-              '${avgSpeed.toStringAsFixed(0)} km/h',
+              '${avgSpeed.toStringAsFixed(0)}',
               Icons.trending_up,
+              subtitle: 'km/h',
+            ),
+            _buildCompactStatCard(
+              'G-Force',
+              maxGForce.toStringAsFixed(2),
+              Icons.flash_on,
+              subtitle: 'max',
             ),
           ],
         ),
+
+        if (worstLap != null) ...[
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFF0F0F12),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: kLineColor.withOpacity(0.5)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                Column(
+                  children: [
+                    const Text(
+                      'GIRO PIÙ LENTO',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: kMutedColor,
+                        letterSpacing: 1.2,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _formatDuration(worstLap),
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.redAccent,
+                      ),
+                    ),
+                  ],
+                ),
+                if (bestLap != null && worstLap != bestLap)
+                  Column(
+                    children: [
+                      const Text(
+                        'DIFFERENZA',
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: kMutedColor,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '+${_formatDuration(Duration(milliseconds: worstLap.inMilliseconds - bestLap!.inMilliseconds))}',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          color: kMutedColor,
+                        ),
+                      ),
+                    ],
+                  ),
+              ],
+            ),
+          ),
+        ],
       ],
+    );
+  }
+
+  Widget _buildCompactStatCard(String label, String value, IconData icon, {String? subtitle}) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF10121A),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: kLineColor),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: kBrandColor, size: 22),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 10,
+              color: kMutedColor,
+              fontWeight: FontWeight.w600,
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+              color: kFgColor,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          if (subtitle != null)
+            Text(
+              subtitle,
+              style: TextStyle(
+                fontSize: 9,
+                color: kMutedColor.withOpacity(0.6),
+              ),
+            ),
+        ],
+      ),
     );
   }
 
