@@ -273,26 +273,7 @@ class _TopBar extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
       child: Row(
         children: [
-          // RACESENSE PULSE logo
-          Text.rich(
-            TextSpan(
-              style: const TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 1.1,
-              ),
-              children: const [
-                TextSpan(
-                  text: 'RACESENSE ',
-                  style: TextStyle(color: kBrandColor),
-                ),
-                TextSpan(
-                  text: 'PULSE',
-                  style: TextStyle(color: kPulseColor),
-                ),
-              ],
-            ),
-          ),
+          const _PremiumLogoTitle(),
           const Spacer(),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -340,6 +321,119 @@ class _TopBar extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _PremiumLogoTitle extends StatelessWidget {
+  const _PremiumLogoTitle();
+
+  @override
+  Widget build(BuildContext context) {
+    const neon = Color(0xFFCCFF00);
+    const lilac = Color(0xFFB6B0F5);
+
+    return Expanded(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isNarrow = constraints.maxWidth < 260;
+          return Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              gradient: const LinearGradient(
+                colors: [
+                  Color.fromRGBO(26, 56, 36, 0.5),
+                  Color.fromRGBO(18, 18, 26, 0.7),
+                  Color.fromRGBO(41, 26, 63, 0.5),
+                ],
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
+              ),
+              border: Border.all(color: kLineColor.withOpacity(0.7)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.35),
+                  blurRadius: 18,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: FittedBox(
+              fit: isNarrow ? BoxFit.scaleDown : BoxFit.none,
+              alignment: Alignment.centerLeft,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _GradientText(
+                    text: 'RACESENSE',
+                    gradient: const LinearGradient(
+                      colors: [
+                        neon,
+                        Color(0xFFE7FF4F),
+                      ],
+                    ),
+                    shadowColor: neon.withOpacity(0.55),
+                  ),
+                  const SizedBox(width: 10),
+                  _GradientText(
+                    text: 'PULSE',
+                    gradient: const LinearGradient(
+                      colors: [
+                        lilac,
+                        Color(0xFFD9D4FF),
+                      ],
+                    ),
+                    shadowColor: lilac.withOpacity(0.6),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _GradientText extends StatelessWidget {
+  final String text;
+  final LinearGradient gradient;
+  final Color shadowColor;
+
+  const _GradientText({
+    required this.text,
+    required this.gradient,
+    required this.shadowColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ShaderMask(
+      shaderCallback: (bounds) => gradient.createShader(
+        Rect.fromLTWH(0, 0, bounds.width, bounds.height),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 22,
+          fontWeight: FontWeight.w900,
+          letterSpacing: 1.2,
+          color: Colors.white,
+          shadows: [
+            Shadow(
+              color: shadowColor,
+              blurRadius: 14,
+              offset: const Offset(0, 0),
+            ),
+            Shadow(
+              color: shadowColor.withOpacity(0.35),
+              blurRadius: 28,
+              offset: const Offset(0, 0),
+            ),
+          ],
+        ),
       ),
     );
   }
