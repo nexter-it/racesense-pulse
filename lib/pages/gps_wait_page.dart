@@ -885,8 +885,14 @@ class _GpsWaitPageState extends State<GpsWaitPage> {
                       children: [
                         TileLayer(
                           urlTemplate:
-                              'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                              'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
                           userAgentPackageName: 'com.racesense.pulse',
+                          subdomains: const [''],
+                          // Esri World Imagery (satellite) as OSM satellite alternative
+                          additionalOptions: const {
+                            'attribution':
+                                'Tiles © Esri — Source: Esri, Maxar, Earthstar Geographics'
+                          },
                         ),
                         if (polylines.isNotEmpty)
                           PolylineLayer(

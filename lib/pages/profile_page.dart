@@ -22,9 +22,13 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
   String _userName = '';
   String _userTag = '';
   bool _isLoading = true;
+  bool _sessionsLoadingAll = false;
+  bool _showAllSessions = false;
+  bool _hasAllSessions = false;
 
   UserStats _userStats = UserStats.empty();
   List<SessionModel> _recentSessions = [];
+  List<SessionModel> _allSessions = [];
 
   @override
   void initState() {
@@ -60,9 +64,9 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
       // Inizializza stats se non esistono (ora senza read extra)
       await _firestoreService.initializeStatsIfNeeded(user.uid);
 
-      // 1) dati utente (con cache locale) + 2) ultime sessioni
+      // 1) dati utente (fresh) + 2) ultime sessioni
       final results = await Future.wait([
-        _firestoreService.getUserDataWithCache(user.uid),
+        _firestoreService.getUserData(user.uid),
         _sessionService.getUserSessions(user.uid, limit: 5),
       ]);
 
@@ -79,6 +83,10 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
 
       if (mounted) {
         final fullName = userData?['fullName'] ?? user.displayName ?? 'Utente';
+        if (userData == null || userData['searchTokens'] == null) {
+          // Backfill token ricerca per utenti già esistenti
+          _firestoreService.ensureSearchTokens(user.uid, fullName);
+        }
 
         // Crea tag dalle iniziali del nome
         String tag;
@@ -97,6 +105,7 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
           _userStats = stats;
           _recentSessions = sessions;
           _isLoading = false;
+          _hasAllSessions = sessions.length < 5 ? true : false;
         });
         print('✅ ProfilePage: UI aggiornata');
       }
@@ -120,6 +129,34 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
     final minutes = d.inMinutes;
     final seconds = d.inSeconds % 60;
     return '$minutes:${seconds.toString().padLeft(2, '0')}';
+  }
+
+  Future<void> _loadAllSessions() async {
+    if (_sessionsLoadingAll || _hasAllSessions) return;
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    setState(() {
+      _sessionsLoadingAll = true;
+    });
+
+    try {
+      final sessions =
+          await _sessionService.getUserSessions(user.uid, limit: 50);
+      setState(() {
+        _allSessions = sessions;
+        _showAllSessions = true;
+        _hasAllSessions = true;
+      });
+    } catch (e) {
+      print('❌ Errore caricamento tutte le sessioni: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _sessionsLoadingAll = false;
+        });
+      }
+    }
   }
 
   @override
@@ -212,7 +249,8 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
                           ),
                         ),
                         const SizedBox(height: 12),
-                        if (_recentSessions.isEmpty)
+                        if ((_showAllSessions ? _allSessions : _recentSessions)
+                            .isEmpty)
                           Center(
                             child: Padding(
                               padding: const EdgeInsets.all(32),
@@ -223,8 +261,51 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
                             ),
                           )
                         else
-                          ..._recentSessions
+                          ...(_showAllSessions ? _allSessions : _recentSessions)
                               .map((session) => _SessionCard(session: session)),
+                        const SizedBox(height: 10),
+                        if (_allSessions.isNotEmpty || !_hasAllSessions)
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: OutlinedButton.icon(
+                              onPressed: _sessionsLoadingAll
+                                  ? null
+                                  : () {
+                                      if (_showAllSessions &&
+                                          _allSessions.isNotEmpty) {
+                                        setState(() {
+                                          _showAllSessions = false;
+                                        });
+                                      } else if (_allSessions.isNotEmpty) {
+                                        setState(() {
+                                          _showAllSessions = true;
+                                        });
+                                      } else {
+                                        _loadAllSessions();
+                                      }
+                                    },
+                              icon: _sessionsLoadingAll
+                                  ? const SizedBox(
+                                      width: 14,
+                                      height: 14,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        valueColor:
+                                            AlwaysStoppedAnimation(kBrandColor),
+                                      ),
+                                    )
+                                  : Icon(_showAllSessions
+                                      ? Icons.expand_less
+                                      : Icons.expand_more),
+                              label: Text(_showAllSessions
+                                  ? 'Mostra meno'
+                                  : 'Mostra tutte'),
+                              style: OutlinedButton.styleFrom(
+                                side: const BorderSide(color: kBrandColor),
+                              ),
+                              onLongPress: null,
+                            ),
+                          ),
                         const SizedBox(height: 30),
                       ],
                     ),

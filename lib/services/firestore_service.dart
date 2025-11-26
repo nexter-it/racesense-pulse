@@ -5,6 +5,33 @@ import 'dart:convert';
 class FirestoreService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
+  List<String> _buildSearchTokens(String fullName) {
+    final tokens = <String>{};
+    final cleaned = fullName.toLowerCase().trim();
+    final parts = cleaned.split(RegExp(r'\s+'));
+
+    for (final part in parts) {
+      if (part.isEmpty) continue;
+      for (int i = 1; i <= part.length; i++) {
+        tokens.add(part.substring(0, i));
+      }
+    }
+
+    // Aggiungi anche token completi per il nome intero
+    for (int i = 1; i <= cleaned.length; i++) {
+      tokens.add(cleaned.substring(0, i));
+    }
+
+    return tokens.toList();
+  }
+
+  Future<void> ensureSearchTokens(String userId, String fullName) async {
+    final tokens = _buildSearchTokens(fullName);
+    await _firestore.collection('users').doc(userId).set({
+      'searchTokens': tokens,
+    }, SetOptions(merge: true));
+  }
+
   // Crea un nuovo documento utente in Firestore
   Future<void> createUserDocument({
     required String userId,
@@ -12,10 +39,12 @@ class FirestoreService {
     required String email,
   }) async {
     try {
+      final tokens = _buildSearchTokens(fullName);
       await _firestore.collection('users').doc(userId).set({
         'userId': userId,
         'fullName': fullName,
         'email': email,
+        'searchTokens': tokens,
         'createdAt': FieldValue.serverTimestamp(),
         'stats': {
           'totalSessions': 0,

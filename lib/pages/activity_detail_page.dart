@@ -412,9 +412,8 @@ class _HeroStatsGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bestLapStr = session.bestLap != null
-        ? _formatDuration(session.bestLap!)
-        : '--:--';
+    final bestLapStr =
+        session.bestLap != null ? _formatDuration(session.bestLap!) : '--:--';
     final totalTimeStr = _formatDuration(session.totalDuration);
 
     return Column(
@@ -427,7 +426,10 @@ class _HeroStatsGrid extends StatelessWidget {
                 value: bestLapStr,
                 icon: Icons.timer,
                 gradient: const LinearGradient(
-                  colors: [Color(0xFF8E85FF), Color(0xFF6B5FFF)],
+                  colors: [
+                    Color.fromARGB(35, 141, 133, 255),
+                    Color.fromARGB(15, 108, 95, 255)
+                  ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -568,8 +570,10 @@ class _SessionInfoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dateStr = '${session.dateTime.day}/${session.dateTime.month}/${session.dateTime.year}';
-    final timeStr = '${session.dateTime.hour.toString().padLeft(2, '0')}:${session.dateTime.minute.toString().padLeft(2, '0')}';
+    final dateStr =
+        '${session.dateTime.day}/${session.dateTime.month}/${session.dateTime.year}';
+    final timeStr =
+        '${session.dateTime.hour.toString().padLeft(2, '0')}:${session.dateTime.minute.toString().padLeft(2, '0')}';
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -917,7 +921,8 @@ class _MapSection extends StatelessWidget {
                 ),
                 children: [
                   TileLayer(
-                    urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    urlTemplate:
+                        'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                     userAgentPackageName: 'com.racesense.pulse',
                   ),
                   PolylineLayer(
@@ -1008,7 +1013,8 @@ class _TechnicalDataSection extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.analytics_outlined, size: 16, color: kBrandColor),
+              const Icon(Icons.analytics_outlined,
+                  size: 16, color: kBrandColor),
               const SizedBox(width: 8),
               const Text(
                 'DATI TECNICI',

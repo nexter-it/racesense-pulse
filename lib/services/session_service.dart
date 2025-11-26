@@ -332,17 +332,26 @@ class SessionService {
   }
 
   /// Recupera le sessioni di un utente (solo metadata, no GPS)
-  Future<List<SessionModel>> getUserSessions(String userId,
-      {int limit = 20}) async {
+  /// [onlyPublic] se true filtra su isPublic == true
+  Future<List<SessionModel>> getUserSessions(
+    String userId, {
+    int limit = 20,
+    bool onlyPublic = false,
+  }) async {
     try {
       print('📥 Caricamento sessioni per user: $userId');
 
-      final querySnapshot = await _firestore
+      Query<Map<String, dynamic>> query = _firestore
           .collection('sessions')
           .where('userId', isEqualTo: userId)
           .orderBy('dateTime', descending: true)
-          .limit(limit)
-          .get();
+          .limit(limit);
+
+      if (onlyPublic) {
+        query = query.where('isPublic', isEqualTo: true);
+      }
+
+      final querySnapshot = await query.get();
 
       print('📊 Trovate ${querySnapshot.docs.length} sessioni');
 
@@ -388,6 +397,29 @@ class SessionService {
       rethrow;
     } catch (e) {
       print('❌ Errore generico getPublicSessions: $e');
+      rethrow;
+    }
+  }
+
+  /// Sessioni pubbliche per un circuito specifico
+  Future<List<SessionModel>> getPublicSessionsByTrack(
+    String trackName, {
+    int limit = 50,
+  }) async {
+    try {
+      final query = _firestore
+          .collection('sessions')
+          .where('isPublic', isEqualTo: true)
+          .where('trackName', isEqualTo: trackName)
+          .orderBy('dateTime', descending: true)
+          .limit(limit);
+
+      final snap = await query.get();
+      return snap.docs
+          .map((d) => SessionModel.fromFirestore(d.id, d.data()))
+          .toList();
+    } catch (e) {
+      print('❌ Errore getPublicSessionsByTrack: $e');
       rethrow;
     }
   }

@@ -71,14 +71,15 @@ class NewPostPage extends StatelessWidget {
                         )
                       ],
                     ),
-                    child: const Column(
+                    child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
                           children: [
-                            Icon(Icons.speed, color: kBrandColor, size: 20),
-                            SizedBox(width: 8),
-                            Text(
+                            const Icon(Icons.speed,
+                                color: kBrandColor, size: 20),
+                            const SizedBox(width: 8),
+                            const Text(
                               'Tracking live',
                               style: TextStyle(
                                 fontWeight: FontWeight.w900,
@@ -87,23 +88,78 @@ class NewPostPage extends StatelessWidget {
                             ),
                           ],
                         ),
-                        SizedBox(height: 12),
-                        Text(
-                          '• GPS a 1Hz (auto smoothing) + IMU\n'
-                          '• Riconoscimento start/finish automatico\n'
-                          '• Tempi, giri, delta, velocità e G-force\n'
-                          '• Recap finale con tracciato e grafici',
-                          style: TextStyle(
-                            fontSize: 13,
-                            height: 1.45,
-                            color: kMutedColor,
+                        const SizedBox(height: 10),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 8),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            color: const Color.fromRGBO(255, 255, 255, 0.05),
+                            border: Border.all(color: kLineColor),
                           ),
+                          child: Row(
+                            children: const [
+                              Icon(Icons.phone_iphone,
+                                  size: 16, color: kMutedColor),
+                              SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Sorgente dati attuale: GPS/IMU del telefono',
+                                  style: TextStyle(
+                                    color: kMutedColor,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        Row(
+                          children: const [
+                            Expanded(
+                              child: _FeaturePill(
+                                icon: Icons.sensors,
+                                title: 'Campionamento',
+                                subtitle: 'GPS ~1Hz con smoothing + IMU',
+                              ),
+                            ),
+                            SizedBox(width: 10),
+                            Expanded(
+                              child: _FeaturePill(
+                                icon: Icons.flag_circle_outlined,
+                                title: 'Start/Finish',
+                                subtitle: 'Riconoscimento automatico gate',
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        Row(
+                          children: const [
+                            Expanded(
+                              child: _FeaturePill(
+                                icon: Icons.timer_outlined,
+                                title: 'Telemetria',
+                                subtitle: 'Tempi, giri, delta live',
+                              ),
+                            ),
+                            SizedBox(width: 10),
+                            Expanded(
+                              child: _FeaturePill(
+                                icon: Icons.insert_chart_outlined,
+                                title: 'Recap',
+                                subtitle: 'Tracciato e grafici a fine sessione',
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
                   ),
 
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 15),
 
                   // CARD 2 — Dispositivi esterni
                   Container(
@@ -161,7 +217,24 @@ class NewPostPage extends StatelessWidget {
                               );
                             },
                             icon: const Icon(Icons.bluetooth_searching),
-                            label: const Text('Collega dispositivo'),
+                            label: const Text('Collega dispositivi tracking'),
+                          ),
+                        ),
+                        const SizedBox(height: 5),
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            onPressed: () {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Funzione in arrivo: collegamento dispositivo salute.',
+                                  ),
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.favorite_border),
+                            label: const Text('Collega dispositivo salute'),
                           ),
                         ),
                       ],
@@ -198,6 +271,61 @@ class NewPostPage extends StatelessWidget {
                   const SizedBox(height: 18),
                 ],
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FeaturePill extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+
+  const _FeaturePill({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(14),
+        color: const Color(0xFF0f1116),
+        border: Border.all(color: kLineColor),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: kBrandColor, size: 18),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: kFgColor,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 13,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    color: kMutedColor,
+                    fontSize: 11,
+                    height: 1.2,
+                  ),
+                ),
+              ],
             ),
           ),
         ],

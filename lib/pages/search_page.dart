@@ -1,6 +1,12 @@
+import 'dart:async';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import '../theme.dart';
 import '../widgets/pulse_background.dart';
+import 'search_user_profile_page.dart';
+import '../models/session_model.dart';
+import 'search_track_sessions_page.dart';
 
 /// Pagina Cerca - Mock UI (solo grafica, nessuna logica)
 /// Funzionalità future:
@@ -15,9 +21,23 @@ class SearchPage extends StatefulWidget {
   State<SearchPage> createState() => _SearchPageState();
 }
 
-class _SearchPageState extends State<SearchPage> with SingleTickerProviderStateMixin {
+class _SearchPageState extends State<SearchPage>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final TextEditingController _searchController = TextEditingController();
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  Timer? _debounce;
+  String _query = '';
+
+  bool _loadingUsers = false;
+  bool _loadingCircuits = false;
+  String? _usersError;
+  String? _circuitsError;
+
+  List<Map<String, dynamic>> _userResults = [];
+  Map<String, List<SessionModel>> _circuitGroups = {};
+  List<String> _circuitOrder = [];
 
   @override
   void initState() {
@@ -29,6 +49,7 @@ class _SearchPageState extends State<SearchPage> with SingleTickerProviderStateM
   void dispose() {
     _tabController.dispose();
     _searchController.dispose();
+    _debounce?.cancel();
     super.dispose();
   }
 
@@ -103,9 +124,8 @@ class _SearchPageState extends State<SearchPage> with SingleTickerProviderStateM
               ? IconButton(
                   icon: const Icon(Icons.clear, color: kMutedColor),
                   onPressed: () {
-                    setState(() {
-                      _searchController.clear();
-                    });
+                    _searchController.clear();
+                    _onQueryChanged('');
                   },
                 )
               : null,
@@ -119,10 +139,11 @@ class _SearchPageState extends State<SearchPage> with SingleTickerProviderStateM
             borderRadius: BorderRadius.circular(16),
             borderSide: const BorderSide(color: kBrandColor, width: 2),
           ),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         ),
         onChanged: (value) {
-          setState(() {});
+          _onQueryChanged(value);
         },
       ),
     );
@@ -154,113 +175,179 @@ class _SearchPageState extends State<SearchPage> with SingleTickerProviderStateM
   }
 
   Widget _buildUsersTab() {
+    if (_query.length < 2) {
+      return _buildSearchHint(
+        title: 'Cerca utenti',
+        subtitle: 'Digita almeno 2 caratteri per cercare per nome completo.',
+        placeholderList: _mockUsers.map((u) => _buildUserCard(u)).toList(),
+      );
+    }
+
+    if (_loadingUsers) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    print(_usersError);
+    if (_usersError != null) {
+      return _buildErrorBox(_usersError!);
+    }
+
+    if (_userResults.isEmpty) {
+      return _buildEmptyState('Nessun utente trovato con "$_query".');
+    }
+
     return ListView(
       padding: const EdgeInsets.all(16),
-      children: [
-        const Text(
-          'Utenti popolari',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 0.3,
-          ),
-        ),
-        const SizedBox(height: 16),
-        ..._mockUsers.map((user) => _buildUserCard(user)),
-      ],
+      children: _userResults.map((user) => _buildUserCard(user)).toList(),
     );
   }
 
   Widget _buildUserCard(Map<String, dynamic> user) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: const Color(0xFF10121A),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: kLineColor),
-      ),
-      child: Row(
-        children: [
-          // Avatar
-          CircleAvatar(
-            radius: 24,
-            backgroundColor: kBrandColor.withOpacity(0.2),
-            child: Text(
-              user['initials'],
-              style: const TextStyle(
-                color: kBrandColor,
-                fontWeight: FontWeight.w900,
-                fontSize: 16,
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
+    final fullName = user['fullName'] ?? user['name'] ?? '';
+    final stats = user['stats'] as Map<String, dynamic>? ?? {};
+    final totalSessions = stats['totalSessions'] ?? user['sessions'] ?? 0;
+    final totalDistance =
+        (stats['totalDistanceKm'] ?? user['distance'] ?? 0).toString();
+    final initials = user['initials'] ??
+        (fullName.isNotEmpty ? fullName[0].toUpperCase() : '?');
+    final userId = user['id']?.toString();
 
-          // Info
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  user['name'],
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
+    return InkWell(
+      onTap: (userId != null && userId.isNotEmpty)
+          ? () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => SearchUserProfilePage(
+                    userId: userId,
+                    fullName: fullName,
                   ),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  '${user['sessions']} sessioni · ${user['distance']} km',
-                  style: const TextStyle(fontSize: 12, color: kMutedColor),
+              );
+            }
+          : null,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: const Color(0xFF10121A),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: kLineColor),
+        ),
+        child: Row(
+          children: [
+            // Avatar
+            CircleAvatar(
+              radius: 24,
+              backgroundColor: kBrandColor.withOpacity(0.2),
+              child: Text(
+                initials.toString(),
+                style: const TextStyle(
+                  color: kBrandColor,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 16,
                 ),
-              ],
+              ),
             ),
-          ),
+            const SizedBox(width: 12),
 
-          // Follow button
-          OutlinedButton(
-            onPressed: () {},
-            style: OutlinedButton.styleFrom(
-              side: const BorderSide(color: kBrandColor),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+            // Info
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    fullName,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '$totalSessions sessioni · $totalDistance km',
+                    style: const TextStyle(fontSize: 12, color: kMutedColor),
+                  ),
+                ],
               ),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             ),
-            child: const Text(
-              'Segui',
-              style: TextStyle(
-                color: kBrandColor,
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
+
+            // Follow button placeholder
+            OutlinedButton(
+              onPressed: () {},
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: kBrandColor),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              ),
+              child: const Text(
+                'Segui',
+                style: TextStyle(
+                  color: kBrandColor,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildCircuitsTab() {
+    if (_query.length < 2) {
+      return _buildSearchHint(
+        title: 'Cerca circuiti',
+        subtitle:
+            'Digita almeno 2 caratteri per cercare tra le sessioni pubbliche per nome circuito.',
+        placeholderList:
+            _mockCircuits.map((circuit) => _buildCircuitCard(circuit)).toList(),
+      );
+    }
+
+    if (_loadingCircuits) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_circuitsError != null) {
+      return _buildErrorBox(_circuitsError!);
+    }
+
+    if (_circuitGroups.isEmpty) {
+      return _buildEmptyState('Nessun circuito trovato con "$_query".');
+    }
+
     return ListView(
       padding: const EdgeInsets.all(16),
-      children: [
-        const Text(
-          'Circuiti più popolari',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 0.3,
-          ),
-        ),
-        const SizedBox(height: 16),
-        ..._mockCircuits.map((circuit) => _buildCircuitCard(circuit)),
-      ],
+      children: _circuitOrder
+          .map((name) => _buildCircuitGroupCard(
+                name,
+                _circuitGroups[name]!,
+              ))
+          .toList(),
     );
   }
 
-  Widget _buildCircuitCard(Map<String, dynamic> circuit) {
+  Widget _buildCircuitGroupCard(String trackName, List<SessionModel> sessions) {
+    final location = sessions.first.location;
+    final totalSessions = sessions.length;
+    final bestLap = sessions
+        .where((s) => s.bestLap != null)
+        .map((s) => s.bestLap!)
+        .fold<Duration?>(null, (prev, d) {
+      if (prev == null) return d;
+      return d < prev ? d : prev;
+    });
+    final avgDistance = sessions.isNotEmpty
+        ? sessions.map((s) => s.distanceKm).reduce((a, b) => a + b) /
+            sessions.length
+        : 0.0;
+    final bestLapStr =
+        bestLap != null ? _formatBestLap(bestLap.inMilliseconds) : '—';
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -282,7 +369,8 @@ class _SearchPageState extends State<SearchPage> with SingleTickerProviderStateM
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: kBrandColor.withOpacity(0.3)),
                 ),
-                child: const Icon(Icons.track_changes, color: kBrandColor, size: 28),
+                child: const Icon(Icons.track_changes,
+                    color: kBrandColor, size: 28),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -290,7 +378,7 @@ class _SearchPageState extends State<SearchPage> with SingleTickerProviderStateM
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      circuit['name'],
+                      trackName,
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w900,
@@ -299,11 +387,13 @@ class _SearchPageState extends State<SearchPage> with SingleTickerProviderStateM
                     const SizedBox(height: 2),
                     Row(
                       children: [
-                        const Icon(Icons.location_on, size: 12, color: kMutedColor),
+                        const Icon(Icons.location_on,
+                            size: 12, color: kMutedColor),
                         const SizedBox(width: 4),
                         Text(
-                          circuit['location'],
-                          style: const TextStyle(fontSize: 12, color: kMutedColor),
+                          location,
+                          style:
+                              const TextStyle(fontSize: 12, color: kMutedColor),
                         ),
                       ],
                     ),
@@ -316,9 +406,107 @@ class _SearchPageState extends State<SearchPage> with SingleTickerProviderStateM
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _buildCircuitStat('Lunghezza', circuit['length']),
-              _buildCircuitStat('Sessioni', circuit['sessions']),
-              _buildCircuitStat('Record', circuit['record']),
+              _buildCircuitStat(
+                  'Avg distanza', '${avgDistance.toStringAsFixed(1)} km'),
+              _buildCircuitStat('Sessioni', totalSessions.toString()),
+              _buildCircuitStat('Record', bestLapStr),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton.icon(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => SearchTrackSessionsPage(
+                      trackName: trackName,
+                      preloaded: sessions,
+                    ),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.list_alt_outlined),
+              label: const Text('Vedi sessioni'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Mock/placeholder card for circuiti statici
+  Widget _buildCircuitCard(Map<String, dynamic> circuit) {
+    final name = (circuit['name'] ?? circuit['trackName'] ?? '').toString();
+    final location = (circuit['location'] ?? '-').toString();
+    final length =
+        (circuit['length'] ?? circuit['estimatedLength'] ?? '—').toString();
+    final sessions =
+        (circuit['sessions'] ?? circuit['sessionCount'] ?? '—').toString();
+    final record =
+        _formatBestLap(circuit['record'] ?? circuit['bestLap'] ?? '—');
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF10121A),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: kLineColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: kBrandColor.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: kBrandColor.withOpacity(0.3)),
+                ),
+                child: const Icon(Icons.track_changes,
+                    color: kBrandColor, size: 28),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        const Icon(Icons.location_on,
+                            size: 12, color: kMutedColor),
+                        const SizedBox(width: 4),
+                        Text(
+                          location,
+                          style:
+                              const TextStyle(fontSize: 12, color: kMutedColor),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _buildCircuitStat('Lunghezza', length),
+              _buildCircuitStat('Sessioni', sessions),
+              _buildCircuitStat('Record', record),
             ],
           ),
         ],
@@ -497,9 +685,11 @@ class _SearchPageState extends State<SearchPage> with SingleTickerProviderStateM
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          _buildLegendItem(Colors.greenAccent, 'Circuiti verificati'),
+                          _buildLegendItem(
+                              Colors.greenAccent, 'Circuiti verificati'),
                           const SizedBox(height: 6),
-                          _buildLegendItem(Colors.blueAccent, 'Circuiti community'),
+                          _buildLegendItem(
+                              Colors.blueAccent, 'Circuiti community'),
                           const SizedBox(height: 6),
                           _buildLegendItem(kBrandColor, 'Le mie sessioni'),
                         ],
@@ -558,15 +748,267 @@ class _SearchPageState extends State<SearchPage> with SingleTickerProviderStateM
       ],
     );
   }
+
+  String _formatBestLap(dynamic raw) {
+    if (raw == null) return '—';
+    if (raw is String) return raw;
+    if (raw is int) {
+      final d = Duration(milliseconds: raw);
+      final minutes = d.inMinutes;
+      final seconds = d.inSeconds % 60;
+      final millis = (d.inMilliseconds % 1000) ~/ 10;
+      return '$minutes:${seconds.toString().padLeft(2, '0')}.${millis.toString().padLeft(2, '0')}';
+    }
+    if (raw is double) return raw.toStringAsFixed(2);
+    return raw.toString();
+  }
+
+  List<String> _tokenize(String input) {
+    final tokens = <String>{};
+    final cleaned = input.toLowerCase().trim();
+    if (cleaned.isEmpty) return [];
+    final parts = cleaned.split(RegExp(r'\s+'));
+    for (final part in parts) {
+      if (part.isEmpty) continue;
+      for (int i = 1; i <= part.length; i++) {
+        tokens.add(part.substring(0, i));
+      }
+    }
+    for (int i = 1; i <= cleaned.length; i++) {
+      tokens.add(cleaned.substring(0, i));
+    }
+    return tokens.toList();
+  }
+
+  // ===== Helper UI =====
+  Widget _buildSearchHint({
+    required String title,
+    required String subtitle,
+    required List<Widget> placeholderList,
+  }) {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 0.3,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          subtitle,
+          style: const TextStyle(fontSize: 12, color: kMutedColor),
+        ),
+        const SizedBox(height: 16),
+        ...placeholderList,
+      ],
+    );
+  }
+
+  Widget _buildEmptyState(String message) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.search_off, color: kMutedColor, size: 44),
+            const SizedBox(height: 10),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: kMutedColor),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildErrorBox(String message) {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: kErrorColor.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: kErrorColor),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Icon(Icons.error_outline, color: kErrorColor),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(color: kErrorColor),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ===== Search logic =====
+  void _onQueryChanged(String value) {
+    _debounce?.cancel();
+    setState(() {
+      _query = value.trim();
+    });
+
+    if (_query.length < 2) {
+      setState(() {
+        _userResults = [];
+        _circuitGroups = {};
+        _circuitOrder = [];
+        _usersError = null;
+        _circuitsError = null;
+      });
+      return;
+    }
+
+    _debounce = Timer(const Duration(milliseconds: 350), () {
+      _runSearch(_query);
+    });
+  }
+
+  Future<void> _runSearch(String term) async {
+    await Future.wait([
+      _searchUsers(term),
+      _searchCircuits(term),
+    ]);
+  }
+
+  Future<void> _searchUsers(String term) async {
+    setState(() {
+      _loadingUsers = true;
+      _usersError = null;
+    });
+
+    try {
+      final tokens = _tokenize(term);
+      if (tokens.isEmpty) {
+        setState(() {
+          _userResults = [];
+        });
+        return;
+      }
+
+      final snap = await _firestore
+          .collection('users')
+          .where('searchTokens', arrayContainsAny: tokens.take(10).toList())
+          .orderBy('fullName')
+          .limit(20)
+          .get();
+
+      final results = snap.docs.map((d) {
+        final data = d.data();
+        return {
+          'id': d.id,
+          ...data,
+        };
+      }).toList();
+
+      setState(() {
+        _userResults = results;
+      });
+    } catch (e) {
+      // Mostra errore in console per link indici Firestore
+      // ignore: avoid_print
+      print('❌ Search users error: $e');
+      // Mostra l'errore per poter creare l'indice Firestore se richiesto
+      setState(() {
+        _usersError = e.toString();
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _loadingUsers = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _searchCircuits(String term) async {
+    setState(() {
+      _loadingCircuits = true;
+      _circuitsError = null;
+    });
+
+    try {
+      final snap = await _firestore
+          .collection('sessions')
+          .where('isPublic', isEqualTo: true)
+          .orderBy('trackName')
+          .startAt([term])
+          .endAt(['$term\uf8ff'])
+          .limit(40)
+          .get();
+
+      final results = snap.docs.map((d) {
+        final data = d.data();
+        return SessionModel.fromFirestore(d.id, data);
+      }).toList();
+
+      final groups = <String, List<SessionModel>>{};
+      for (final s in results) {
+        groups.putIfAbsent(s.trackName, () => []).add(s);
+      }
+
+      setState(() {
+        _circuitGroups = groups;
+        _circuitOrder = groups.keys.toList();
+      });
+    } catch (e) {
+      // Mostra errore in console per link indici Firestore
+      // ignore: avoid_print
+      print('❌ Search circuits error: $e');
+      setState(() {
+        _circuitsError = e.toString();
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _loadingCircuits = false;
+        });
+      }
+    }
+  }
 }
 
 // Mock data
 final _mockUsers = [
-  {'initials': 'LH', 'name': 'Lewis Hamilton', 'sessions': 142, 'distance': 2840},
-  {'initials': 'MV', 'name': 'Max Verstappen', 'sessions': 128, 'distance': 2560},
-  {'initials': 'CF', 'name': 'Charles Leclerc', 'sessions': 95, 'distance': 1900},
+  {
+    'initials': 'LH',
+    'name': 'Lewis Hamilton',
+    'sessions': 142,
+    'distance': 2840
+  },
+  {
+    'initials': 'MV',
+    'name': 'Max Verstappen',
+    'sessions': 128,
+    'distance': 2560
+  },
+  {
+    'initials': 'CF',
+    'name': 'Charles Leclerc',
+    'sessions': 95,
+    'distance': 1900
+  },
   {'initials': 'LN', 'name': 'Lando Norris', 'sessions': 87, 'distance': 1740},
-  {'initials': 'SA', 'name': 'Sebastian Alonso', 'sessions': 76, 'distance': 1520},
+  {
+    'initials': 'SA',
+    'name': 'Sebastian Alonso',
+    'sessions': 76,
+    'distance': 1520
+  },
 ];
 
 final _mockCircuits = [
