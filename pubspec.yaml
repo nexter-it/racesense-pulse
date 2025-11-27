@@ -18,6 +18,7 @@ dependencies:
   # Tracking
   geolocator: ^13.0.1
   sensors_plus: ^5.0.0
+  geocoding: ^3.0.0
 
   # Mappa OpenStreetMap
   flutter_map: ^7.0.2
@@ -25,6 +26,12 @@ dependencies:
 
   # Grafici
   fl_chart: ^0.69.0
+
+  # Firebase
+  firebase_core: ^4.2.1
+  firebase_auth: ^6.1.2
+  cloud_firestore: ^6.1.0
+  shared_preferences: ^2.3.3
 
 dev_dependencies:
   flutter_test:
@@ -35,4 +42,4 @@ flutter:
   uses-material-design: true
 
   assets:
-    - assets/images/logonexter.png
+    - assets/images/

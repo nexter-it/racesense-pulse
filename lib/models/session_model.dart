@@ -38,6 +38,7 @@ class SessionModel {
   final String sessionId;
   final String userId;
   final String trackName;
+  final String driverFullName;
   final String location; // "Misano, Italy"
   final GeoPoint locationCoords; // Coordinate centro circuito
   final DateTime dateTime;
@@ -64,6 +65,7 @@ class SessionModel {
     required this.sessionId,
     required this.userId,
     required this.trackName,
+    required this.driverFullName,
     required this.location,
     required this.locationCoords,
     required this.dateTime,
@@ -85,6 +87,7 @@ class SessionModel {
     final data = <String, dynamic>{
       'userId': userId,
       'trackName': trackName,
+      'driverfullName': driverFullName,
       'location': location,
       'locationCoords': locationCoords,
       'dateTime': Timestamp.fromDate(dateTime),
@@ -129,6 +132,10 @@ class SessionModel {
       sessionId: sessionId,
       userId: data['userId'] as String,
       trackName: data['trackName'] as String,
+      driverFullName:
+          data['driverfullName'] as String? ??
+          data['driverFullName'] as String? ??
+          'Pilota',
       location: data['location'] as String,
       locationCoords: data['locationCoords'] as GeoPoint,
       dateTime: (data['dateTime'] as Timestamp).toDate(),

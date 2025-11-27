@@ -144,6 +144,8 @@ class SessionRecapPage extends StatelessWidget {
       final sessionService = SessionService();
       await sessionService.saveSession(
         userId: user.uid,
+        driverFullName:
+            user.displayName ?? user.email ?? 'Pilota',
         trackName: metadata.trackName,
         location: metadata.location,
         locationCoords: metadata.locationCoords,

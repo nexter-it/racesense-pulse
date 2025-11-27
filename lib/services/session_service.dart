@@ -16,6 +16,7 @@ class SessionService {
   /// Ottimizzato per scalabilità con sub-collections
   Future<String> saveSession({
     required String userId,
+    required String driverFullName,
     required String trackName,
     required String location,
     required GeoPoint locationCoords,
@@ -65,6 +66,7 @@ class SessionService {
         sessionId: '', // Verrà assegnato da Firestore
         userId: userId,
         trackName: trackName,
+        driverFullName: driverFullName,
         location: location,
         locationCoords: locationCoords,
         dateTime: DateTime.now(),

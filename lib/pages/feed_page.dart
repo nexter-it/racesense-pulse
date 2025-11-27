@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import '../theme.dart';
 import '../widgets/pulse_background.dart';
@@ -469,7 +471,7 @@ class _ActivityCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final sessionType = 'Sessione';
-    final pilotName = 'Pilota'; // placeholder per ora
+    final pilotName = session.driverFullName;
     final pilotTag = session.userId.substring(0, 3).toUpperCase();
 
     final circuitName = session.trackName;
@@ -496,16 +498,23 @@ class _ActivityCard extends StatelessWidget {
           child: Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(20),
-              color: const Color(0xFF10121A),
+              gradient: const LinearGradient(
+                colors: [
+                  Color(0xFF0E1118),
+                  Color(0xFF0A0C11),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
               border: Border.all(
-                color: kLineColor.withOpacity(0.9),
-                width: 1.2,
+                color: kLineColor.withOpacity(0.45),
+                width: 1,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.6),
-                  blurRadius: 18,
-                  spreadRadius: -4,
+                  color: Colors.black.withOpacity(0.35),
+                  blurRadius: 14,
+                  spreadRadius: -2,
                   offset: const Offset(0, 8),
                 ),
               ],
@@ -518,7 +527,7 @@ class _ActivityCard extends StatelessWidget {
                   // ----- HEADER PILOTA -----
                   Row(
                     children: [
-                      _AvatarInitials(tag: pilotTag),
+                      _AvatarUser(userId: session.userId),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Column(
@@ -547,9 +556,10 @@ class _ActivityCard extends StatelessWidget {
                             horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(999),
-                          color: const Color.fromRGBO(255, 255, 255, 0.06),
-                          border:
-                              Border.all(color: kLineColor.withOpacity(0.8)),
+                          color: const Color.fromRGBO(255, 255, 255, 0.04),
+                          border: Border.all(
+                            color: kLineColor.withOpacity(0.5),
+                          ),
                         ),
                         child: Text(
                           _timeAgo(),
@@ -568,7 +578,7 @@ class _ActivityCard extends StatelessWidget {
                   Container(
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: kLineColor),
+                      border: Border.all(color: kLineColor.withOpacity(0.35)),
                       gradient: const LinearGradient(
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
@@ -728,10 +738,17 @@ String _formatLap(Duration d) {
     AVATAR
 ============================================================ */
 
-class _AvatarInitials extends StatelessWidget {
-  final String tag;
+class _AvatarUser extends StatelessWidget {
+  final String userId;
 
-  const _AvatarInitials({required this.tag});
+  const _AvatarUser({required this.userId});
+
+  String _assetForUser() {
+    // Selezione deterministica tra 1..5 usando un seed Random
+    // final seed = userId.hashCode & 0x7fffffff;
+    final idx = (Random().nextInt(5)) + 1;
+    return 'assets/images/dr$idx.png';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -741,24 +758,15 @@ class _AvatarInitials extends StatelessWidget {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: const Color.fromRGBO(10, 12, 18, 1),
-        border: Border.all(color: kBrandColor, width: 1.4),
-        boxShadow: [
-          BoxShadow(
-            color: kBrandColor.withOpacity(0.4),
-            blurRadius: 10,
-            spreadRadius: 1,
-          ),
-        ],
+        border: Border.all(color: kLineColor.withOpacity(0.5), width: 1.2),
       ),
-      child: Center(
-        child: Text(
-          tag,
-          style: const TextStyle(
-            fontWeight: FontWeight.w900,
-            fontSize: 13,
-            letterSpacing: 1.1,
-          ),
-        ),
+      clipBehavior: Clip.antiAlias,
+      child: Image.asset(
+        _assetForUser(),
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) {
+          return const Icon(Icons.person, color: kMutedColor);
+        },
       ),
     );
   }
