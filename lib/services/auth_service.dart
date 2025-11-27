@@ -32,8 +32,21 @@ class AuthService {
     String email,
     String password,
     String displayName,
+    String usernameInput,
   ) async {
     try {
+      final firestoreService = FirestoreService();
+      final sanitizedUsername =
+          firestoreService.sanitizeUsername(usernameInput.trim());
+      if (sanitizedUsername.isEmpty) {
+        throw 'Username non valido. Usa solo lettere e numeri.';
+      }
+      final available =
+          await firestoreService.isUsernameAvailable(sanitizedUsername);
+      if (!available) {
+        throw 'Username non disponibile.';
+      }
+
       final credential = await _auth.createUserWithEmailAndPassword(
         email: email.trim(),
         password: password,
@@ -45,10 +58,11 @@ class AuthService {
 
       // Crea documento utente in Firestore
       if (credential.user != null) {
-        await _firestoreService.createUserDocument(
+        await firestoreService.createUserDocument(
           userId: credential.user!.uid,
           fullName: displayName.trim(),
           email: email.trim(),
+          username: sanitizedUsername,
         );
       }
 

@@ -32,24 +32,73 @@ class FirestoreService {
     }, SetOptions(merge: true));
   }
 
+  Future<String?> ensureUsernameForUser(String userId, String fullName) async {
+    final docRef = _firestore.collection('users').doc(userId);
+    final doc = await docRef.get();
+    final current = doc.data()?['username'] as String?;
+    if (current != null && current.isNotEmpty) return current;
+
+    final candidate = sanitizeUsername(fullName.isNotEmpty ? fullName : 'user');
+    final username = candidate.isEmpty ? 'user$userId' : candidate;
+    try {
+      await reserveUsername(userId, username);
+      await docRef.set({'username': username}, SetOptions(merge: true));
+      return username;
+    } catch (_) {
+      return username;
+    }
+  }
+
   // Crea un nuovo documento utente in Firestore
+  String sanitizeUsername(String raw) {
+    return raw
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9]'), '')
+        .trim();
+  }
+
+  Future<bool> isUsernameAvailable(String username) async {
+    final doc =
+        await _firestore.collection('usernames').doc(username).get();
+    return !doc.exists;
+  }
+
+  Future<void> reserveUsername(String userId, String username) async {
+    final docRef = _firestore.collection('usernames').doc(username);
+    await _firestore.runTransaction((tx) async {
+      final snap = await tx.get(docRef);
+      if (snap.exists) {
+        throw 'Username non disponibile';
+      }
+      tx.set(docRef, {
+        'userId': userId,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+    });
+  }
+
   Future<void> createUserDocument({
     required String userId,
     required String fullName,
     required String email,
+    required String username,
   }) async {
     try {
       final tokens = _buildSearchTokens(fullName);
+       await reserveUsername(userId, username);
       await _firestore.collection('users').doc(userId).set({
         'userId': userId,
         'fullName': fullName,
         'email': email,
+        'username': username,
         'searchTokens': tokens,
         'createdAt': FieldValue.serverTimestamp(),
         'stats': {
           'totalSessions': 0,
           'totalDistanceKm': 0.0,
           'totalLaps': 0,
+          'followerCount': 0,
+          'followingCount': 0,
           'bestLapEver': null,
           'bestLapTrack': null,
           'personalBests': 0,
@@ -117,6 +166,8 @@ class FirestoreService {
           'totalSessions': FieldValue.increment(0),
           'totalDistanceKm': FieldValue.increment(0),
           'totalLaps': FieldValue.increment(0),
+          'followerCount': FieldValue.increment(0),
+          'followingCount': FieldValue.increment(0),
           'bestLapEver': null,
           'bestLapTrack': null,
           'personalBests': FieldValue.increment(0),

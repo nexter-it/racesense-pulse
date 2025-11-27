@@ -10,6 +10,7 @@ import '../widgets/pulse_background.dart';
 import '../widgets/pulse_chip.dart';
 import '../models/session_model.dart';
 import '../services/session_service.dart';
+import 'search_user_profile_page.dart';
 import 'dart:ui' as ui;
 
 class ActivityDetailPage extends StatefulWidget {
@@ -168,6 +169,8 @@ class _ActivityDetailPageState extends State<ActivityDetailPage> {
         child: Column(
           children: [
             _TopBar(session: _session, device: deviceUsed),
+            const SizedBox(height: 8),
+            _PilotHeader(session: _session),
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
@@ -225,6 +228,84 @@ class _ActivityDetailPageState extends State<ActivityDetailPage> {
                 ),
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PilotHeader extends StatelessWidget {
+  final SessionModel session;
+
+  const _PilotHeader({required this.session});
+
+  @override
+  Widget build(BuildContext context) {
+    final seed = session.userId.hashCode & 0x7fffffff;
+    final idx = (math.Random(seed).nextInt(5)) + 1;
+    final asset = 'assets/images/dr$idx.png';
+    return InkWell(
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => SearchUserProfilePage(
+              userId: session.userId,
+              fullName: session.driverFullName,
+            ),
+          ),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(15),
+          color: const Color.fromRGBO(255, 255, 255, 0.04),
+          border: Border.all(color: kLineColor),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: kLineColor.withOpacity(0.6)),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: Image.asset(
+                asset,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) =>
+                    const Icon(Icons.person, color: kMutedColor),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    session.driverFullName,
+                    style: const TextStyle(
+                      color: kFgColor,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 15,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '@${session.driverUsername}',
+                    style: const TextStyle(
+                      color: kMutedColor,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right, color: kMutedColor),
           ],
         ),
       ),

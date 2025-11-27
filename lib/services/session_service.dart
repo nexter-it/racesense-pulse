@@ -17,6 +17,7 @@ class SessionService {
   Future<String> saveSession({
     required String userId,
     required String driverFullName,
+    required String driverUsername,
     required String trackName,
     required String location,
     required GeoPoint locationCoords,
@@ -67,6 +68,7 @@ class SessionService {
         userId: userId,
         trackName: trackName,
         driverFullName: driverFullName,
+        driverUsername: driverUsername,
         location: location,
         locationCoords: locationCoords,
         dateTime: DateTime.now(),
@@ -107,6 +109,56 @@ class SessionService {
     } catch (e) {
       throw 'Errore nel salvataggio della sessione: $e';
     }
+  }
+
+  Future<void> updateSessionMetadata({
+    required String sessionId,
+    required String ownerId,
+    required String trackName,
+    required String location,
+    required GeoPoint locationCoords,
+    required bool isPublic,
+  }) async {
+    final docRef = _firestore.collection('sessions').doc(sessionId);
+    final doc = await docRef.get();
+    if (!doc.exists || doc.data()?['userId'] != ownerId) {
+      throw 'Non autorizzato a modificare questa sessione';
+    }
+
+    await docRef.update({
+      'trackName': trackName,
+      'location': location,
+      'locationCoords': locationCoords,
+      'isPublic': isPublic,
+    });
+  }
+
+  Future<void> deleteSession({
+    required String sessionId,
+    required String ownerId,
+  }) async {
+    final docRef = _firestore.collection('sessions').doc(sessionId);
+    final doc = await docRef.get();
+    if (!doc.exists || doc.data()?['userId'] != ownerId) {
+      throw 'Non autorizzato a eliminare questa sessione';
+    }
+
+    final data = doc.data()!;
+    final distanceKm = (data['distanceKm'] as num?)?.toDouble() ?? 0.0;
+    final laps = data['lapCount'] as int? ?? 0;
+
+    final batch = _firestore.batch();
+    batch.delete(docRef);
+
+    // Decrementa statistiche utente (clamp lato client, ma Firestore gestisce con increment negativo)
+    final userRef = _firestore.collection('users').doc(ownerId);
+    batch.update(userRef, {
+      'stats.totalSessions': FieldValue.increment(-1),
+      'stats.totalDistanceKm': FieldValue.increment(-distanceKm),
+      'stats.totalLaps': FieldValue.increment(-laps),
+    });
+
+    await batch.commit();
   }
 
   /// Salva i giri in una sub-collection
@@ -228,6 +280,8 @@ class SessionService {
           1,
         ),
         totalLaps: currentStats.totalLaps + lapsCount,
+        followerCount: currentStats.followerCount,
+        followingCount: currentStats.followingCount,
         bestLapEver: _getBestLap(currentStats.bestLapEver, bestLap),
         bestLapTrack: _getBestLap(currentStats.bestLapEver, bestLap) == bestLap
             ? trackName

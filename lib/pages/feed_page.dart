@@ -1,6 +1,5 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
+import 'dart:math' as math;
 import '../theme.dart';
 import '../widgets/pulse_background.dart';
 import '../widgets/pulse_chip.dart';
@@ -128,54 +127,6 @@ List<Offset> _buildTrack2dFromSession(SessionModel session) {
 
   return points;
 }
-
-final _mockActivities = <PulseActivity>[
-  PulseActivity(
-    id: '1',
-    pilotName: 'Luca Martini',
-    pilotTag: 'LMC',
-    circuitName: 'Autodromo di Monza',
-    city: 'Monza',
-    country: 'IT',
-    bestLap: '1:59.432',
-    sessionType: 'Gara',
-    laps: 18,
-    isPb: true,
-    distanceKm: 104.3,
-    date: DateTime.now().subtract(const Duration(hours: 2)),
-    track2d: _generateFakeTrack(rotationDeg: 5), // 👈
-  ),
-  PulseActivity(
-    id: '2',
-    pilotName: 'Sara Rossi',
-    pilotTag: 'SRS',
-    circuitName: 'Mugello Circuit',
-    city: 'Scarperia',
-    country: 'IT',
-    bestLap: '2:05.210',
-    sessionType: 'Practice',
-    laps: 12,
-    isPb: false,
-    distanceKm: 67.8,
-    date: DateTime.now().subtract(const Duration(days: 1, hours: 3)),
-    track2d: _generateFakeTrack(rotationDeg: -12), // 👈
-  ),
-  PulseActivity(
-    id: '3',
-    pilotName: 'Marco Bianchi',
-    pilotTag: 'MB9',
-    circuitName: 'Circuit de Barcelona-Catalunya',
-    city: 'Barcelona',
-    country: 'ES',
-    bestLap: '1:52.001',
-    sessionType: 'Qualifica',
-    laps: 10,
-    isPb: true,
-    distanceKm: 54.0,
-    date: DateTime.now().subtract(const Duration(days: 2, hours: 5)),
-    track2d: _generateFakeTrack(rotationDeg: 25), // 👈
-  ),
-];
 
 class FeedPage extends StatelessWidget {
   const FeedPage({super.key});
@@ -472,7 +423,7 @@ class _ActivityCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final sessionType = 'Sessione';
     final pilotName = session.driverFullName;
-    final pilotTag = session.userId.substring(0, 3).toUpperCase();
+    final pilotTag = session.driverUsername;
 
     final circuitName = session.trackName;
     final city = session.location;
@@ -542,7 +493,7 @@ class _ActivityCard extends StatelessWidget {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              '@${pilotTag}',
+                              '@$pilotTag',
                               style: const TextStyle(
                                 color: kMutedColor,
                                 fontSize: 12,
@@ -744,9 +695,8 @@ class _AvatarUser extends StatelessWidget {
   const _AvatarUser({required this.userId});
 
   String _assetForUser() {
-    // Selezione deterministica tra 1..5 usando un seed Random
-    // final seed = userId.hashCode & 0x7fffffff;
-    final idx = (Random().nextInt(5)) + 1;
+    final seed = userId.hashCode & 0x7fffffff;
+    final idx = (math.Random(seed).nextInt(5)) + 1;
     return 'assets/images/dr$idx.png';
   }
 

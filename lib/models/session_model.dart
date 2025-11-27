@@ -39,6 +39,7 @@ class SessionModel {
   final String userId;
   final String trackName;
   final String driverFullName;
+  final String driverUsername;
   final String location; // "Misano, Italy"
   final GeoPoint locationCoords; // Coordinate centro circuito
   final DateTime dateTime;
@@ -66,6 +67,7 @@ class SessionModel {
     required this.userId,
     required this.trackName,
     required this.driverFullName,
+    required this.driverUsername,
     required this.location,
     required this.locationCoords,
     required this.dateTime,
@@ -88,6 +90,7 @@ class SessionModel {
       'userId': userId,
       'trackName': trackName,
       'driverfullName': driverFullName,
+      'driverUsername': driverUsername,
       'location': location,
       'locationCoords': locationCoords,
       'dateTime': Timestamp.fromDate(dateTime),
@@ -136,6 +139,11 @@ class SessionModel {
           data['driverfullName'] as String? ??
           data['driverFullName'] as String? ??
           'Pilota',
+      driverUsername: data['driverUsername'] as String? ??
+          (data['driverfullName'] as String?)
+              ?.toLowerCase()
+              .replaceAll(RegExp(r'[^a-z0-9]'), '') ??
+          'user',
       location: data['location'] as String,
       locationCoords: data['locationCoords'] as GeoPoint,
       dateTime: (data['dateTime'] as Timestamp).toDate(),
@@ -268,6 +276,8 @@ class UserStats {
   final int totalSessions;
   final double totalDistanceKm;
   final int totalLaps;
+  final int followerCount;
+  final int followingCount;
   final Duration? bestLapEver;
   final String? bestLapTrack;
   final int personalBests; // Numero di circuiti con PB
@@ -276,6 +286,8 @@ class UserStats {
     required this.totalSessions,
     required this.totalDistanceKm,
     required this.totalLaps,
+    required this.followerCount,
+    required this.followingCount,
     this.bestLapEver,
     this.bestLapTrack,
     required this.personalBests,
@@ -286,6 +298,8 @@ class UserStats {
       'totalSessions': totalSessions,
       'totalDistanceKm': totalDistanceKm,
       'totalLaps': totalLaps,
+      'followerCount': followerCount,
+      'followingCount': followingCount,
       'bestLapEver': bestLapEver?.inMilliseconds,
       'bestLapTrack': bestLapTrack,
       'personalBests': personalBests,
@@ -297,6 +311,8 @@ class UserStats {
       totalSessions: map['totalSessions'] as int? ?? 0,
       totalDistanceKm: (map['totalDistanceKm'] as num?)?.toDouble() ?? 0.0,
       totalLaps: map['totalLaps'] as int? ?? 0,
+      followerCount: map['followerCount'] as int? ?? 0,
+      followingCount: map['followingCount'] as int? ?? 0,
       bestLapEver: map['bestLapEver'] != null
           ? Duration(milliseconds: map['bestLapEver'] as int)
           : null,
@@ -310,6 +326,8 @@ class UserStats {
       totalSessions: 0,
       totalDistanceKm: 0.0,
       totalLaps: 0,
+      followerCount: 0,
+      followingCount: 0,
       personalBests: 0,
     );
   }

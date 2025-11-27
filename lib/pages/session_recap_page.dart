@@ -12,6 +12,7 @@ import '../theme.dart';
 import '../widgets/pulse_background.dart';
 import '../widgets/session_metadata_dialog.dart';
 import '../services/session_service.dart';
+import '../services/firestore_service.dart';
 import '../models/session_model.dart';
 
 class SessionRecapPage extends StatelessWidget {
@@ -142,10 +143,18 @@ class SessionRecapPage extends StatelessWidget {
 
     try {
       final sessionService = SessionService();
+      final fsService = FirestoreService();
+      final userData = await fsService.getUserData(user.uid);
+      final username = userData?['username'] as String? ??
+          (userData?['fullName'] as String?)
+              ?.toLowerCase()
+              .replaceAll(RegExp(r'[^a-z0-9]'), '') ??
+          'user';
       await sessionService.saveSession(
         userId: user.uid,
         driverFullName:
             user.displayName ?? user.email ?? 'Pilota',
+        driverUsername: username,
         trackName: metadata.trackName,
         location: metadata.location,
         locationCoords: metadata.locationCoords,

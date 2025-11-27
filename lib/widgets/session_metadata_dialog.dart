@@ -20,10 +20,18 @@ class SessionMetadata {
 
 class SessionMetadataDialog extends StatefulWidget {
   final List<Position> gpsTrack;
+  final String? initialTrackName;
+  final String? initialLocationName;
+  final GeoPoint? initialLocationCoords;
+  final bool? initialIsPublic;
 
   const SessionMetadataDialog({
     super.key,
     required this.gpsTrack,
+    this.initialTrackName,
+    this.initialLocationName,
+    this.initialLocationCoords,
+    this.initialIsPublic,
   });
 
   @override
@@ -40,6 +48,20 @@ class _SessionMetadataDialogState extends State<SessionMetadataDialog> {
   @override
   void initState() {
     super.initState();
+    if (widget.initialTrackName != null) {
+      _trackNameController.text = widget.initialTrackName!;
+    }
+    if (widget.initialLocationName != null) {
+      _locationName = widget.initialLocationName!;
+      _isLoadingLocation = false;
+    }
+    if (widget.initialLocationCoords != null) {
+      _locationCoords = widget.initialLocationCoords;
+      _isLoadingLocation = false;
+    }
+    if (widget.initialIsPublic != null) {
+      _isPublic = widget.initialIsPublic!;
+    }
     _loadLocationName();
   }
 
@@ -50,6 +72,10 @@ class _SessionMetadataDialogState extends State<SessionMetadataDialog> {
   }
 
   Future<void> _loadLocationName() async {
+    if (widget.initialLocationCoords != null &&
+        widget.initialLocationName != null) {
+      return;
+    }
     if (widget.gpsTrack.isEmpty) {
       setState(() {
         _locationName = 'Località non disponibile';

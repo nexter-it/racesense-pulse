@@ -3,9 +3,12 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../theme.dart';
 import '../widgets/pulse_background.dart';
 import '../widgets/pulse_chip.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/firestore_service.dart';
 import '../services/session_service.dart';
 import '../models/session_model.dart';
+import '../widgets/follow_counts.dart';
+import '../services/follow_service.dart';
 
 class SearchUserProfilePage extends StatefulWidget {
   final String userId;
@@ -24,6 +27,7 @@ class SearchUserProfilePage extends StatefulWidget {
 class _SearchUserProfilePageState extends State<SearchUserProfilePage> {
   final FirestoreService _firestoreService = FirestoreService();
   final SessionService _sessionService = SessionService();
+  final FollowService _followService = FollowService();
 
   String _userName = '';
   String _userTag = '';
@@ -36,11 +40,16 @@ class _SearchUserProfilePageState extends State<SearchUserProfilePage> {
   bool _showAllSessions = false;
   bool _sessionsLoadingAll = false;
   bool _hasAllSessions = false;
+  int _followerCount = 0;
+  int _followingCount = 0;
+  String _username = '';
+  bool _isFollowing = false;
 
   @override
   void initState() {
     super.initState();
     _loadUserData();
+    _loadFollowState();
   }
 
   Future<void> _loadUserData() async {
@@ -73,6 +82,9 @@ class _SearchUserProfilePageState extends State<SearchUserProfilePage> {
         if (userData == null || userData['searchTokens'] == null) {
           _firestoreService.ensureSearchTokens(widget.userId, fullName);
         }
+        if (userData == null || userData['username'] == null) {
+          _firestoreService.ensureUsernameForUser(widget.userId, fullName);
+        }
 
         // Crea tag dalle iniziali del nome
         String tag;
@@ -90,12 +102,16 @@ class _SearchUserProfilePageState extends State<SearchUserProfilePage> {
         setState(() {
           _userName = fullName;
           _userTag = tag;
+          _username = userData?['username'] as String? ??
+              fullName.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
           _userStats = stats;
           _publicSessions = sessions;
           _isLoading = false;
           _hasAllSessions = sessions.length < 5;
           _showAllSessions = false;
           _allPublicSessions = [];
+          _followerCount = stats.followerCount;
+          _followingCount = stats.followingCount;
         });
       }
     } catch (e) {
@@ -112,14 +128,25 @@ class _SearchUserProfilePageState extends State<SearchUserProfilePage> {
     }
   }
 
+  Future<void> _loadFollowState() async {
+    final current = FirebaseAuth.instance.currentUser?.uid;
+    if (current == null || current == widget.userId) return;
+    final following = await _followService.isFollowing(widget.userId);
+    if (mounted) {
+      setState(() {
+        _isFollowing = following;
+      });
+    }
+  }
+
   Future<void> _loadAllPublicSessions() async {
     if (_sessionsLoadingAll || _hasAllSessions) return;
     setState(() {
       _sessionsLoadingAll = true;
     });
     try {
-      final sessions =
-          await _sessionService.getUserSessions(widget.userId, limit: 50, onlyPublic: true);
+      final sessions = await _sessionService.getUserSessions(widget.userId,
+          limit: 50, onlyPublic: true);
       if (mounted) {
         setState(() {
           _allPublicSessions = sessions;
@@ -152,7 +179,8 @@ class _SearchUserProfilePageState extends State<SearchUserProfilePage> {
 
             // ---------- HEADER ----------
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 6),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 6),
               child: Row(
                 children: [
                   IconButton(
@@ -173,8 +201,8 @@ class _SearchUserProfilePageState extends State<SearchUserProfilePage> {
                   ),
                   if (isMe)
                     Container(
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(color: kBrandColor),
@@ -233,9 +261,57 @@ class _SearchUserProfilePageState extends State<SearchUserProfilePage> {
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 16, vertical: 8),
                             children: [
-                              _ProfileHeader(name: _userName, tag: _userTag),
-                              const SizedBox(height: 18),
-                              _ProfileStats(stats: _userStats),
+                              _ProfileHeader(
+                                  name: _userName,
+                                  tag: _userTag,
+                                  username: _username,
+                                  showFollowButton:
+                                      FirebaseAuth.instance.currentUser?.uid !=
+                                          widget.userId,
+                                  isFollowing: _isFollowing,
+                                  onToggleFollow: () async {
+                                    if (FirebaseAuth.instance.currentUser ==
+                                        null) {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                              'Devi essere loggato per seguire.'),
+                                        ),
+                                      );
+                                      return;
+                                    }
+                                    try {
+                                      if (_isFollowing) {
+                                        await _followService
+                                            .unfollow(widget.userId);
+                                      } else {
+                                        await _followService
+                                            .follow(widget.userId);
+                                      }
+                                      setState(() {
+                                        _isFollowing = !_isFollowing;
+                                        _followerCount += _isFollowing ? 1 : -1;
+                                      });
+                                    } catch (e) {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        SnackBar(
+                                          content: Text('Errore: $e'),
+                                          backgroundColor: kErrorColor,
+                                        ),
+                                      );
+                                    }
+                                  }),
+                              const SizedBox(height: 10),
+                              FollowCounts(
+                                followerCount: _followerCount,
+                                followingCount: _followingCount,
+                              ),
+                              const SizedBox(height: 14),
+                              _ProfileStats(
+                                stats: _userStats,
+                              ),
                               const SizedBox(height: 18),
                               _ProfileHighlights(stats: _userStats),
                               const SizedBox(height: 26),
@@ -259,7 +335,8 @@ class _SearchUserProfilePageState extends State<SearchUserProfilePage> {
                                       isMe
                                           ? 'Nessuna sessione registrata'
                                           : 'Nessuna sessione pubblica disponibile',
-                                      style: const TextStyle(color: kMutedColor),
+                                      style:
+                                          const TextStyle(color: kMutedColor),
                                     ),
                                   ),
                                 )
@@ -278,8 +355,7 @@ class _SearchUserProfilePageState extends State<SearchUserProfilePage> {
                                         ? null
                                         : () {
                                             if (_showAllSessions &&
-                                                _allPublicSessions
-                                                    .isNotEmpty) {
+                                                _allPublicSessions.isNotEmpty) {
                                               setState(() {
                                                 _showAllSessions = false;
                                               });
@@ -334,10 +410,18 @@ class _SearchUserProfilePageState extends State<SearchUserProfilePage> {
 class _ProfileHeader extends StatelessWidget {
   final String name;
   final String tag;
+  final String username;
+  final bool showFollowButton;
+  final bool isFollowing;
+  final VoidCallback? onToggleFollow;
 
   const _ProfileHeader({
     required this.name,
     required this.tag,
+    required this.username,
+    this.showFollowButton = false,
+    this.isFollowing = false,
+    this.onToggleFollow,
   });
 
   @override
@@ -403,29 +487,48 @@ class _ProfileHeader extends StatelessWidget {
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  '@$tag',
+                  '@$username',
                   style: const TextStyle(
                     color: kMutedColor,
                     fontSize: 13,
                   ),
                 ),
-                const SizedBox(height: 12),
-
-                // Chips
-                const Wrap(
-                  spacing: 8,
-                  runSpacing: 6,
-                  children: [
-                    PulseChip(
-                      label: Text('RACESENSE LIVE'),
-                      icon: Icons.bluetooth_connected,
+                const SizedBox(height: 10),
+                const PulseChip(
+                  label: Text('Accesso PULSE+'),
+                  icon: Icons.bolt,
+                ),
+                if (showFollowButton) ...[
+                  const SizedBox(height: 10),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: OutlinedButton.icon(
+                      onPressed: onToggleFollow,
+                      icon: Icon(
+                        isFollowing ? Icons.check : Icons.person_add_alt,
+                        color: isFollowing ? kMutedColor : kBrandColor,
+                        size: 18,
+                      ),
+                      label: Text(
+                        isFollowing ? 'Segui già' : 'Segui',
+                        style: TextStyle(
+                          color: isFollowing ? kMutedColor : kBrandColor,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 12,
+                        ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(
+                            color: isFollowing ? kMutedColor : kBrandColor),
+                        backgroundColor:
+                            isFollowing ? kMutedColor.withOpacity(0.1) : null,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
+                        minimumSize: const Size(0, 36),
+                      ),
                     ),
-                    PulseChip(
-                      label: Text('Accesso PULSE+'),
-                      icon: Icons.bolt,
-                    ),
-                  ],
-                )
+                  ),
+                ]
               ],
             ),
           )
@@ -442,68 +545,103 @@ class _ProfileHeader extends StatelessWidget {
 class _ProfileStats extends StatelessWidget {
   final UserStats stats;
 
-  const _ProfileStats({required this.stats});
+  const _ProfileStats({
+    required this.stats,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        color: const Color.fromRGBO(255, 255, 255, 0.08),
-        border: Border.all(color: kLineColor),
-      ),
-      child: Row(
-        children: [
-          _ProfileStatItem(
+    return Row(
+      children: [
+        Expanded(
+          child: _StatTile(
+            icon: Icons.flag_circle_outlined,
             label: 'Sessioni',
             value: '${stats.totalSessions}',
           ),
-          const SizedBox(width: 14),
-          _ProfileStatItem(
-            label: 'Distanza totale',
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _StatTile(
+            icon: Icons.timeline,
+            label: 'Distanza',
             value: '${stats.totalDistanceKm.toStringAsFixed(0)} km',
           ),
-          const SizedBox(width: 14),
-          _ProfileStatItem(
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _StatTile(
+            icon: Icons.emoji_events_outlined,
             label: 'PB circuiti',
             value: '${stats.personalBests}',
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
 
-class _ProfileStatItem extends StatelessWidget {
+class _StatTile extends StatelessWidget {
+  final IconData icon;
   final String label;
   final String value;
 
-  const _ProfileStatItem({
+  const _StatTile({
+    required this.icon,
     required this.label,
     required this.value,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(14),
+        gradient: const LinearGradient(
+          colors: [
+            Color.fromRGBO(255, 255, 255, 0.08),
+            Color.fromRGBO(255, 255, 255, 0.02),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        border: Border.all(color: kLineColor.withOpacity(0.7)),
+      ),
+      child: Row(
         children: [
-          Text(
-            label.toUpperCase(),
-            style: const TextStyle(
-              fontSize: 11,
-              color: kMutedColor,
-              letterSpacing: 1.1,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 19,
-              fontWeight: FontWeight.w900,
+          // Container(
+          //   padding: const EdgeInsets.all(10),
+          //   decoration: BoxDecoration(
+          //     shape: BoxShape.circle,
+          //     color: kBrandColor.withOpacity(0.14),
+          //   ),
+          //   child: Icon(icon, color: kBrandColor, size: 18),
+          // ),
+          // const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label.toUpperCase(),
+                  style: const TextStyle(
+                    color: kMutedColor,
+                    fontSize: 10,
+                    letterSpacing: 1.0,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    color: kFgColor,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ],
             ),
           ),
         ],

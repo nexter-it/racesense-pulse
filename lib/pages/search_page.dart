@@ -7,6 +7,8 @@ import '../widgets/pulse_background.dart';
 import 'search_user_profile_page.dart';
 import '../models/session_model.dart';
 import 'search_track_sessions_page.dart';
+import '../services/follow_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 /// Pagina Cerca - Mock UI (solo grafica, nessuna logica)
 /// Funzionalità future:
@@ -26,9 +28,11 @@ class _SearchPageState extends State<SearchPage>
   late TabController _tabController;
   final TextEditingController _searchController = TextEditingController();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FollowService _followService = FollowService();
 
   Timer? _debounce;
   String _query = '';
+  String? _currentUserId;
 
   bool _loadingUsers = false;
   bool _loadingCircuits = false;
@@ -39,10 +43,13 @@ class _SearchPageState extends State<SearchPage>
   Map<String, List<SessionModel>> _circuitGroups = {};
   List<String> _circuitOrder = [];
 
+  Set<String> _followingIds = {};
+
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
+    _initCurrentUser();
   }
 
   @override
@@ -51,6 +58,24 @@ class _SearchPageState extends State<SearchPage>
     _searchController.dispose();
     _debounce?.cancel();
     super.dispose();
+  }
+
+  Future<void> _initCurrentUser() async {
+    final user = FirebaseAuth.instance.currentUser;
+    setState(() {
+      _currentUserId = user?.uid;
+    });
+    await _loadFollowingIds();
+  }
+
+  Future<void> _loadFollowingIds() async {
+    if (_currentUserId == null) return;
+    final ids = await _followService.getFollowingIds(limit: 300);
+    if (mounted) {
+      setState(() {
+        _followingIds = ids;
+      });
+    }
   }
 
   @override
@@ -211,6 +236,10 @@ class _SearchPageState extends State<SearchPage>
     final initials = user['initials'] ??
         (fullName.isNotEmpty ? fullName[0].toUpperCase() : '?');
     final userId = user['id']?.toString();
+    final followerCount = stats['followerCount'] ?? 0;
+    final followingCount = stats['followingCount'] ?? 0;
+    final isMe = _currentUserId != null && _currentUserId == userId;
+    final isFollowing = userId != null && _followingIds.contains(userId);
 
     return InkWell(
       onTap: (userId != null && userId.isNotEmpty)
@@ -267,30 +296,85 @@ class _SearchPageState extends State<SearchPage>
                     '$totalSessions sessioni · $totalDistance km',
                     style: const TextStyle(fontSize: 12, color: kMutedColor),
                   ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '$followerCount follower · $followingCount seguiti',
+                    style: const TextStyle(fontSize: 11, color: kMutedColor),
+                  ),
                 ],
               ),
             ),
 
-            // Follow button placeholder
-            OutlinedButton(
-              onPressed: () {},
-              style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: kBrandColor),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
+            if (!isMe)
+              OutlinedButton(
+                onPressed: userId == null
+                    ? null
+                    : () async {
+                        if (_currentUserId == null) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Devi essere loggato per seguire.'),
+                            ),
+                          );
+                          return;
+                        }
+                        try {
+                          if (isFollowing) {
+                            await _followService.unfollow(userId!);
+                            setState(() {
+                              _followingIds.remove(userId);
+                              if (user['stats'] != null) {
+                                final s = Map<String, dynamic>.from(
+                                    user['stats'] as Map);
+                                s['followerCount'] =
+                                    (s['followerCount'] ?? 0) - 1;
+                                user['stats'] = s;
+                              }
+                            });
+                          } else {
+                            await _followService.follow(userId!);
+                            setState(() {
+                              _followingIds.add(userId);
+                              if (user['stats'] != null) {
+                                final s = Map<String, dynamic>.from(
+                                    user['stats'] as Map);
+                                s['followerCount'] =
+                                    (s['followerCount'] ?? 0) + 1;
+                                user['stats'] = s;
+                              }
+                            });
+                          }
+                        } catch (e) {
+                          // ignore: avoid_print
+                          print('❌ Follow toggle error: $e');
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Errore: $e'),
+                              backgroundColor: kErrorColor,
+                            ),
+                          );
+                        }
+                      },
+                style: OutlinedButton.styleFrom(
+                  side: BorderSide(
+                      color: isFollowing ? kMutedColor : kBrandColor),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  backgroundColor:
+                      isFollowing ? kMutedColor.withOpacity(0.1) : null,
                 ),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              ),
-              child: const Text(
-                'Segui',
-                style: TextStyle(
-                  color: kBrandColor,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
+                child: Text(
+                  isFollowing ? 'Segui già' : 'Segui',
+                  style: TextStyle(
+                    color: isFollowing ? kMutedColor : kBrandColor,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
-            ),
           ],
         ),
       ),

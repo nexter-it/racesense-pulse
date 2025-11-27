@@ -5,8 +5,13 @@ import '../widgets/pulse_background.dart';
 import '../widgets/pulse_chip.dart';
 import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
+import '../services/follow_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/session_service.dart';
 import '../models/session_model.dart';
+import '../widgets/follow_counts.dart';
+import '../widgets/session_metadata_dialog.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -18,17 +23,119 @@ class ProfilePage extends StatefulWidget {
 class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
   final FirestoreService _firestoreService = FirestoreService();
   final SessionService _sessionService = SessionService();
+  final FollowService _followService = FollowService();
 
   String _userName = '';
   String _userTag = '';
+  String _username = '';
   bool _isLoading = true;
   bool _sessionsLoadingAll = false;
   bool _showAllSessions = false;
   bool _hasAllSessions = false;
+  int _followerCount = 0;
+  int _followingCount = 0;
 
   UserStats _userStats = UserStats.empty();
   List<SessionModel> _recentSessions = [];
+  List<Map<String, dynamic>> _followNotifs = [];
   List<SessionModel> _allSessions = [];
+  bool _showNotifPanel = false;
+
+  Future<void> _editSession(SessionModel session) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null || user.uid != session.userId) return;
+
+    final metadata = await showDialog<SessionMetadata>(
+      context: context,
+      builder: (context) => SessionMetadataDialog(
+        gpsTrack: const [],
+        initialTrackName: session.trackName,
+        initialLocationName: session.location,
+        initialLocationCoords: session.locationCoords,
+        initialIsPublic: session.isPublic,
+      ),
+    );
+
+    if (metadata == null) return;
+
+    try {
+      await _sessionService.updateSessionMetadata(
+        sessionId: session.sessionId,
+        ownerId: user.uid,
+        trackName: metadata.trackName,
+        location: metadata.location,
+        locationCoords: metadata.locationCoords,
+        isPublic: metadata.isPublic,
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Sessione aggiornata')),
+        );
+        _loadUserData();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Errore aggiornamento: $e'),
+            backgroundColor: kErrorColor,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _deleteSession(SessionModel session) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null || user.uid != session.userId) return;
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1a1a1a),
+        title:
+            const Text('Elimina sessione', style: TextStyle(color: kFgColor)),
+        content: const Text(
+          'Vuoi eliminare questa sessione? Questa azione non è reversibile.',
+          style: TextStyle(color: kMutedColor),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Annulla', style: TextStyle(color: kMutedColor)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Elimina', style: TextStyle(color: kErrorColor)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    try {
+      await _sessionService.deleteSession(
+        sessionId: session.sessionId,
+        ownerId: user.uid,
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Sessione eliminata')),
+        );
+        _loadUserData();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Errore eliminazione: $e'),
+            backgroundColor: kErrorColor,
+          ),
+        );
+      }
+    }
+  }
 
   @override
   void initState() {
@@ -64,14 +171,16 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
       // Inizializza stats se non esistono (ora senza read extra)
       await _firestoreService.initializeStatsIfNeeded(user.uid);
 
-      // 1) dati utente (fresh) + 2) ultime sessioni
+      // 1) dati utente (fresh) + 2) ultime sessioni + 3) notifiche follow
       final results = await Future.wait([
         _firestoreService.getUserData(user.uid),
         _sessionService.getUserSessions(user.uid, limit: 5),
+        _followService.fetchFollowNotifications(user.uid, limit: 20),
       ]);
 
       final userData = results[0] as Map<String, dynamic>?;
       final sessions = results[1] as List<SessionModel>;
+      final notifs = results[2] as List<Map<String, dynamic>>;
 
       // Stats direttamente dal doc utente
       final stats = (userData != null && userData['stats'] != null)
@@ -86,6 +195,9 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
         if (userData == null || userData['searchTokens'] == null) {
           // Backfill token ricerca per utenti già esistenti
           _firestoreService.ensureSearchTokens(user.uid, fullName);
+        }
+        if (userData == null || userData['username'] == null) {
+          _firestoreService.ensureUsernameForUser(user.uid, fullName);
         }
 
         // Crea tag dalle iniziali del nome
@@ -102,8 +214,13 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
         setState(() {
           _userName = fullName;
           _userTag = tag;
+          _username = userData?['username'] as String? ??
+              fullName.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
           _userStats = stats;
           _recentSessions = sessions;
+          _followNotifs = notifs;
+          _followerCount = stats.followerCount;
+          _followingCount = stats.followingCount;
           _isLoading = false;
           _hasAllSessions = sessions.length < 5 ? true : false;
         });
@@ -181,6 +298,32 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
                   ),
                 ),
                 const Spacer(),
+                Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.notifications_none, size: 24),
+                      onPressed: () {
+                        setState(() {
+                          _showNotifPanel = !_showNotifPanel;
+                        });
+                      },
+                    ),
+                    if (_followNotifs.isNotEmpty)
+                      Positioned(
+                        right: 8,
+                        top: 8,
+                        child: Container(
+                          width: 10,
+                          height: 10,
+                          decoration: const BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
                 IconButton(
                   icon: const Icon(Icons.logout, size: 26),
                   onPressed: () async {
@@ -219,6 +362,13 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
             ),
           ),
 
+          if (_showNotifPanel)
+            Padding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 6),
+              child: _FollowNotifications(notifs: _followNotifs),
+            ),
+
           // ---------- BODY ----------
           Expanded(
             child: _isLoading
@@ -234,9 +384,21 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 16, vertical: 8),
                       children: [
-                        _ProfileHeader(name: _userName, tag: _userTag),
-                        const SizedBox(height: 18),
-                        _ProfileStats(stats: _userStats),
+                        _ProfileHeader(
+                            name: _userName,
+                            tag: _userTag,
+                            username: _username),
+                        const SizedBox(height: 10),
+                        FollowCounts(
+                          followerCount: _followerCount,
+                          followingCount: _followingCount,
+                        ),
+                        const SizedBox(height: 14),
+                        _ProfileStats(
+                          stats: _userStats,
+                        ),
+                        // const SizedBox(height: 18),
+                        // _FollowNotifications(notifs: _followNotifs),
                         const SizedBox(height: 18),
                         _ProfileHighlights(stats: _userStats),
                         const SizedBox(height: 26),
@@ -262,7 +424,11 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
                           )
                         else
                           ...(_showAllSessions ? _allSessions : _recentSessions)
-                              .map((session) => _SessionCard(session: session)),
+                              .map((session) => _SessionCard(
+                                    session: session,
+                                    onEdit: () => _editSession(session),
+                                    onDelete: () => _deleteSession(session),
+                                  )),
                         const SizedBox(height: 10),
                         if (_allSessions.isNotEmpty || !_hasAllSessions)
                           Align(
@@ -324,10 +490,12 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
 class _ProfileHeader extends StatelessWidget {
   final String name;
   final String tag;
+  final String username;
 
   const _ProfileHeader({
     required this.name,
     required this.tag,
+    required this.username,
   });
 
   @override
@@ -393,23 +561,23 @@ class _ProfileHeader extends StatelessWidget {
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  '@$tag',
+                  '@$username',
                   style: const TextStyle(
                     color: kMutedColor,
                     fontSize: 13,
                   ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 8),
 
                 // Chips
                 Wrap(
                   spacing: 8,
                   runSpacing: 6,
                   children: const [
-                    PulseChip(
-                      label: Text('RACESENSE LIVE'),
-                      icon: Icons.bluetooth_connected,
-                    ),
+                    // PulseChip(
+                    //   label: Text('RACESENSE LIVE'),
+                    //   icon: Icons.bluetooth_connected,
+                    // ),
                     PulseChip(
                       label: Text('Accesso PULSE+'),
                       icon: Icons.bolt,
@@ -432,32 +600,104 @@ class _ProfileHeader extends StatelessWidget {
 class _ProfileStats extends StatelessWidget {
   final UserStats stats;
 
-  const _ProfileStats({required this.stats});
+  const _ProfileStats({
+    required this.stats,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: _StatTile(
+            icon: Icons.flag_circle_outlined,
+            label: 'Sessioni',
+            value: '${stats.totalSessions}',
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _StatTile(
+            icon: Icons.timeline,
+            label: 'Distanza',
+            value: '${stats.totalDistanceKm.toStringAsFixed(0)} km',
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _StatTile(
+            icon: Icons.emoji_events_outlined,
+            label: 'PB circuiti',
+            value: '${stats.personalBests}',
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _StatTile extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+
+  const _StatTile({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        color: const Color.fromRGBO(255, 255, 255, 0.08),
-        border: Border.all(color: kLineColor),
+        borderRadius: BorderRadius.circular(14),
+        gradient: const LinearGradient(
+          colors: [
+            Color.fromRGBO(255, 255, 255, 0.08),
+            Color.fromRGBO(255, 255, 255, 0.02),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        border: Border.all(color: kLineColor.withOpacity(0.7)),
       ),
       child: Row(
         children: [
-          _ProfileStatItem(
-            label: 'Sessioni',
-            value: '${stats.totalSessions}',
-          ),
-          const SizedBox(width: 14),
-          _ProfileStatItem(
-            label: 'Distanza totale',
-            value: '${stats.totalDistanceKm.toStringAsFixed(0)} km',
-          ),
-          const SizedBox(width: 14),
-          _ProfileStatItem(
-            label: 'PB circuiti',
-            value: '${stats.personalBests}',
+          // Container(
+          //   padding: const EdgeInsets.all(10),
+          //   decoration: BoxDecoration(
+          //     shape: BoxShape.circle,
+          //     color: kBrandColor.withOpacity(0.14),
+          //   ),
+          //   child: Icon(icon, color: kBrandColor, size: 10),
+          // ),
+          // const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label.toUpperCase(),
+                  style: const TextStyle(
+                    color: kMutedColor,
+                    fontSize: 10,
+                    letterSpacing: 1.0,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    color: kFgColor,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -465,37 +705,116 @@ class _ProfileStats extends StatelessWidget {
   }
 }
 
-class _ProfileStatItem extends StatelessWidget {
-  final String label;
-  final String value;
+class _FollowNotifications extends StatelessWidget {
+  final List<Map<String, dynamic>> notifs;
 
-  const _ProfileStatItem({
-    required this.label,
-    required this.value,
-  });
+  const _FollowNotifications({required this.notifs});
+
+  String _timeAgo(DateTime t) {
+    final diff = DateTime.now().difference(t);
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m fa';
+    if (diff.inHours < 24) return '${diff.inHours}h fa';
+    return '${diff.inDays}g fa';
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
+    final hasNew = notifs.isNotEmpty;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(14),
+        color: const Color.fromRGBO(255, 255, 255, 0.04),
+        border: Border.all(color: kLineColor.withOpacity(0.6)),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            label.toUpperCase(),
-            style: const TextStyle(
-              fontSize: 11,
-              color: kMutedColor,
-              letterSpacing: 1.1,
-            ),
+          Row(
+            children: [
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  const Icon(Icons.notifications_none,
+                      color: kFgColor, size: 22),
+                  if (hasNew)
+                    Positioned(
+                      right: -2,
+                      top: -2,
+                      child: Container(
+                        width: 10,
+                        height: 10,
+                        decoration: const BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(width: 8),
+              const Text(
+                'Nuovi follower',
+                style: TextStyle(
+                  fontWeight: FontWeight.w900,
+                  fontSize: 14,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                hasNew ? '${notifs.length} nuovi' : 'Nessuna notifica',
+                style: const TextStyle(color: kMutedColor, fontSize: 12),
+              ),
+            ],
           ),
-          const SizedBox(height: 6),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 19,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
+          if (hasNew) ...[
+            const SizedBox(height: 10),
+            ...notifs.take(5).map((n) {
+              final followerName = n['followerName'] ?? 'Follower';
+              final followerUsername = n['followerUsername'] ?? '';
+              final ts = n['createdAt'];
+              DateTime? t;
+              if (ts is Timestamp) t = ts.toDate();
+              final subtitle =
+                  followerUsername.isNotEmpty ? '@$followerUsername' : '';
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                child: Row(
+                  children: [
+                    const Icon(Icons.person_add_alt,
+                        color: kBrandColor, size: 18),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            followerName,
+                            style: const TextStyle(
+                              color: kFgColor,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          if (subtitle.isNotEmpty)
+                            Text(
+                              subtitle,
+                              style: const TextStyle(
+                                  color: kMutedColor, fontSize: 12),
+                            ),
+                        ],
+                      ),
+                    ),
+                    if (t != null)
+                      Text(
+                        _timeAgo(t),
+                        style:
+                            const TextStyle(color: kMutedColor, fontSize: 11),
+                      ),
+                  ],
+                ),
+              );
+            }).toList(),
+          ],
         ],
       ),
     );
@@ -608,10 +927,14 @@ class _HighlightRow extends StatelessWidget {
 
 class _SessionCard extends StatelessWidget {
   final SessionModel session;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
 
   const _SessionCard({
     super.key,
     required this.session,
+    this.onEdit,
+    this.onDelete,
   });
 
   String _formatDuration(Duration d) {
@@ -653,83 +976,110 @@ class _SessionCard extends StatelessWidget {
           border: Border.all(color: kLineColor),
         ),
         child: Row(
-        children: [
-          // Icona attività
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: kBrandColor.withOpacity(0.18),
+          children: [
+            // Icona attività
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: kBrandColor.withOpacity(0.18),
+              ),
+              child:
+                  const Icon(Icons.track_changes, color: kBrandColor, size: 22),
             ),
-            child:
-                const Icon(Icons.track_changes, color: kBrandColor, size: 22),
-          ),
-          const SizedBox(width: 12),
+            const SizedBox(width: 12),
 
-          // Info sessione
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            // Info sessione
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    session.trackName,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 15,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${session.lapCount} giri · ${session.distanceKm.toStringAsFixed(1)} km${bestLapText.isNotEmpty ? ' · $bestLapText' : ''}',
+                    style: const TextStyle(fontSize: 12, color: kMutedColor),
+                  ),
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      Icon(
+                        session.isPublic ? Icons.public : Icons.lock_outline,
+                        size: 12,
+                        color: kMutedColor,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        _formatDate(session.dateTime),
+                        style: TextStyle(
+                            fontSize: 11, color: kMutedColor.withOpacity(0.7)),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            // Velocità max
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  session.trackName,
+                  '${session.maxSpeedKmh.toStringAsFixed(0)}',
                   style: const TextStyle(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 15,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    color: kBrandColor,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  '${session.lapCount} giri · ${session.distanceKm.toStringAsFixed(1)} km${bestLapText.isNotEmpty ? ' · $bestLapText' : ''}',
-                  style: const TextStyle(fontSize: 12, color: kMutedColor),
-                ),
-                const SizedBox(height: 2),
-                Row(
-                  children: [
-                    Icon(
-                      session.isPublic ? Icons.public : Icons.lock_outline,
-                      size: 12,
-                      color: kMutedColor,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      _formatDate(session.dateTime),
-                      style: TextStyle(
-                          fontSize: 11, color: kMutedColor.withOpacity(0.7)),
-                    ),
-                  ],
+                const Text(
+                  'km/h',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    color: kMutedColor,
+                  ),
                 ),
               ],
             ),
-          ),
-
-          // Velocità max
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                '${session.maxSpeedKmh.toStringAsFixed(0)}',
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w900,
-                  color: kBrandColor,
-                ),
-              ),
-              const Text(
-                'km/h',
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600,
-                  color: kMutedColor,
-                ),
+            if (onEdit != null || onDelete != null) ...[
+              const SizedBox(width: 6),
+              PopupMenuButton<String>(
+                onSelected: (value) {
+                  if (value == 'edit') {
+                    onEdit?.call();
+                  } else if (value == 'delete') {
+                    onDelete?.call();
+                  }
+                },
+                itemBuilder: (context) => [
+                  if (onEdit != null)
+                    const PopupMenuItem(
+                      value: 'edit',
+                      child: Text('Modifica'),
+                    ),
+                  if (onDelete != null)
+                    const PopupMenuItem(
+                      value: 'delete',
+                      child: Text(
+                        'Elimina',
+                        style: TextStyle(color: kErrorColor),
+                      ),
+                    ),
+                ],
               ),
             ],
-          ),
-        ],
-      ),
+          ],
+        ),
       ),
     );
   }

@@ -13,6 +13,7 @@ class RegisterPage extends StatefulWidget {
 class _RegisterPageState extends State<RegisterPage> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
+  final _usernameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
@@ -24,6 +25,7 @@ class _RegisterPageState extends State<RegisterPage> {
   @override
   void dispose() {
     _nameController.dispose();
+    _usernameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
@@ -51,6 +53,7 @@ class _RegisterPageState extends State<RegisterPage> {
         _emailController.text.trim(),
         _passwordController.text,
         _nameController.text.trim(),
+        _usernameController.text.trim(),
       );
 
       // Torna al LoginPage, AuthGate rileverà l'autenticazione e reindirizzerà alla home
@@ -192,7 +195,72 @@ class _RegisterPageState extends State<RegisterPage> {
                               return 'Inserisci il tuo nome';
                             }
                             if (value.length < 3) {
-                              return 'Il nome deve essere almeno 3 caratteri';
+                            return 'Il nome deve essere almeno 3 caratteri';
+                          }
+                          return null;
+                        },
+                      ),
+
+                        const SizedBox(height: 20),
+
+                        // Username
+                        Text(
+                          'USERNAME',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: kMutedColor,
+                            letterSpacing: 1.2,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        TextFormField(
+                          controller: _usernameController,
+                          enabled: !_isLoading,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            color: kFgColor,
+                          ),
+                          decoration: InputDecoration(
+                            hintText: 'mrossi',
+                            hintStyle: TextStyle(color: kMutedColor.withOpacity(0.5)),
+                            filled: true,
+                            fillColor: const Color(0xFF1a1a1a),
+                            prefixIcon: const Icon(Icons.alternate_email, color: kBrandColor),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide.none,
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: kLineColor),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: kBrandColor, width: 2),
+                            ),
+                            errorBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: kErrorColor),
+                            ),
+                            focusedErrorBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: kErrorColor, width: 2),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 16,
+                            ),
+                          ),
+                          validator: (value) {
+                            final v = value?.trim() ?? '';
+                            final sanitized =
+                                v.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+                            if (sanitized.isEmpty) {
+                              return 'Usa solo lettere e numeri';
+                            }
+                            if (sanitized.length < 3) {
+                              return 'Minimo 3 caratteri';
                             }
                             return null;
                           },

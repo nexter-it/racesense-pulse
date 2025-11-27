@@ -31,7 +31,7 @@ class _GpsWaitPageState extends State<GpsWaitPage> {
   Position? _lastPosition;
 
   // Soglia "fix buono" (puoi tarare)
-  static const double _targetAccuracy = 20.0; // metri
+  static const double _targetAccuracy = 100.0; // metri
   static const double _worstAccuracy = 60.0; // per grafica/progress
 
   // Selezione circuito
@@ -247,8 +247,7 @@ class _GpsWaitPageState extends State<GpsWaitPage> {
     );
   }
 
-  bool get _hasManualLine =>
-      _manualLineStart != null && _manualLineEnd != null;
+  bool get _hasManualLine => _manualLineStart != null && _manualLineEnd != null;
 
   bool get _hasSelectedTrack => _selectedTrack != null;
 
@@ -557,8 +556,9 @@ class _GpsWaitPageState extends State<GpsWaitPage> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   ElevatedButton.icon(
-                    onPressed:
-                        (!_hasError && _canStartRecording) ? _goToLivePage : null,
+                    onPressed: (!_hasError && _canStartRecording)
+                        ? _goToLivePage
+                        : null,
                     icon: const Icon(Icons.play_circle_outline),
                     label: const Text(
                       'Inizia registrazione LIVE',
@@ -639,7 +639,8 @@ class _GpsWaitPageState extends State<GpsWaitPage> {
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.flag_outlined, color: kBrandColor, size: 20),
+                    const Icon(Icons.flag_outlined,
+                        color: kBrandColor, size: 20),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
@@ -674,8 +675,7 @@ class _GpsWaitPageState extends State<GpsWaitPage> {
                 ),
                 const SizedBox(height: 12),
                 Column(
-                  children:
-                      PredefinedTracks.all.map(_buildTrackCard).toList(),
+                  children: PredefinedTracks.all.map(_buildTrackCard).toList(),
                 ),
                 const SizedBox(height: 14),
                 _buildManualConfigCard(enableSelection),
@@ -836,8 +836,7 @@ class _GpsWaitPageState extends State<GpsWaitPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             child: Row(
               children: [
                 const Icon(Icons.draw_rounded, color: kFgColor),
@@ -928,8 +927,7 @@ class _GpsWaitPageState extends State<GpsWaitPage> {
             ),
           ),
           Padding(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
