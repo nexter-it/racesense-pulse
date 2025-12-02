@@ -409,12 +409,6 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
                           followingCount: _followingCount,
                         ),
                         const SizedBox(height: 14),
-                        _ProfileStats(
-                          stats: _userStats,
-                        ),
-                        // const SizedBox(height: 18),
-                        // _FollowNotifications(notifs: _followNotifs),
-                        const SizedBox(height: 18),
                         _ProfileHighlights(stats: _userStats),
                         const SizedBox(height: 26),
                         const Text(
@@ -613,114 +607,6 @@ class _ProfileHeader extends StatelessWidget {
     STATISTICHE PROFILO
 ============================================================ */
 
-class _ProfileStats extends StatelessWidget {
-  final UserStats stats;
-
-  const _ProfileStats({
-    required this.stats,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: _StatTile(
-            icon: Icons.flag_circle_outlined,
-            label: 'Sessioni',
-            value: '${stats.totalSessions}',
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: _StatTile(
-            icon: Icons.timeline,
-            label: 'Distanza',
-            value: '${stats.totalDistanceKm.toStringAsFixed(0)} km',
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: _StatTile(
-            icon: Icons.emoji_events_outlined,
-            label: 'PB circuiti',
-            value: '${stats.personalBests}',
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _StatTile extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String value;
-
-  const _StatTile({
-    required this.icon,
-    required this.label,
-    required this.value,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
-        gradient: const LinearGradient(
-          colors: [
-            Color.fromRGBO(255, 255, 255, 0.08),
-            Color.fromRGBO(255, 255, 255, 0.02),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        border: Border.all(color: kLineColor.withOpacity(0.7)),
-      ),
-      child: Row(
-        children: [
-          // Container(
-          //   padding: const EdgeInsets.all(10),
-          //   decoration: BoxDecoration(
-          //     shape: BoxShape.circle,
-          //     color: kBrandColor.withOpacity(0.14),
-          //   ),
-          //   child: Icon(icon, color: kBrandColor, size: 10),
-          // ),
-          // const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label.toUpperCase(),
-                  style: const TextStyle(
-                    color: kMutedColor,
-                    fontSize: 10,
-                    letterSpacing: 1.0,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  value,
-                  style: const TextStyle(
-                    color: kFgColor,
-                    fontSize: 17,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _FollowNotifications extends StatelessWidget {
   final List<Map<String, dynamic>> notifs;
 
@@ -858,6 +744,9 @@ class _ProfileHighlights extends StatelessWidget {
     final bestLapText = stats.bestLapEver != null
         ? '${_formatDuration(stats.bestLapEver!)}${stats.bestLapTrack != null ? ' · ${stats.bestLapTrack}' : ''}'
         : 'Nessun record';
+    final distanceTotal = '${stats.totalDistanceKm.toStringAsFixed(0)} km';
+    final sessionsTotal = '${stats.totalSessions} sessioni';
+    final pbCount = '${stats.personalBests} circuiti';
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -884,17 +773,27 @@ class _ProfileHighlights extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           _HighlightRow(
-            icon: Icons.flag_outlined,
-            label: 'Giri totali',
-            value: '${stats.totalLaps} giri',
+            icon: Icons.flag_circle_outlined,
+            label: 'Sessioni totali',
+            value: sessionsTotal,
           ),
           const SizedBox(height: 8),
           _HighlightRow(
-            icon: Icons.insights_outlined,
-            label: 'Distanza media',
-            value: stats.totalSessions > 0
-                ? '${(stats.totalDistanceKm / stats.totalSessions).toStringAsFixed(1)} km/sessione'
-                : '0 km',
+            icon: Icons.timeline,
+            label: 'Distanza totale',
+            value: distanceTotal,
+          ),
+          const SizedBox(height: 8),
+          _HighlightRow(
+            icon: Icons.emoji_events_outlined,
+            label: 'PB circuiti',
+            value: pbCount,
+          ),
+          const SizedBox(height: 8),
+          _HighlightRow(
+            icon: Icons.flag_outlined,
+            label: 'Giri totali',
+            value: '${stats.totalLaps} giri',
           ),
         ],
       ),
