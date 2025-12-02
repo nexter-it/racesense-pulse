@@ -121,7 +121,7 @@ class NewPostPage extends StatelessWidget {
                             Expanded(
                               child: _FeaturePill(
                                 icon: Icons.sensors,
-                                title: 'Campionamento',
+                                title: 'Tracking',
                                 subtitle: 'GPS ~1Hz con smoothing + IMU',
                               ),
                             ),

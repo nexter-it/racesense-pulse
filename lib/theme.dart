@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-
 /// Palette Racesense Live portata in Flutter
 const kBgColor = Color(0xFF040404);
 const kFgColor = Color(0xFFE9FFE0);
@@ -16,6 +14,22 @@ const kCoachColor = Color(0xFFFFC24B);
 ThemeData buildPulseTheme() {
   final base = ThemeData.dark(useMaterial3: true);
 
+  const fontFallback = [
+    'SF Pro Text',
+    'SF Pro Display',
+    'San Francisco',
+    'Segoe UI',
+    'Roboto',
+    'Oxygen',
+    'Ubuntu',
+    'Cantarell',
+    'Fira Sans',
+    'Droid Sans',
+    'Helvetica Neue',
+    'Arial',
+    'sans-serif',
+  ];
+
   return base.copyWith(
     scaffoldBackgroundColor: kBgColor,
     primaryColor: kBrandColor,
@@ -30,9 +44,11 @@ ThemeData buildPulseTheme() {
       onPrimary: Colors.black,
       onSurface: kFgColor,
     ),
-    textTheme: GoogleFonts.robotoTextTheme(base.textTheme).apply(
+    textTheme: base.textTheme.apply(
       bodyColor: kFgColor,
       displayColor: kFgColor,
+      fontFamily: 'SF Pro Text',
+      fontFamilyFallback: fontFallback,
     ),
     appBarTheme: const AppBarTheme(
       backgroundColor: Colors.transparent,

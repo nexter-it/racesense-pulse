@@ -48,7 +48,7 @@ class _SearchPageState extends State<SearchPage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
     _initCurrentUser();
   }
 
@@ -101,7 +101,6 @@ class _SearchPageState extends State<SearchPage>
                 _buildUsersTab(),
                 _buildCircuitsTab(),
                 _buildCountriesTab(),
-                _buildMapTab(),
               ],
             ),
           ),
@@ -193,7 +192,6 @@ class _SearchPageState extends State<SearchPage>
           Tab(text: 'UTENTI'),
           Tab(text: 'CIRCUITI'),
           Tab(text: 'PAESI'),
-          Tab(icon: Icon(Icons.map_outlined, size: 20)),
         ],
       ),
     );
@@ -693,178 +691,7 @@ class _SearchPageState extends State<SearchPage>
     );
   }
 
-  Widget _buildMapTab() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        children: [
-          Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                color: const Color(0xFF10121A),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: kLineColor),
-              ),
-              child: Stack(
-                children: [
-                  // Map placeholder
-                  Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.map_outlined,
-                          size: 80,
-                          color: kMutedColor.withOpacity(0.3),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Mappa Circuiti',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w900,
-                            color: kMutedColor.withOpacity(0.5),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'OpenStreetMap integration\nProximamente disponibile',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: kMutedColor.withOpacity(0.4),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // Map controls overlay
-                  Positioned(
-                    top: 16,
-                    right: 16,
-                    child: Column(
-                      children: [
-                        _buildMapButton(Icons.add),
-                        const SizedBox(height: 8),
-                        _buildMapButton(Icons.remove),
-                        const SizedBox(height: 8),
-                        _buildMapButton(Icons.my_location),
-                      ],
-                    ),
-                  ),
-
-                  // Legend overlay
-                  Positioned(
-                    bottom: 16,
-                    left: 16,
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF000000).withOpacity(0.7),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: kLineColor.withOpacity(0.5)),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          _buildLegendItem(
-                              Colors.greenAccent, 'Circuiti verificati'),
-                          const SizedBox(height: 6),
-                          _buildLegendItem(
-                              Colors.blueAccent, 'Circuiti community'),
-                          const SizedBox(height: 6),
-                          _buildLegendItem(kBrandColor, 'Le mie sessioni'),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMapButton(IconData icon) {
-    return Container(
-      width: 44,
-      height: 44,
-      decoration: BoxDecoration(
-        color: const Color(0xFF000000).withOpacity(0.7),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: kLineColor),
-      ),
-      child: IconButton(
-        icon: Icon(icon, size: 20),
-        color: kFgColor,
-        onPressed: () {
-          // Future: map controls
-        },
-      ),
-    );
-  }
-
-  Widget _buildLegendItem(Color color, String label) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 12,
-          height: 12,
-          decoration: BoxDecoration(
-            color: color,
-            shape: BoxShape.circle,
-          ),
-        ),
-        const SizedBox(width: 8),
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 11,
-            color: kFgColor,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ],
-    );
-  }
-
-  String _formatBestLap(dynamic raw) {
-    if (raw == null) return '—';
-    if (raw is String) return raw;
-    if (raw is int) {
-      final d = Duration(milliseconds: raw);
-      final minutes = d.inMinutes;
-      final seconds = d.inSeconds % 60;
-      final millis = (d.inMilliseconds % 1000) ~/ 10;
-      return '$minutes:${seconds.toString().padLeft(2, '0')}.${millis.toString().padLeft(2, '0')}';
-    }
-    if (raw is double) return raw.toStringAsFixed(2);
-    return raw.toString();
-  }
-
-  List<String> _tokenize(String input) {
-    final tokens = <String>{};
-    final cleaned = input.toLowerCase().trim();
-    if (cleaned.isEmpty) return [];
-    final parts = cleaned.split(RegExp(r'\s+'));
-    for (final part in parts) {
-      if (part.isEmpty) continue;
-      for (int i = 1; i <= part.length; i++) {
-        tokens.add(part.substring(0, i));
-      }
-    }
-    for (int i = 1; i <= cleaned.length; i++) {
-      tokens.add(cleaned.substring(0, i));
-    }
-    return tokens.toList();
-  }
-
-  // ===== Helper UI =====
+  // Helper UI e ricerca
   Widget _buildSearchHint({
     required String title,
     required String subtitle,
@@ -939,7 +766,20 @@ class _SearchPageState extends State<SearchPage>
     );
   }
 
-  // ===== Search logic =====
+  String _formatBestLap(dynamic raw) {
+    if (raw == null) return '—';
+    if (raw is String) return raw;
+    if (raw is int) {
+      final d = Duration(milliseconds: raw);
+      final minutes = d.inMinutes;
+      final seconds = d.inSeconds % 60;
+      final millis = (d.inMilliseconds % 1000) ~/ 10;
+      return '$minutes:${seconds.toString().padLeft(2, '0')}.${millis.toString().padLeft(2, '0')}';
+    }
+    if (raw is double) return raw.toStringAsFixed(2);
+    return raw.toString();
+  }
+
   void _onQueryChanged(String value) {
     _debounce?.cancel();
     setState(() {
@@ -963,7 +803,7 @@ class _SearchPageState extends State<SearchPage>
   }
 
   Future<void> _runSearch(String term) async {
-    await Future.wait([
+    await Future.wait(<Future<void>>[
       _searchUsers(term),
       _searchCircuits(term),
     ]);
@@ -974,39 +814,19 @@ class _SearchPageState extends State<SearchPage>
       _loadingUsers = true;
       _usersError = null;
     });
-
     try {
-      final tokens = _tokenize(term);
-      if (tokens.isEmpty) {
-        setState(() {
-          _userResults = [];
-        });
-        return;
-      }
-
       final snap = await _firestore
           .collection('users')
-          .where('searchTokens', arrayContainsAny: tokens.take(10).toList())
           .orderBy('fullName')
+          .startAt([term])
+          .endAt(['$term'])
           .limit(20)
           .get();
-
-      final results = snap.docs.map((d) {
-        final data = d.data();
-        return {
-          'id': d.id,
-          ...data,
-        };
-      }).toList();
-
+      final results = snap.docs.map((d) => {'id': d.id, ...d.data()}).toList();
       setState(() {
         _userResults = results;
       });
     } catch (e) {
-      // Mostra errore in console per link indici Firestore
-      // ignore: avoid_print
-      print('❌ Search users error: $e');
-      // Mostra l'errore per poter creare l'indice Firestore se richiesto
       setState(() {
         _usersError = e.toString();
       });
@@ -1024,21 +844,19 @@ class _SearchPageState extends State<SearchPage>
       _loadingCircuits = true;
       _circuitsError = null;
     });
-
     try {
       final snap = await _firestore
           .collection('sessions')
           .where('isPublic', isEqualTo: true)
           .orderBy('trackName')
           .startAt([term])
-          .endAt(['$term\uf8ff'])
+          .endAt(['$term'])
           .limit(40)
           .get();
 
-      final results = snap.docs.map((d) {
-        final data = d.data();
-        return SessionModel.fromFirestore(d.id, data);
-      }).toList();
+      final results = snap.docs
+          .map((d) => SessionModel.fromFirestore(d.id, d.data()))
+          .toList();
 
       final groups = <String, List<SessionModel>>{};
       for (final s in results) {
@@ -1050,9 +868,6 @@ class _SearchPageState extends State<SearchPage>
         _circuitOrder = groups.keys.toList();
       });
     } catch (e) {
-      // Mostra errore in console per link indici Firestore
-      // ignore: avoid_print
-      print('❌ Search circuits error: $e');
       setState(() {
         _circuitsError = e.toString();
       });

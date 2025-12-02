@@ -307,31 +307,35 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
                   ),
                 ),
                 const Spacer(),
-                Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.notifications_none, size: 24),
-                      onPressed: () {
-                        setState(() {
-                          _showNotifPanel = !_showNotifPanel;
-                        });
-                      },
-                    ),
-                    if (_followNotifs.isNotEmpty)
-                      Positioned(
-                        right: 8,
-                        top: 8,
-                        child: Container(
-                          width: 10,
-                          height: 10,
-                          decoration: const BoxDecoration(
-                            color: Colors.red,
-                            shape: BoxShape.circle,
+                IconButton(
+                  icon: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      const Icon(Icons.notifications_none, size: 24),
+                      if (_followNotifs.isNotEmpty)
+                        Positioned(
+                          right: -2,
+                          top: -2,
+                          child: Container(
+                            width: 10,
+                            height: 10,
+                            decoration: const BoxDecoration(
+                              color: Colors.red,
+                              shape: BoxShape.circle,
+                            ),
                           ),
                         ),
-                      ),
-                  ],
+                    ],
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _showNotifPanel = !_showNotifPanel;
+                      if (_showNotifPanel) {
+                        // mark as seen
+                        _followNotifs = [];
+                      }
+                    });
+                  },
                 ),
                 IconButton(
                   icon: const Icon(Icons.logout, size: 26),
@@ -370,12 +374,14 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
               ],
             ),
           ),
-
           if (_showNotifPanel)
-            Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 6),
-              child: _FollowNotifications(notifs: _followNotifs),
+            Align(
+              alignment: Alignment.topRight,
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16.0, vertical: 6),
+                child: _FollowNotifications(notifs: _followNotifs),
+              ),
             ),
 
           // ---------- BODY ----------
@@ -432,7 +438,7 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
                             ),
                           )
                         else
-                        ...(_showAllSessions ? _allSessions : _recentSessions)
+                          ...(_showAllSessions ? _allSessions : _recentSessions)
                               .map((session) => _SessionCard(
                                     session: session,
                                     onEdit: () => _editSession(session),
