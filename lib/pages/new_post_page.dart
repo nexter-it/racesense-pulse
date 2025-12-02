@@ -256,7 +256,7 @@ class NewPostPage extends StatelessWidget {
                       },
                       icon: const Icon(Icons.play_circle_outline),
                       label: const Text(
-                        'Inizia registrazione',
+                        'Inizia sessione',
                         style: TextStyle(fontSize: 17),
                       ),
                       style: ElevatedButton.styleFrom(

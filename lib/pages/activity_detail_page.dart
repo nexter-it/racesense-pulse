@@ -146,9 +146,8 @@ class _ActivityDetailPageState extends State<ActivityDetailPage> {
         .toList();
 
     // G-Force longitudinale (fusione IMU+GPS salvata in Firestore)
-    final List<double> gForceHistory = _gpsData
-        .map((p) => p.longitudinalG ?? 0.0)
-        .toList();
+    final List<double> gForceHistory =
+        _gpsData.map((p) => p.longitudinalG ?? 0.0).toList();
 
     // Convert GPS to LatLng for visualization
     final List<ll.LatLng> smoothPath =
@@ -170,7 +169,7 @@ class _ActivityDetailPageState extends State<ActivityDetailPage> {
             ))
         .toList();
 
-    final deviceUsed = "RaceBox Mini S";
+    final deviceUsed = "Cellular GPS";
 
     return Scaffold(
       body: PulseBackground(
@@ -227,37 +226,48 @@ class _ActivityDetailPageState extends State<ActivityDetailPage> {
                     _TechnicalDataSection(
                       session: _session,
                       gpsDataCount: _gpsData.length,
+                      avgGForce: _gpsData.isNotEmpty
+                          ? _gpsData
+                                  .map((p) => (p.longitudinalG ?? 0).abs())
+                                  .reduce((a, b) => a + b) /
+                              _gpsData.length
+                          : 0.0,
+                    ),
+                    const SizedBox(height: 16),
+                    _GpsDeviceSection(
+                      avgAccuracy: _session.avgGpsAccuracy,
+                      sampleRateHz: _session.gpsSampleRateHz,
+                      points: _gpsData.length,
                     ),
                     const SizedBox(height: 24),
 
                     // Action Buttons
-                  _ActionsRow(
-                    session: _session,
-                    liked: _liked,
-                    challenged: _challenged,
-                    onToggleLike: () async {
-                      await _engagementService
-                          .toggleLike(_session.sessionId);
-                      setState(() {
-                        _liked = !_liked;
-                        final delta = _liked ? 1 : -1;
-                        _session = _session.copyWith(
-                          likesCount: _session.likesCount + delta,
-                        );
-                      });
-                    },
-                    onToggleChallenge: () async {
-                      await _engagementService
-                          .toggleChallenge(_session.sessionId);
-                      setState(() {
-                        _challenged = !_challenged;
-                        final delta = _challenged ? 1 : -1;
-                        _session = _session.copyWith(
-                          challengeCount: _session.challengeCount + delta,
-                        );
-                      });
-                    },
-                  ),
+                    _ActionsRow(
+                      session: _session,
+                      liked: _liked,
+                      challenged: _challenged,
+                      onToggleLike: () async {
+                        await _engagementService.toggleLike(_session.sessionId);
+                        setState(() {
+                          _liked = !_liked;
+                          final delta = _liked ? 1 : -1;
+                          _session = _session.copyWith(
+                            likesCount: _session.likesCount + delta,
+                          );
+                        });
+                      },
+                      onToggleChallenge: () async {
+                        await _engagementService
+                            .toggleChallenge(_session.sessionId);
+                        setState(() {
+                          _challenged = !_challenged;
+                          final delta = _challenged ? 1 : -1;
+                          _session = _session.copyWith(
+                            challengeCount: _session.challengeCount + delta,
+                          );
+                        });
+                      },
+                    ),
                     const SizedBox(height: 32),
                   ],
                 ),
@@ -1109,10 +1119,12 @@ class _MapSection extends StatelessWidget {
 class _TechnicalDataSection extends StatelessWidget {
   final SessionModel session;
   final int gpsDataCount;
+  final double avgGForce;
 
   const _TechnicalDataSection({
     required this.session,
     required this.gpsDataCount,
+    required this.avgGForce,
   });
 
   @override
@@ -1176,29 +1188,9 @@ class _TechnicalDataSection extends StatelessWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: _TechnicalMetric(
-                  icon: Icons.gps_fixed,
-                  label: 'GPS Accuracy',
-                  value: '${session.avgGpsAccuracy.toStringAsFixed(1)} m',
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: _TechnicalMetric(
-                  icon: Icons.refresh,
-                  label: 'Sample Rate',
-                  value: '${session.gpsSampleRateHz} Hz',
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _TechnicalMetric(
-                  icon: Icons.data_usage,
-                  label: 'Punti GPS',
-                  value: gpsDataCount.toString(),
+                  icon: Icons.analytics,
+                  label: 'G-Force Media',
+                  value: '${avgGForce.toStringAsFixed(2)} g',
                 ),
               ),
             ],
@@ -1249,6 +1241,96 @@ class _TechnicalMetric extends StatelessWidget {
               fontWeight: FontWeight.w900,
               color: kFgColor,
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/* -------------------------------------------------------------
+   GPS DEVICE SECTION
+------------------------------------------------------------- */
+
+class _GpsDeviceSection extends StatelessWidget {
+  final double avgAccuracy;
+  final int sampleRateHz;
+  final int points;
+  final String deviceName;
+
+  const _GpsDeviceSection({
+    required this.avgAccuracy,
+    required this.sampleRateHz,
+    required this.points,
+    this.deviceName = 'Cellular GPS',
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        color: const Color(0xFF0A0A0F),
+        border: Border.all(color: kLineColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.gps_fixed, size: 16, color: kBrandColor),
+              const SizedBox(width: 8),
+              const Text(
+                'DISPOSITIVO GPS',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: kBrandColor,
+                  letterSpacing: 0.8,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _TechnicalMetric(
+                  icon: Icons.memory,
+                  label: 'Nome dispositivo',
+                  value: deviceName,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _TechnicalMetric(
+                  icon: Icons.gps_not_fixed,
+                  label: 'GPS Accuracy',
+                  value: '${avgAccuracy.toStringAsFixed(1)} m',
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _TechnicalMetric(
+                  icon: Icons.refresh,
+                  label: 'Sample Rate',
+                  value: '$sampleRateHz Hz',
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _TechnicalMetric(
+                  icon: Icons.data_usage,
+                  label: 'Punti GPS',
+                  value: points.toString(),
+                ),
+              ),
+            ],
           ),
         ],
       ),
