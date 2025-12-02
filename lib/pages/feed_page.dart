@@ -642,30 +642,27 @@ class _ActivityCard extends StatelessWidget {
 
                   const SizedBox(height: 10),
 
-                  // ----- CHIPS INFO -----
+                  // ----- LIKE / CHALLENGE + info -----
                   Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
+                    spacing: 8,
+                    runSpacing: 8,
                     children: [
+                      PulseChip(
+                        icon: Icons.favorite_border,
+                        label: Text('${session.likesCount}'),
+                      ),
+                      PulseChip(
+                        icon: Icons.sports_martial_arts,
+                        label: Text('${session.challengeCount} '),
+                      ),
                       PulseChip(
                         icon: Icons.flag_outlined,
                         label: Text('${laps} giri'),
                       ),
                       PulseChip(
                         icon: Icons.speed,
-                        label: Text(
-                          '${distanceKm.toStringAsFixed(1)} km',
-                        ),
+                        label: Text('${distanceKm.toStringAsFixed(1)} km'),
                       ),
-                      PulseChip(
-                        icon: Icons.sports_motorsports_outlined,
-                        label: Text(sessionType),
-                      ),
-                      // if (isPb)
-                      //   const PulseChip(
-                      //     label: Text('PB RACESENSE PULSE'),
-                      //     icon: Icons.star_outline,
-                      //   ),
                     ],
                   ),
                 ],

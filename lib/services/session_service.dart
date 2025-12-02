@@ -69,6 +69,8 @@ class SessionService {
         trackName: trackName,
         driverFullName: driverFullName,
         driverUsername: driverUsername,
+        likesCount: 0,
+        challengeCount: 0,
         location: location,
         locationCoords: locationCoords,
         dateTime: DateTime.now(),

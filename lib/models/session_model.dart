@@ -40,6 +40,8 @@ class SessionModel {
   final String trackName;
   final String driverFullName;
   final String driverUsername;
+  final int likesCount;
+  final int challengeCount;
   final String location; // "Misano, Italy"
   final GeoPoint locationCoords; // Coordinate centro circuito
   final DateTime dateTime;
@@ -68,6 +70,8 @@ class SessionModel {
     required this.trackName,
     required this.driverFullName,
     required this.driverUsername,
+    required this.likesCount,
+    required this.challengeCount,
     required this.location,
     required this.locationCoords,
     required this.dateTime,
@@ -91,6 +95,8 @@ class SessionModel {
       'trackName': trackName,
       'driverfullName': driverFullName,
       'driverUsername': driverUsername,
+      'likesCount': likesCount,
+      'challengeCount': challengeCount,
       'location': location,
       'locationCoords': locationCoords,
       'dateTime': Timestamp.fromDate(dateTime),
@@ -112,6 +118,35 @@ class SessionModel {
     }
 
     return data;
+  }
+
+  SessionModel copyWith({
+    int? likesCount,
+    int? challengeCount,
+  }) {
+    return SessionModel(
+      sessionId: sessionId,
+      userId: userId,
+      trackName: trackName,
+      driverFullName: driverFullName,
+      driverUsername: driverUsername,
+      likesCount: likesCount ?? this.likesCount,
+      challengeCount: challengeCount ?? this.challengeCount,
+      location: location,
+      locationCoords: locationCoords,
+      dateTime: dateTime,
+      isPublic: isPublic,
+      totalDuration: totalDuration,
+      distanceKm: distanceKm,
+      bestLap: bestLap,
+      lapCount: lapCount,
+      maxSpeedKmh: maxSpeedKmh,
+      avgSpeedKmh: avgSpeedKmh,
+      maxGForce: maxGForce,
+      avgGpsAccuracy: avgGpsAccuracy,
+      gpsSampleRateHz: gpsSampleRateHz,
+      displayPath: displayPath,
+    );
   }
 
   // Crea da Firestore
@@ -144,6 +179,8 @@ class SessionModel {
               ?.toLowerCase()
               .replaceAll(RegExp(r'[^a-z0-9]'), '') ??
           'user',
+      likesCount: data['likesCount'] as int? ?? 0,
+      challengeCount: data['challengeCount'] as int? ?? 0,
       location: data['location'] as String,
       locationCoords: data['locationCoords'] as GeoPoint,
       dateTime: (data['dateTime'] as Timestamp).toDate(),

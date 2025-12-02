@@ -11,6 +11,7 @@ import '../services/session_service.dart';
 import '../models/session_model.dart';
 import '../widgets/follow_counts.dart';
 import '../widgets/session_metadata_dialog.dart';
+import 'story_composer_page.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ProfilePage extends StatefulWidget {
@@ -135,6 +136,14 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
         );
       }
     }
+  }
+
+  void _openStoryComposer(SessionModel session) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => StoryComposerPage(session: session),
+      ),
+    );
   }
 
   @override
@@ -423,11 +432,12 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
                             ),
                           )
                         else
-                          ...(_showAllSessions ? _allSessions : _recentSessions)
+                        ...(_showAllSessions ? _allSessions : _recentSessions)
                               .map((session) => _SessionCard(
                                     session: session,
                                     onEdit: () => _editSession(session),
                                     onDelete: () => _deleteSession(session),
+                                    onShare: () => _openStoryComposer(session),
                                   )),
                         const SizedBox(height: 10),
                         if (_allSessions.isNotEmpty || !_hasAllSessions)
@@ -929,12 +939,14 @@ class _SessionCard extends StatelessWidget {
   final SessionModel session;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
+  final VoidCallback? onShare;
 
   const _SessionCard({
     super.key,
     required this.session,
     this.onEdit,
     this.onDelete,
+    this.onShare,
   });
 
   String _formatDuration(Duration d) {
@@ -1051,17 +1063,24 @@ class _SessionCard extends StatelessWidget {
                 ),
               ],
             ),
-            if (onEdit != null || onDelete != null) ...[
+            if (onShare != null || onEdit != null || onDelete != null) ...[
               const SizedBox(width: 6),
               PopupMenuButton<String>(
                 onSelected: (value) {
-                  if (value == 'edit') {
+                  if (value == 'share') {
+                    onShare?.call();
+                  } else if (value == 'edit') {
                     onEdit?.call();
                   } else if (value == 'delete') {
                     onDelete?.call();
                   }
                 },
                 itemBuilder: (context) => [
+                  if (onShare != null)
+                    const PopupMenuItem(
+                      value: 'share',
+                      child: Text('Condividi'),
+                    ),
                   if (onEdit != null)
                     const PopupMenuItem(
                       value: 'edit',

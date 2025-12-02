@@ -10,6 +10,7 @@ import '../widgets/pulse_background.dart';
 import '../widgets/pulse_chip.dart';
 import '../models/session_model.dart';
 import '../services/session_service.dart';
+import '../services/engagement_service.dart';
 import 'search_user_profile_page.dart';
 import 'dart:ui' as ui;
 
@@ -24,6 +25,7 @@ class ActivityDetailPage extends StatefulWidget {
 
 class _ActivityDetailPageState extends State<ActivityDetailPage> {
   final SessionService _sessionService = SessionService();
+  final EngagementService _engagementService = EngagementService();
 
   bool _isLoading = true;
   String? _error;
@@ -32,6 +34,8 @@ class _ActivityDetailPageState extends State<ActivityDetailPage> {
   List<GpsPoint> _gpsData = [];
   List<LapModel> _laps = [];
   late SessionModel _session;
+  bool _liked = false;
+  bool _challenged = false;
 
   @override
   void didChangeDependencies() {
@@ -65,12 +69,16 @@ class _ActivityDetailPageState extends State<ActivityDetailPage> {
 
       _gpsData = results[0] as List<GpsPoint>;
       _laps = results[1] as List<LapModel>;
+      final reactions =
+          await _engagementService.getUserReactions(_session.sessionId);
 
       print('✅ Caricati ${_gpsData.length} punti GPS e ${_laps.length} giri');
 
       if (mounted) {
         setState(() {
           _isLoading = false;
+          _liked = reactions['like'] ?? false;
+          _challenged = reactions['challenge'] ?? false;
         });
       }
     } catch (e) {
@@ -222,7 +230,33 @@ class _ActivityDetailPageState extends State<ActivityDetailPage> {
                     const SizedBox(height: 24),
 
                     // Action Buttons
-                    _ActionsRow(session: _session),
+                  _ActionsRow(
+                    session: _session,
+                    liked: _liked,
+                    challenged: _challenged,
+                    onToggleLike: () async {
+                      await _engagementService
+                          .toggleLike(_session.sessionId);
+                      setState(() {
+                        _liked = !_liked;
+                        final delta = _liked ? 1 : -1;
+                        _session = _session.copyWith(
+                          likesCount: _session.likesCount + delta,
+                        );
+                      });
+                    },
+                    onToggleChallenge: () async {
+                      await _engagementService
+                          .toggleChallenge(_session.sessionId);
+                      setState(() {
+                        _challenged = !_challenged;
+                        final delta = _challenged ? 1 : -1;
+                        _session = _session.copyWith(
+                          challengeCount: _session.challengeCount + delta,
+                        );
+                      });
+                    },
+                  ),
                     const SizedBox(height: 32),
                   ],
                 ),
@@ -1645,8 +1679,18 @@ class _SectorList extends StatelessWidget {
 
 class _ActionsRow extends StatelessWidget {
   final SessionModel session;
+  final bool liked;
+  final bool challenged;
+  final VoidCallback? onToggleLike;
+  final VoidCallback? onToggleChallenge;
 
-  const _ActionsRow({required this.session});
+  const _ActionsRow({
+    required this.session,
+    required this.liked,
+    required this.challenged,
+    this.onToggleLike,
+    this.onToggleChallenge,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1654,11 +1698,11 @@ class _ActionsRow extends StatelessWidget {
       children: [
         Expanded(
           child: ElevatedButton.icon(
-            onPressed: () {},
-            icon: const Icon(Icons.favorite_border),
-            label: const Text('Preferito'),
+            onPressed: onToggleLike,
+            icon: Icon(liked ? Icons.favorite : Icons.favorite_border),
+            label: Text('Mi piace (${session.likesCount})'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: kBrandColor,
+              backgroundColor: liked ? kBrandColor : kBrandColor,
               foregroundColor: Colors.black,
               padding: const EdgeInsets.symmetric(vertical: 14),
             ),
@@ -1667,9 +1711,9 @@ class _ActionsRow extends StatelessWidget {
         const SizedBox(width: 12),
         Expanded(
           child: OutlinedButton.icon(
-            onPressed: () {},
-            icon: const Icon(Icons.share),
-            label: const Text('Condividi'),
+            onPressed: onToggleChallenge,
+            icon: const Icon(Icons.sports_martial_arts),
+            label: Text('Ti sfido (${session.challengeCount})'),
             style: OutlinedButton.styleFrom(
               side: const BorderSide(color: kLineColor),
               padding: const EdgeInsets.symmetric(vertical: 14),
