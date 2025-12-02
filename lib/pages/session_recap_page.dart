@@ -82,7 +82,7 @@ class SessionRecapPage extends StatelessWidget {
 
   double _getMaxGForce() {
     if (gForceHistory.isEmpty) return 0;
-    return gForceHistory.reduce(math.max);
+    return gForceHistory.map((g) => g.abs()).reduce(math.max);
   }
 
   double _getAvgGpsAccuracy() {
@@ -1270,6 +1270,10 @@ class _SessionOverviewPanelState extends State<_SessionOverviewPanel> {
         .where((i) => i < widget.smoothPath.length)
         .map((i) => widget.smoothPath[i])
         .toList();
+    final List<double> lapAccel = indices
+        .where((i) => i < widget.gForceHistory.length)
+        .map((i) => widget.gForceHistory[i])
+        .toList();
 
     LatLng? marker;
     if (globalIdx < widget.gpsTrack.length) {
@@ -1345,6 +1349,7 @@ class _SessionOverviewPanelState extends State<_SessionOverviewPanel> {
           _CircuitTrackView(
             path: lapPath,
             marker: marker,
+            accelG: lapAccel,
           ),
           const SizedBox(height: 16),
           SizedBox(
@@ -1559,10 +1564,12 @@ class _SessionOverviewPanelState extends State<_SessionOverviewPanel> {
 class _CircuitTrackView extends StatelessWidget {
   final List<LatLng> path;
   final LatLng? marker;
+  final List<double> accelG;
 
   const _CircuitTrackView({
     required this.path,
     required this.marker,
+    this.accelG = const [],
   });
 
   @override
@@ -1587,7 +1594,11 @@ class _CircuitTrackView extends StatelessWidget {
     return AspectRatio(
       aspectRatio: 1.6,
       child: CustomPaint(
-        painter: _CircuitPainter(path: path, marker: marker),
+        painter: _CircuitPainter(
+          path: path,
+          marker: marker,
+          accelG: accelG,
+        ),
       ),
     );
   }
@@ -1596,10 +1607,12 @@ class _CircuitTrackView extends StatelessWidget {
 class _CircuitPainter extends CustomPainter {
   final List<LatLng> path;
   final LatLng? marker;
+  final List<double> accelG;
 
   _CircuitPainter({
     required this.path,
     required this.marker,
+    required this.accelG,
   });
 
   @override
@@ -1657,8 +1670,10 @@ class _CircuitPainter extends CustomPainter {
     }
 
     final ui.Path shadowPath = ui.Path();
+    final List<Offset> projected = [];
     for (int i = 0; i < path.length; i++) {
       final o = _project(path[i]);
+      projected.add(o);
       if (i == 0) {
         shadowPath.moveTo(o.dx, o.dy);
       } else {
@@ -1672,21 +1687,15 @@ class _CircuitPainter extends CustomPainter {
       ..strokeCap = StrokeCap.round;
     canvas.drawPath(shadowPath.shift(const Offset(2, 2)), shadowPaint);
 
-    final ui.Path trackPath = ui.Path();
-    for (int i = 0; i < path.length; i++) {
-      final o = _project(path[i]);
-      if (i == 0) {
-        trackPath.moveTo(o.dx, o.dy);
-      } else {
-        trackPath.lineTo(o.dx, o.dy);
-      }
+    for (int i = 1; i < projected.length; i++) {
+      final double g = i < accelG.length ? accelG[i] : 0.0;
+      final paint = Paint()
+        ..color = _colorForG(g)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 4
+        ..strokeCap = StrokeCap.round;
+      canvas.drawLine(projected[i - 1], projected[i], paint);
     }
-    final trackPaint = Paint()
-      ..color = kBrandColor.withOpacity(0.9)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 4
-      ..strokeCap = StrokeCap.round;
-    canvas.drawPath(trackPath, trackPaint);
 
     if (marker != null) {
       final o = _project(marker!);
@@ -1704,6 +1713,22 @@ class _CircuitPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _CircuitPainter oldDelegate) {
-    return oldDelegate.path != path || oldDelegate.marker != marker;
+    return oldDelegate.path != path ||
+        oldDelegate.marker != marker ||
+        oldDelegate.accelG != accelG;
+  }
+
+  Color _colorForG(double g) {
+    const pos = Color(0xFF4CD964); // accelerazione
+    const neg = Color(0xFFFF4D4D); // frenata
+    const neu = Color(0xFFF7D64E); // neutro
+    final double clamped = g.clamp(-1.5, 1.5).toDouble();
+    if (clamped >= 0) {
+      final double t = (clamped / 1.5).clamp(0.0, 1.0);
+      return Color.lerp(neu, pos, t)!;
+    } else {
+      final double t = (-clamped / 1.5).clamp(0.0, 1.0);
+      return Color.lerp(neg, neu, t)!;
+    }
   }
 }

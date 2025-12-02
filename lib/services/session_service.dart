@@ -26,7 +26,7 @@ class SessionService {
     required List<Duration> laps,
     required Duration totalDuration,
     required List<double> speedHistory,
-    required List<double> gForceHistory,
+    required List<double> gForceHistory, // fused accel/decel in g
     required List<double> gpsAccuracyHistory,
     required List<Duration> timeHistory,
   }) async {
@@ -47,8 +47,9 @@ class SessionService {
       final maxSpeed = rawMaxSpeed.roundToDouble(); // es. 20 km/h
       final avgSpeed = rawAvgSpeed.roundToDouble(); // es. 18 km/h
 
-      final rawMaxGForce =
-          gForceHistory.isNotEmpty ? gForceHistory.reduce(math.max) : 0.0;
+      final rawMaxGForce = gForceHistory.isNotEmpty
+          ? gForceHistory.map((g) => g.abs()).reduce(math.max)
+          : 0.0;
       final maxGForce = _roundDouble(rawMaxGForce, 2); // es. 1.06
 
       final rawAvgAccuracy = gpsAccuracyHistory.isNotEmpty
@@ -102,7 +103,12 @@ class SessionService {
       await _saveLaps(sessionId, laps, speedHistory, timeHistory);
 
       // 3. Salva dati GPS in chunks (opzionale, caricato solo in dettaglio)
-      await _saveGpsData(sessionId, gpsTrack, speedHistory);
+      await _saveGpsData(
+        sessionId,
+        gpsTrack,
+        speedHistory,
+        gForceHistory,
+      );
 
       // 4. Aggiorna statistiche utente
       await _updateUserStats(userId, distance, laps.length, bestLap, trackName);
@@ -219,6 +225,7 @@ class SessionService {
     String sessionId,
     List<Position> gpsTrack,
     List<double> speedHistory,
+    List<double> gForceHistory,
   ) async {
     const chunkSize = 100;
     final chunks = <GpsDataChunk>[];
@@ -229,8 +236,15 @@ class SessionService {
 
       for (int j = i; j < end; j++) {
         final speed = j < speedHistory.length ? speedHistory[j] : 0.0;
+        final g = j < gForceHistory.length ? gForceHistory[j] : null;
         final roundedSpeed = speed.roundToDouble(); // 👈 velocità intera
-        chunkPoints.add(GpsPoint.fromPosition(gpsTrack[j], roundedSpeed));
+        chunkPoints.add(
+          GpsPoint.fromPosition(
+            gpsTrack[j],
+            roundedSpeed,
+            longitudinalG: g,
+          ),
+        );
       }
 
       chunks.add(GpsDataChunk(

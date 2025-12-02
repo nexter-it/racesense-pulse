@@ -93,6 +93,7 @@ class SessionModel {
     final data = <String, dynamic>{
       'userId': userId,
       'trackName': trackName,
+      'trackNameLower': trackName.toLowerCase(),
       'driverfullName': driverFullName,
       'driverUsername': driverUsername,
       'likesCount': likesCount,
@@ -268,6 +269,7 @@ class GpsPoint {
   final double speedKmh;
   final DateTime timestamp;
   final double accuracy;
+  final double? longitudinalG; // accelerazione long./decel fusion in g
 
   GpsPoint({
     required this.latitude,
@@ -275,6 +277,7 @@ class GpsPoint {
     required this.speedKmh,
     required this.timestamp,
     required this.accuracy,
+    this.longitudinalG,
   });
 
   Map<String, dynamic> toMap() {
@@ -284,6 +287,8 @@ class GpsPoint {
       'spd': speedKmh.roundToDouble(), // 👈 velocità intera (es. 20)
       'ts': Timestamp.fromDate(timestamp),
       'acc': _roundDouble(accuracy, 1), // 👈 accuracy 1 decimale (es. 4.5)
+      if (longitudinalG != null)
+        'ag': _roundDouble(longitudinalG!, 3), // 👈 accel/decel fusion in g
     };
   }
 
@@ -294,16 +299,22 @@ class GpsPoint {
       speedKmh: (map['spd'] as num).toDouble(),
       timestamp: (map['ts'] as Timestamp).toDate(),
       accuracy: (map['acc'] as num).toDouble(),
+      longitudinalG: map['ag'] != null ? (map['ag'] as num).toDouble() : null,
     );
   }
 
-  factory GpsPoint.fromPosition(Position pos, double speedKmh) {
+  factory GpsPoint.fromPosition(
+    Position pos,
+    double speedKmh, {
+    double? longitudinalG,
+  }) {
     return GpsPoint(
       latitude: pos.latitude,
       longitude: pos.longitude,
       speedKmh: speedKmh,
       timestamp: pos.timestamp ?? DateTime.now(),
       accuracy: pos.accuracy,
+      longitudinalG: longitudinalG,
     );
   }
 }

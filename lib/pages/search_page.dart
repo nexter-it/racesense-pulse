@@ -40,8 +40,11 @@ class _SearchPageState extends State<SearchPage>
   String? _circuitsError;
 
   List<Map<String, dynamic>> _userResults = [];
+  List<Map<String, dynamic>> _topUsers = [];
   Map<String, List<SessionModel>> _circuitGroups = {};
   List<String> _circuitOrder = [];
+  Map<String, List<SessionModel>> _topCircuitGroups = {};
+  List<String> _topCircuitOrder = [];
 
   Set<String> _followingIds = {};
 
@@ -50,6 +53,8 @@ class _SearchPageState extends State<SearchPage>
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
     _initCurrentUser();
+    _loadTopUsers();
+    _loadTopCircuits();
   }
 
   @override
@@ -75,6 +80,49 @@ class _SearchPageState extends State<SearchPage>
       setState(() {
         _followingIds = ids;
       });
+    }
+  }
+
+  Future<void> _loadTopUsers() async {
+    try {
+      final snap = await _firestore
+          .collection('users')
+          .orderBy('stats.followerCount', descending: true)
+          .limit(3)
+          .get();
+      setState(() {
+        _topUsers = snap.docs.map((d) => {'id': d.id, ...d.data()}).toList();
+      });
+    } catch (_) {
+      // silenzioso: top utenti opzionale
+    }
+  }
+
+  Future<void> _loadTopCircuits() async {
+    try {
+      final snap = await _firestore
+          .collection('sessions')
+          .where('isPublic', isEqualTo: true)
+          .orderBy('dateTime', descending: true)
+          .limit(200)
+          .get();
+      final sessions = snap.docs
+          .map((d) => SessionModel.fromFirestore(d.id, d.data()))
+          .toList();
+
+      final groups = <String, List<SessionModel>>{};
+      for (final s in sessions) {
+        groups.putIfAbsent(s.trackName, () => []).add(s);
+      }
+
+      final ordered = groups.keys.toList()
+        ..sort((a, b) => groups[b]!.length.compareTo(groups[a]!.length));
+      setState(() {
+        _topCircuitGroups = groups;
+        _topCircuitOrder = ordered.take(3).toList();
+      });
+    } catch (_) {
+      // silenzioso: top circuiti opzionale
     }
   }
 
@@ -122,13 +170,13 @@ class _SearchPageState extends State<SearchPage>
               letterSpacing: 0.5,
             ),
           ),
-          const Spacer(),
-          IconButton(
-            icon: const Icon(Icons.tune),
-            onPressed: () {
-              // Future: filtri avanzati
-            },
-          ),
+          // const Spacer(),
+          // IconButton(
+          //   icon: const Icon(Icons.tune),
+          //   onPressed: () {
+          //     // Future: filtri avanzati
+          //   },
+          // ),
         ],
       ),
     );
@@ -200,9 +248,10 @@ class _SearchPageState extends State<SearchPage>
   Widget _buildUsersTab() {
     if (_query.length < 2) {
       return _buildSearchHint(
-        title: 'Cerca utenti',
-        subtitle: 'Digita almeno 2 caratteri per cercare per nome completo.',
-        // placeholderList: _mockUsers.map((u) => _buildUserCard(u)).toList(),
+        title: 'Top 3 piloti',
+        subtitle: 'Top 3 piloti più seguiti della piattaforma.',
+        placeholderList:
+            _topUsers.map((u) => _buildUserCard(u)).take(3).toList(),
       );
     }
 
@@ -381,12 +430,16 @@ class _SearchPageState extends State<SearchPage>
 
   Widget _buildCircuitsTab() {
     if (_query.length < 2) {
+      final widgets = _topCircuitOrder
+          .map((name) => _buildCircuitGroupCard(
+                name,
+                _topCircuitGroups[name] ?? [],
+              ))
+          .toList();
       return _buildSearchHint(
-        title: 'Cerca circuiti',
-        subtitle:
-            'Digita almeno 2 caratteri per cercare tra le sessioni pubbliche per nome circuito.',
-        // placeholderList:
-        //     _mockCircuits.map((circuit) => _buildCircuitCard(circuit)).toList(),
+        title: 'Top 3 circuiti',
+        subtitle: 'Lista dei circuiti con più sessioni tracciate.',
+        placeholderList: widgets,
       );
     }
 
@@ -414,6 +467,7 @@ class _SearchPageState extends State<SearchPage>
   }
 
   Widget _buildCircuitGroupCard(String trackName, List<SessionModel> sessions) {
+    if (sessions.isEmpty) return const SizedBox.shrink();
     final location = sessions.first.location;
     final totalSessions = sessions.length;
     final bestLap = sessions
@@ -695,7 +749,7 @@ class _SearchPageState extends State<SearchPage>
   Widget _buildSearchHint({
     required String title,
     required String subtitle,
-    // required List<Widget> placeholderList,
+    List<Widget> placeholderList = const [],
   }) {
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -713,8 +767,10 @@ class _SearchPageState extends State<SearchPage>
           subtitle,
           style: const TextStyle(fontSize: 12, color: kMutedColor),
         ),
-        // const SizedBox(height: 16),
-        // ...placeholderList,
+        if (placeholderList.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          ...placeholderList,
+        ],
       ],
     );
   }
@@ -810,19 +866,40 @@ class _SearchPageState extends State<SearchPage>
   }
 
   Future<void> _searchUsers(String term) async {
+    final termLower = term.toLowerCase();
     setState(() {
       _loadingUsers = true;
       _usersError = null;
     });
     try {
-      final snap = await _firestore
+      Query<Map<String, dynamic>> q = _firestore
           .collection('users')
-          .orderBy('fullName')
-          .startAt([term])
-          .endAt(['$term'])
-          .limit(20)
-          .get();
-      final results = snap.docs.map((d) => {'id': d.id, ...d.data()}).toList();
+          .where('searchTokens', arrayContains: termLower)
+          .limit(20);
+
+      final snap = await q.get();
+
+      List<Map<String, dynamic>> results =
+          snap.docs.map((d) => {'id': d.id, ...d.data()}).toList();
+
+      if (results.isEmpty) {
+        // fallback a startAt/endAt case-sensitive ma filtrato in locale
+        final alt = await _firestore
+            .collection('users')
+            .orderBy('fullName')
+            .startAt([term])
+            .endAt(['$term\uf8ff'])
+            .limit(20)
+            .get();
+        results = alt.docs
+            .map((d) => {'id': d.id, ...d.data()})
+            .where((u) => (u['fullName'] ?? '')
+                .toString()
+                .toLowerCase()
+                .contains(termLower))
+            .toList();
+      }
+
       setState(() {
         _userResults = results;
       });
@@ -840,22 +917,36 @@ class _SearchPageState extends State<SearchPage>
   }
 
   Future<void> _searchCircuits(String term) async {
+    final termLower = term.toLowerCase();
     setState(() {
       _loadingCircuits = true;
       _circuitsError = null;
     });
     try {
-      final snap = await _firestore
+      Query<Map<String, dynamic>> q = _firestore
           .collection('sessions')
           .where('isPublic', isEqualTo: true)
-          .orderBy('trackName')
-          .startAt([term])
-          .endAt(['$term'])
-          .limit(40)
-          .get();
+          .orderBy('trackNameLower')
+          .startAt([termLower]).endAt(['$termLower\uf8ff']).limit(80);
+
+      QuerySnapshot<Map<String, dynamic>> snap;
+      try {
+        snap = await q.get();
+      } on FirebaseException {
+        // fallback se manca il campo indicizzato
+        snap = await _firestore
+            .collection('sessions')
+            .where('isPublic', isEqualTo: true)
+            .orderBy('trackName')
+            .startAt([term])
+            .endAt(['$term\uf8ff'])
+            .limit(80)
+            .get();
+      }
 
       final results = snap.docs
           .map((d) => SessionModel.fromFirestore(d.id, d.data()))
+          .where((s) => s.trackName.toLowerCase().contains(termLower))
           .toList();
 
       final groups = <String, List<SessionModel>>{};

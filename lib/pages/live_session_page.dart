@@ -82,16 +82,18 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
   double _gForceY = 0.0;
   double _gForceMagnitude = 1.0;
   String _gpsStatus = 'Inizializzazione GPS...';
+  double? _prevSpeedMs;
 
   // Dati storici per grafici
   final List<double> _speedHistory = [];
-  final List<double> _gForceHistory = [];
+  final List<double> _gForceHistory = []; // fused accel/decel (g)
   final List<double> _gpsAccuracyHistory = [];
   final List<Duration> _timeHistory = [];
+  final List<_ImuSample> _imuBuffer = [];
 
   // Subscriptions
   StreamSubscription<Position>? _gpsSub;
-  StreamSubscription<AccelerometerEvent>? _accelSub;
+  StreamSubscription<UserAccelerometerEvent>? _accelSub;
 
   // 🔁 Timer simulatore GPS
   Timer? _simTimer;
@@ -326,15 +328,29 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
 
   void _startImuStream() {
     // Leggi accelerometro per G-force (solo display)
-    _accelSub = accelerometerEventStream().listen((AccelerometerEvent event) {
+    _accelSub =
+        userAccelerometerEventStream().listen((UserAccelerometerEvent event) {
       if (!mounted || !_recording) return;
+
+      final now = DateTime.now();
+      final sample = _ImuSample(
+        now,
+        event.x,
+        event.y,
+        event.z,
+      );
+      _imuBuffer.add(sample);
+      if (_imuBuffer.length > 500) {
+        _imuBuffer.removeRange(0, _imuBuffer.length - 400);
+      }
+
+      final mag = math.sqrt(
+          event.x * event.x + event.y * event.y + event.z * event.z);
 
       setState(() {
         _gForceX = event.x / 9.81;
         _gForceY = event.y / 9.81;
-        _gForceMagnitude = math.sqrt(
-                event.x * event.x + event.y * event.y + event.z * event.z) /
-            9.81;
+        _gForceMagnitude = mag / 9.81;
       });
     });
   }
@@ -387,6 +403,37 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
       );
     }
     return _lastLocalSmoothed!;
+  }
+
+  double _averageImuG({int windowMs = 600}) {
+    if (_imuBuffer.isEmpty) return 0.0;
+    final cutoff =
+        DateTime.now().subtract(Duration(milliseconds: windowMs));
+    final recent =
+        _imuBuffer.where((s) => s.timestamp.isAfter(cutoff)).toList();
+    if (recent.isEmpty) return 0.0;
+    final sum = recent.fold<double>(0.0, (acc, s) => acc + s.magnitude);
+    return (sum / recent.length) / 9.81;
+  }
+
+  double _computeFusedLongitudinalG(
+    double currentSpeedMs,
+    Duration? prevSampleTime,
+    Duration nowT,
+  ) {
+    final double deltaSpeed =
+        _prevSpeedMs != null ? currentSpeedMs - _prevSpeedMs! : 0.0;
+    final double dtSeconds = prevSampleTime != null
+        ? (nowT - prevSampleTime).inMilliseconds / 1000.0
+        : 0.0;
+
+    final double accelFromSpeed =
+        dtSeconds > 0 ? (deltaSpeed / dtSeconds) / 9.81 : 0.0;
+    final double imuG = _averageImuG(windowMs: 600);
+    final double sign = deltaSpeed >= 0 ? 1.0 : -1.0;
+
+    final double fused = 0.7 * imuG * sign + 0.3 * accelFromSpeed;
+    return fused.clamp(-2.5, 2.5);
   }
 
   Position _positionFromLatLng(LatLng point) {
@@ -479,11 +526,19 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
     // Aggiorna velocità corrente
     _currentSpeedKph = pos.speed * 3.6; // m/s -> km/h
 
+    // Fusione IMU + delta velocità per ottenere accel/decel lungo traiettoria
+    final fusedLongG = _computeFusedLongitudinalG(
+      pos.speed,
+      prevSampleTime,
+      nowT,
+    );
+
     // Salva dati storici per grafici
     _speedHistory.add(_currentSpeedKph);
-    _gForceHistory.add(_gForceMagnitude);
+    _gForceHistory.add(fusedLongG);
     _gpsAccuracyHistory.add(pos.accuracy);
     _timeHistory.add(nowT);
+    _prevSpeedMs = pos.speed;
 
     // Ricalcola smooth path per disegno su mappa
     if (_gpsTrack.length >= 2) {
@@ -1362,4 +1417,15 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
       ),
     );
   }
+}
+
+class _ImuSample {
+  final DateTime timestamp;
+  final double ax;
+  final double ay;
+  final double az;
+
+  _ImuSample(this.timestamp, this.ax, this.ay, this.az);
+
+  double get magnitude => math.sqrt(ax * ax + ay * ay + az * az);
 }

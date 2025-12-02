@@ -164,7 +164,8 @@ class _FeedPageState extends State<FeedPage> {
   bool _hasMore = true;
 
   static const int _pageSize = 10;
-  static const int _fetchBatchSize = 25; // batch più ampio per filtrare senza troppe read
+  static const int _fetchBatchSize =
+      25; // batch più ampio per filtrare senza troppe read
   static const double _nearbyRadiusKm = 80;
 
   @override
@@ -360,26 +361,27 @@ class _FeedPageState extends State<FeedPage> {
                       )
                     : ListView.builder(
                         controller: _scrollController,
-                        padding:
-                            const EdgeInsets.symmetric(horizontal: 16, vertical: 8)
-                                .copyWith(bottom: 24),
-                        itemCount:
-                            _feedItems.length + (_isLoadingMore && _hasMore ? 1 : 0),
+                        padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 8)
+                            .copyWith(bottom: 24),
+                        itemCount: _feedItems.length +
+                            (_isLoadingMore && _hasMore ? 1 : 0),
                         itemBuilder: (context, index) {
                           if (index >= _feedItems.length) {
                             return const Padding(
                               padding: EdgeInsets.all(16.0),
                               child: Center(
                                 child: CircularProgressIndicator(
-                                  valueColor:
-                                      AlwaysStoppedAnimation<Color>(kBrandColor),
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                      kBrandColor),
                                 ),
                               ),
                             );
                           }
 
                           final item = _feedItems[index];
-                          final track2d = _buildTrack2dFromSession(item.session);
+                          final track2d =
+                              _buildTrack2dFromSession(item.session);
                           return _ActivityCard(
                             session: item.session,
                             track2d: track2d,
@@ -698,7 +700,8 @@ class _ActivityCard extends StatelessWidget {
                                   horizontal: 10, vertical: 4),
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(999),
-                                color: const Color.fromRGBO(255, 255, 255, 0.04),
+                                color:
+                                    const Color.fromRGBO(255, 255, 255, 0.04),
                                 border: Border.all(
                                   color: kLineColor.withOpacity(0.5),
                                 ),
@@ -711,10 +714,11 @@ class _ActivityCard extends StatelessWidget {
                                 ),
                               ),
                             ),
-                            if (isFollowed || isNearby) const SizedBox(height: 6),
+                            if (isFollowed || isNearby)
+                              const SizedBox(height: 6),
                             if (isFollowed)
                               _TagBadge(
-                                label: 'Segui',
+                                label: 'Seguito',
                                 color: kBrandColor,
                                 icon: Icons.star,
                               ),
