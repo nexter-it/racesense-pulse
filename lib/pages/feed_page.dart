@@ -1,4 +1,6 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'dart:math' as math;
 import '../theme.dart';
 import '../widgets/pulse_background.dart';
@@ -6,9 +8,8 @@ import '../widgets/pulse_chip.dart';
 import 'activity_detail_page.dart';
 
 import '../services/session_service.dart';
+import '../services/follow_service.dart';
 import '../models/session_model.dart';
-
-import 'dart:math' as math;
 
 class PulseActivity {
   final String id;
@@ -128,13 +129,189 @@ List<Offset> _buildTrack2dFromSession(SessionModel session) {
   return points;
 }
 
-class FeedPage extends StatelessWidget {
+class FeedPage extends StatefulWidget {
   const FeedPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final sessionService = SessionService();
+  State<FeedPage> createState() => _FeedPageState();
+}
 
+class _FeedSessionItem {
+  final SessionModel session;
+  final bool isFollowed;
+  final bool isNearby;
+
+  const _FeedSessionItem({
+    required this.session,
+    required this.isFollowed,
+    required this.isNearby,
+  });
+}
+
+class _FeedPageState extends State<FeedPage> {
+  final SessionService _sessionService = SessionService();
+  final FollowService _followService = FollowService();
+  final ScrollController _scrollController = ScrollController();
+
+  final List<_FeedSessionItem> _feedItems = [];
+  Set<String> _followingIds = {};
+  Position? _userPosition;
+  String? _locationError;
+
+  DocumentSnapshot? _lastDoc;
+  bool _isLoading = true;
+  bool _isLoadingMore = false;
+  bool _hasMore = true;
+
+  static const int _pageSize = 10;
+  static const int _fetchBatchSize = 25; // batch più ampio per filtrare senza troppe read
+  static const double _nearbyRadiusKm = 80;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+    _bootstrapFeed();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _bootstrapFeed() async {
+    setState(() => _isLoading = true);
+    try {
+      final results = await Future.wait([
+        _followService.getFollowingIds(limit: 200),
+        _getUserLocation(),
+      ]);
+
+      _followingIds = results[0] as Set<String>;
+      _userPosition = results[1] as Position?;
+
+      await _loadMore(reset: true);
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<Position?> _getUserLocation() async {
+    try {
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        _locationError = 'GPS disattivato';
+        return null;
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        _locationError = 'Permesso posizione negato';
+        return null;
+      }
+
+      return await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.medium,
+      );
+    } catch (e) {
+      _locationError = 'Errore localizzazione: $e';
+      return null;
+    }
+  }
+
+  bool _isNearby(SessionModel session) {
+    if (_userPosition == null) return false;
+    final coords = session.locationCoords;
+    final distMeters = Geolocator.distanceBetween(
+      _userPosition!.latitude,
+      _userPosition!.longitude,
+      coords.latitude,
+      coords.longitude,
+    );
+    return distMeters / 1000.0 <= _nearbyRadiusKm;
+  }
+
+  Future<void> _loadMore({bool reset = false}) async {
+    if (_isLoadingMore) return;
+    if (reset) {
+      _feedItems.clear();
+      _lastDoc = null;
+      _hasMore = true;
+    }
+    if (!_hasMore) return;
+
+    setState(() => _isLoadingMore = true);
+    int added = 0;
+    int attempts = 0;
+
+    try {
+      while (added < _pageSize && _hasMore && attempts < 4) {
+        attempts++;
+        final snap = await _sessionService.fetchSessionsPage(
+          limit: _fetchBatchSize,
+          startAfter: _lastDoc,
+        );
+
+        if (snap.docs.isEmpty) {
+          _hasMore = false;
+          break;
+        }
+
+        _lastDoc = snap.docs.last;
+
+        for (final doc in snap.docs) {
+          final session = SessionModel.fromFirestore(doc.id, doc.data());
+          final isFollowed = _followingIds.contains(session.userId);
+          final isNearby = _isNearby(session);
+          if (!isFollowed && !isNearby) continue;
+
+          final alreadyAdded = _feedItems
+              .any((item) => item.session.sessionId == session.sessionId);
+          if (alreadyAdded) continue;
+
+          _feedItems.add(_FeedSessionItem(
+            session: session,
+            isFollowed: isFollowed,
+            isNearby: isNearby,
+          ));
+          added++;
+
+          if (added >= _pageSize) break;
+        }
+
+        if (snap.docs.length < _fetchBatchSize) {
+          _hasMore = false;
+        }
+      }
+
+      if (added == 0 || (added < _pageSize && attempts >= 4)) {
+        _hasMore = false;
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoadingMore = false);
+      }
+    }
+  }
+
+  void _onScroll() {
+    if (!_hasMore || _isLoadingMore) return;
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
+      _loadMore();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return PulseBackground(
       withTopPadding: true,
       child: Column(
@@ -155,57 +332,62 @@ class FeedPage extends StatelessWidget {
               ],
             ),
           ),
+          if (_locationError != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              child: Text(
+                _locationError!,
+                style: const TextStyle(color: kMutedColor, fontSize: 12),
+              ),
+            ),
           Expanded(
-            child: FutureBuilder<List<SessionModel>>(
-              future: sessionService.getPublicSessions(limit: 20),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(
+            child: _isLoading
+                ? const Center(
                     child: CircularProgressIndicator(
                       valueColor: AlwaysStoppedAnimation<Color>(kBrandColor),
                     ),
-                  );
-                }
+                  )
+                : _feedItems.isEmpty
+                    ? Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(32),
+                          child: Text(
+                            'Nessuna sessione da piloti che segui o vicina a te',
+                            style: TextStyle(color: kMutedColor),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      )
+                    : ListView.builder(
+                        controller: _scrollController,
+                        padding:
+                            const EdgeInsets.symmetric(horizontal: 16, vertical: 8)
+                                .copyWith(bottom: 24),
+                        itemCount:
+                            _feedItems.length + (_isLoadingMore && _hasMore ? 1 : 0),
+                        itemBuilder: (context, index) {
+                          if (index >= _feedItems.length) {
+                            return const Padding(
+                              padding: EdgeInsets.all(16.0),
+                              child: Center(
+                                child: CircularProgressIndicator(
+                                  valueColor:
+                                      AlwaysStoppedAnimation<Color>(kBrandColor),
+                                ),
+                              ),
+                            );
+                          }
 
-                if (snapshot.hasError) {
-                  return Center(
-                    child: Text(
-                      'Errore nel caricamento delle attività',
-                      style: const TextStyle(color: kErrorColor),
-                    ),
-                  );
-                }
-
-                final sessions = snapshot.data ?? [];
-
-                if (sessions.isEmpty) {
-                  return Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(32),
-                      child: Text(
-                        'Ancora nessuna attività pubblica',
-                        style: TextStyle(color: kMutedColor),
+                          final item = _feedItems[index];
+                          final track2d = _buildTrack2dFromSession(item.session);
+                          return _ActivityCard(
+                            session: item.session,
+                            track2d: track2d,
+                            isFollowed: item.isFollowed,
+                            isNearby: item.isNearby,
+                          );
+                        },
                       ),
-                    ),
-                  );
-                }
-
-                return ListView.builder(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8)
-                          .copyWith(bottom: 24),
-                  itemCount: sessions.length,
-                  itemBuilder: (context, index) {
-                    final session = sessions[index];
-                    final track2d = _buildTrack2dFromSession(session);
-                    return _ActivityCard(
-                      session: session,
-                      track2d: track2d,
-                    );
-                  },
-                );
-              },
-            ),
           ),
         ],
       ),
@@ -399,10 +581,14 @@ class _GradientText extends StatelessWidget {
 class _ActivityCard extends StatelessWidget {
   final SessionModel session;
   final List<Offset> track2d;
+  final bool isFollowed;
+  final bool isNearby;
 
   const _ActivityCard({
     required this.session,
     required this.track2d,
+    this.isFollowed = false,
+    this.isNearby = false,
   });
 
   String _timeAgo() {
@@ -503,21 +689,45 @@ class _ActivityCard extends StatelessWidget {
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(999),
-                          color: const Color.fromRGBO(255, 255, 255, 0.04),
-                          border: Border.all(
-                            color: kLineColor.withOpacity(0.5),
-                          ),
-                        ),
-                        child: Text(
-                          _timeAgo(),
-                          style: const TextStyle(
-                            color: kMutedColor,
-                            fontSize: 11,
-                          ),
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(999),
+                                color: const Color.fromRGBO(255, 255, 255, 0.04),
+                                border: Border.all(
+                                  color: kLineColor.withOpacity(0.5),
+                                ),
+                              ),
+                              child: Text(
+                                _timeAgo(),
+                                style: const TextStyle(
+                                  color: kMutedColor,
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ),
+                            if (isFollowed || isNearby) const SizedBox(height: 6),
+                            if (isFollowed)
+                              _TagBadge(
+                                label: 'Segui',
+                                color: kBrandColor,
+                                icon: Icons.star,
+                              ),
+                            if (isNearby)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 6.0),
+                                child: _TagBadge(
+                                  label: 'Vicino a te',
+                                  color: kPulseColor,
+                                  icon: Icons.location_on_outlined,
+                                ),
+                              ),
+                          ],
                         ),
                       ),
                     ],
@@ -670,6 +880,45 @@ class _ActivityCard extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _TagBadge extends StatelessWidget {
+  final String label;
+  final Color color;
+  final IconData icon;
+
+  const _TagBadge({
+    required this.label,
+    required this.color,
+    required this.icon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.7)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: color, size: 14),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
       ),
     );
   }

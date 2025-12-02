@@ -275,7 +275,7 @@ class _GpsWaitPageState extends State<GpsWaitPage> {
                   ),
                   const SizedBox(width: 4),
                   const Text(
-                    'Preparazione GPS',
+                    'Preparazione',
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w900,

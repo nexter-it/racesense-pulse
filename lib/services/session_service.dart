@@ -482,6 +482,22 @@ class SessionService {
     }
   }
 
+  /// Paginazione feed: sessioni pubbliche ordinate per data
+  Future<QuerySnapshot<Map<String, dynamic>>> fetchSessionsPage({
+    int limit = 20,
+    DocumentSnapshot? startAfter,
+  }) {
+    Query<Map<String, dynamic>> q = _firestore
+        .collection('sessions')
+        .where('isPublic', isEqualTo: true)
+        .orderBy('dateTime', descending: true)
+        .limit(limit);
+    if (startAfter != null) {
+      q = q.startAfterDocument(startAfter);
+    }
+    return q.get();
+  }
+
   /// Recupera i dati GPS di una sessione specifica (caricamento on-demand)
   Future<List<GpsPoint>> getSessionGpsData(String sessionId) async {
     final querySnapshot = await _firestore

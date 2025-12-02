@@ -24,7 +24,7 @@ class LiveSessionPage extends StatefulWidget {
 
 class _LiveSessionPageState extends State<LiveSessionPage> {
   // 🔧 Toggle simulatore GPS (true = usa simulatore, false = usa GPS reale)
-  static const bool _useGpsSimulator = true;
+  static const bool _useGpsSimulator = false;
 
   // 🗺️ Toggle mappa visibile (true = mostra mappa, false = solo dashboard)
   static const bool _viewMap = false; // Abilita solo per test

@@ -202,7 +202,7 @@ class _SearchPageState extends State<SearchPage>
       return _buildSearchHint(
         title: 'Cerca utenti',
         subtitle: 'Digita almeno 2 caratteri per cercare per nome completo.',
-        placeholderList: _mockUsers.map((u) => _buildUserCard(u)).toList(),
+        // placeholderList: _mockUsers.map((u) => _buildUserCard(u)).toList(),
       );
     }
 
@@ -385,8 +385,8 @@ class _SearchPageState extends State<SearchPage>
         title: 'Cerca circuiti',
         subtitle:
             'Digita almeno 2 caratteri per cercare tra le sessioni pubbliche per nome circuito.',
-        placeholderList:
-            _mockCircuits.map((circuit) => _buildCircuitCard(circuit)).toList(),
+        // placeholderList:
+        //     _mockCircuits.map((circuit) => _buildCircuitCard(circuit)).toList(),
       );
     }
 
@@ -695,7 +695,7 @@ class _SearchPageState extends State<SearchPage>
   Widget _buildSearchHint({
     required String title,
     required String subtitle,
-    required List<Widget> placeholderList,
+    // required List<Widget> placeholderList,
   }) {
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -713,8 +713,8 @@ class _SearchPageState extends State<SearchPage>
           subtitle,
           style: const TextStyle(fontSize: 12, color: kMutedColor),
         ),
-        const SizedBox(height: 16),
-        ...placeholderList,
+        // const SizedBox(height: 16),
+        // ...placeholderList,
       ],
     );
   }
