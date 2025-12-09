@@ -27,6 +27,8 @@ dependencies:
   # Grafici
   fl_chart: ^0.69.0
 
+  path_provider: ^2.1.4
+
   # Firebase
   firebase_core: ^4.2.1
   firebase_auth: ^6.1.2

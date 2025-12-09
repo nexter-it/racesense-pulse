@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'theme.dart';
+import 'firebase_options.dart';
 import 'pages/feed_page.dart';
 import 'pages/profile_page.dart';
 import 'pages/new_post_page.dart';
@@ -10,7 +12,17 @@ import 'pages/search_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
+  try {
+    if (kIsWeb) {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+    } else {
+      await Firebase.initializeApp();
+    }
+  } catch (e) {
+    debugPrint('Firebase init failed, app continuerà offline: $e');
+  }
   runApp(const RacesensePulseApp());
 }
 
