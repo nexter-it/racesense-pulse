@@ -179,7 +179,7 @@ class _CustomCircuitBuilderPageState extends State<CustomCircuitBuilderPage> {
         lengthMeters: length,
         createdAt: DateTime.now(),
         points: sectors,
-        microSectors: CustomCircuitInfo.buildSectorsFromPoints(sectors),
+        microSectors: CustomCircuitInfo.buildSectorsFromPoints(sectors, widthMeters: result.widthMeters),
       );
 
       await _service.saveCircuit(circuit);
@@ -282,45 +282,107 @@ class _CustomCircuitBuilderPageState extends State<CustomCircuitBuilderPage> {
               ),
             ),
             Expanded(
-              child: FlutterMap(
-                mapController: _mapController,
-                options: MapOptions(
-                  initialCenter: currentCenter,
-                  initialZoom: 17,
-                  backgroundColor: const Color(0xFF0A0A0A),
-                ),
+              child: Stack(
                 children: [
-                  TileLayer(
-                    urlTemplate:
-                        'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-                    subdomains: const ['a', 'b', 'c'],
-                    userAgentPackageName: 'racesense_pulse',
-                  ),
-                  if (_track.isNotEmpty)
-                    PolylineLayer(
-                      polylines: [
-                        Polyline(
-                          points: _track,
-                          strokeWidth: 5,
-                          color: Colors.greenAccent,
-                        ),
-                      ],
+                  FlutterMap(
+                    mapController: _mapController,
+                    options: MapOptions(
+                      initialCenter: currentCenter,
+                      initialZoom: 17,
+                      backgroundColor: const Color(0xFF0A0A0A),
                     ),
-                  if (_track.isNotEmpty)
-                    MarkerLayer(
-                      markers: [
-                        Marker(
-                          point: _track.last,
-                          width: 14,
-                          height: 14,
-                          child: Container(
-                            decoration: const BoxDecoration(
-                              shape: BoxShape.circle,
+                    children: [
+                      TileLayer(
+                        urlTemplate:
+                            'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+                        subdomains: const ['a', 'b', 'c'],
+                        userAgentPackageName: 'racesense_pulse',
+                      ),
+                      if (_track.isNotEmpty)
+                        PolylineLayer(
+                          polylines: [
+                            Polyline(
+                              points: _track,
+                              strokeWidth: 5,
                               color: kBrandColor,
                             ),
-                          ),
+                          ],
                         ),
-                      ],
+                      if (_track.isNotEmpty)
+                        MarkerLayer(
+                          markers: [
+                            Marker(
+                              point: _track.last,
+                              width: 14,
+                              height: 14,
+                              child: Container(
+                                decoration: const BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: kBrandColor,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                    ],
+                  ),
+                  // Banner istruzioni quando non si sta registrando
+                  if (!_recording && _hasFix)
+                    Positioned(
+                      top: 20,
+                      left: 16,
+                      right: 16,
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(16),
+                          gradient: LinearGradient(
+                            colors: [
+                              kBrandColor.withOpacity(0.95),
+                              kBrandWeakColor.withOpacity(0.95),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          border: Border.all(color: kBrandColor, width: 2),
+                          boxShadow: [
+                            BoxShadow(
+                              color: kBrandColor.withOpacity(0.3),
+                              blurRadius: 20,
+                              spreadRadius: 2,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Colors.black.withOpacity(0.3),
+                              ),
+                              child: const Icon(
+                                Icons.info_outline,
+                                color: Colors.black,
+                                size: 24,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            const Expanded(
+                              child: Text(
+                                'Posizionati sulla linea del via e premi "Inizia tracciamento"',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.black,
+                                  height: 1.3,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                 ],
               ),

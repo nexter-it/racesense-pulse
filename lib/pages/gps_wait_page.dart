@@ -391,7 +391,7 @@ class _GpsWaitPageState extends State<GpsWaitPage> {
                       child: ModeSelector(
                         selected: _selectedMode,
                         onSelect: (mode) async {
-                          if (!_hasFix) return;
+                          // Rimuovendo il check del fix GPS - i bottoni sono sempre attivi
                           switch (mode) {
                             case StartMode.existing:
                               final track =
