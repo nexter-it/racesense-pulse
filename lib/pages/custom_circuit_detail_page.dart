@@ -91,6 +91,9 @@ class CustomCircuitDetailPage extends StatelessWidget {
     final stroke = (circuit.widthMeters / 1.5).clamp(6, 18).toDouble();
     final startFinish = _startFinishLines(path, stroke);
     final boundaryOffset = (circuit.widthMeters / 2) / 111111.0; // circa °lat
+    final microSectors = circuit.microSectors.isNotEmpty
+        ? circuit.microSectors
+        : CustomCircuitInfo.buildSectorsFromPoints(path);
 
     return Scaffold(
       body: SafeArea(
@@ -190,6 +193,14 @@ class CustomCircuitDetailPage extends StatelessWidget {
                           color: kBrandColor.withOpacity(0.55),
                         ),
                         ...startFinish,
+                        // micro settori
+                        ...microSectors.map(
+                          (s) => Polyline(
+                            points: [s.start, s.end],
+                            strokeWidth: 2,
+                            color: Colors.black,
+                          ),
+                        ),
                       ],
                     ),
                   if (path.isNotEmpty)

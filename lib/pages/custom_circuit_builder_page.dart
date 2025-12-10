@@ -179,6 +179,7 @@ class _CustomCircuitBuilderPageState extends State<CustomCircuitBuilderPage> {
         lengthMeters: length,
         createdAt: DateTime.now(),
         points: sectors,
+        microSectors: CustomCircuitInfo.buildSectorsFromPoints(sectors),
       );
 
       await _service.saveCircuit(circuit);

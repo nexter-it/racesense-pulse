@@ -24,7 +24,7 @@ class LiveSessionPage extends StatefulWidget {
 
 class _LiveSessionPageState extends State<LiveSessionPage> {
   // 🔧 Toggle simulatore GPS (true = usa simulatore, false = usa GPS reale)
-  static const bool _useGpsSimulator = false;
+  static const bool _useGpsSimulator = true;
 
   // 🗺️ Toggle mappa visibile (true = mostra mappa, false = solo dashboard)
   static const bool _viewMap = false; // Abilita solo per test
@@ -66,9 +66,10 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
   double _finishLength = 0.0; // Lunghezza del segmento di arrivo originario
 
   // Larghezza metà-gate (perpendicolare alla linea) in metri
-  final double _gateHalfWidth = 10.0; // es. ±10m dalla linea
+  // Ampiato per tollerare campionamenti lenti (1-5 Hz) a velocità elevate.
+  final double _gateHalfWidth = 25.0; // es. ±25m dalla linea
   // Estensione lungo la linea oltre il segmento base (metri)
-  final double _gateHalfLength = 30.0; // es. 30m prima e 30m dopo
+  final double _gateHalfLength = 70.0; // es. 70m prima e 70m dopo
 
   // Dati giri
   final List<Duration> _laps = [];
@@ -344,8 +345,8 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
         _imuBuffer.removeRange(0, _imuBuffer.length - 400);
       }
 
-      final mag = math.sqrt(
-          event.x * event.x + event.y * event.y + event.z * event.z);
+      final mag =
+          math.sqrt(event.x * event.x + event.y * event.y + event.z * event.z);
 
       setState(() {
         _gForceX = event.x / 9.81;
@@ -407,8 +408,7 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
 
   double _averageImuG({int windowMs = 600}) {
     if (_imuBuffer.isEmpty) return 0.0;
-    final cutoff =
-        DateTime.now().subtract(Duration(milliseconds: windowMs));
+    final cutoff = DateTime.now().subtract(Duration(milliseconds: windowMs));
     final recent =
         _imuBuffer.where((s) => s.timestamp.isAfter(cutoff)).toList();
     if (recent.isEmpty) return 0.0;
@@ -669,17 +669,6 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
     final prevDist = _signedDistanceToFinish(prevLocal);
     final curDist = _signedDistanceToFinish(currentLocal);
 
-    // Se sono dallo stesso lato della linea, niente crossing
-    if (prevDist * curDist > 0) {
-      return;
-    }
-
-    // Se entrambi molto lontani dalla linea, scarta
-    if (prevDist.abs() > _gateHalfWidth && curDist.abs() > _gateHalfWidth) {
-      return;
-    }
-
-    // Proiezioni lungo la linea (per vedere se siamo dentro l'area del gate)
     final prevProj = _projectionOnFinish(prevLocal);
     final curProj = _projectionOnFinish(currentLocal);
 
@@ -689,17 +678,28 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
     final double gateStart = -_gateHalfLength;
     final double gateEnd = _finishLength + _gateHalfLength;
 
-    // Se il segmento del veicolo è tutto fuori dalla "finestra" del gate, scarta
     if (maxProj < gateStart || minProj > gateEnd) {
       return;
     }
 
-    // Min 10s dall'inizio sessione per evitare falsi positivi iniziali
-    if (currentTime.inSeconds <= 10) return;
+    final sameSide = prevDist * curDist > 0;
+    if (sameSide) {
+      // Fallback per campionamenti lenti: se siamo comunque molto vicini alla linea
+      // e dentro al gate, considera un crossing approssimato.
+      final minDist = math.min(prevDist.abs(), curDist.abs());
+      final maxDist = math.max(prevDist.abs(), curDist.abs());
+      if (minDist > _gateHalfWidth && maxDist > _gateHalfWidth) {
+        return;
+      }
+      final approxTime = _interpolateTime(prevTime, currentTime, 0.5);
+      if (_canMarkLap(approxTime)) {
+        _registerLapAtTime(approxTime);
+      }
+      return;
+    }
 
-    // Rispetta il minimo tempo tra giri (per evitare doppi conteggi da jitter)
-    final minLap = const Duration(seconds: 20);
-    if (currentTime - _lastLapMark < minLap) {
+    // Se entrambi molto lontani dalla linea, scarta
+    if (prevDist.abs() > _gateHalfWidth && curDist.abs() > _gateHalfWidth) {
       return;
     }
 
@@ -719,7 +719,18 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
     // Interpola il tempo esatto del crossing
     final crossingTime = _interpolateTime(prevTime, currentTime, t);
 
-    _registerLapAtTime(crossingTime);
+    if (_canMarkLap(crossingTime)) {
+      _registerLapAtTime(crossingTime);
+    }
+  }
+
+  bool _canMarkLap(Duration time) {
+    // Min 10s dall'inizio sessione per evitare falsi positivi iniziali
+    if (time.inSeconds <= 10) return false;
+    // Rispetta il minimo tempo tra giri (per evitare doppi conteggi da jitter)
+    const minLap = Duration(seconds: 20);
+    if (time - _lastLapMark < minLap) return false;
+    return true;
   }
 
   // Interpolazione temporale tra due sample

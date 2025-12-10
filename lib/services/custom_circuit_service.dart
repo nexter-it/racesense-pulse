@@ -12,6 +12,7 @@ class CustomCircuitInfo {
   final double lengthMeters;
   final DateTime createdAt;
   final List<LatLng> points;
+  final List<MicroSector> microSectors;
 
   CustomCircuitInfo({
     required this.name,
@@ -21,6 +22,7 @@ class CustomCircuitInfo {
     required this.lengthMeters,
     required this.createdAt,
     required this.points,
+    required this.microSectors,
   });
 
   Map<String, dynamic> toJson() {
@@ -37,6 +39,7 @@ class CustomCircuitInfo {
                 'lon': p.longitude,
               })
           .toList(),
+      'microSectors': microSectors.map((s) => s.toJson()).toList(),
     };
   }
 
@@ -56,6 +59,48 @@ class CustomCircuitInfo {
       createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ??
           DateTime.now(),
       points: pts,
+      microSectors: (json['microSectors'] as List<dynamic>?)
+              ?.map((s) => MicroSector.fromJson(s as Map<String, dynamic>))
+              .toList() ??
+          buildSectorsFromPoints(pts),
+    );
+  }
+
+  static List<MicroSector> buildSectorsFromPoints(List<LatLng> pts) {
+    final List<MicroSector> sectors = [];
+    if (pts.length < 2) return sectors;
+    for (int i = 1; i < pts.length; i++) {
+      sectors.add(MicroSector(start: pts[i - 1], end: pts[i]));
+    }
+    return sectors;
+  }
+}
+
+class MicroSector {
+  final LatLng start;
+  final LatLng end;
+
+  MicroSector({required this.start, required this.end});
+
+  Map<String, dynamic> toJson() {
+    return {
+      'startLat': start.latitude,
+      'startLon': start.longitude,
+      'endLat': end.latitude,
+      'endLon': end.longitude,
+    };
+  }
+
+  factory MicroSector.fromJson(Map<String, dynamic> json) {
+    return MicroSector(
+      start: LatLng(
+        (json['startLat'] as num).toDouble(),
+        (json['startLon'] as num).toDouble(),
+      ),
+      end: LatLng(
+        (json['endLat'] as num).toDouble(),
+        (json['endLon'] as num).toDouble(),
+      ),
     );
   }
 }
