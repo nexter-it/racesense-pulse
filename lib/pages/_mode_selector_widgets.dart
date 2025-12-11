@@ -340,18 +340,80 @@ class _PrivateCircuitsPageState extends State<PrivateCircuitsPage> {
               ),
             );
           }
-          return ListView.builder(
+          return ListView.separated(
+            padding: const EdgeInsets.all(16),
             itemCount: circuits.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 12),
             itemBuilder: (context, index) {
               final c = circuits[index];
               final t = _toTrack(c);
-              return ListTile(
-                title: Text(c.name),
-                subtitle: Text('${c.city} ${c.country}'.trim()),
+              return InkWell(
                 onTap: t != null ? () => Navigator.of(context).pop(t) : null,
-                trailing: t == null
-                    ? const Icon(Icons.error_outline, color: kErrorColor)
-                    : null,
+                borderRadius: BorderRadius.circular(16),
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    gradient: const LinearGradient(
+                      colors: [
+                        Color.fromRGBO(255, 255, 255, 0.08),
+                        Color.fromRGBO(255, 255, 255, 0.04),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    border: Border.all(
+                        color: t != null ? kBrandColor : kErrorColor.withOpacity(0.8)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.25),
+                        blurRadius: 12,
+                        offset: const Offset(0, 6),
+                      )
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: kBrandColor.withOpacity(0.14),
+                        ),
+                        child: const Icon(Icons.track_changes, color: kBrandColor),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              c.name,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w900,
+                                fontSize: 15,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '${c.city} ${c.country}'.trim(),
+                              style: const TextStyle(
+                                color: kMutedColor,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Icon(
+                        t != null ? Icons.chevron_right : Icons.error_outline,
+                        color: t != null ? kMutedColor : kErrorColor,
+                      ),
+                    ],
+                  ),
+                ),
               );
             },
           );

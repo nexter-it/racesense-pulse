@@ -760,21 +760,48 @@ class _GpsWaitPageState extends State<GpsWaitPage> {
         ],
       );
     } else {
-      return _accuracy != null
-          ? Text(
-              'Precisione stimata: ${_accuracy!.toStringAsFixed(1)} m',
-              style: const TextStyle(
-                fontSize: 13,
-                color: kFgColor,
+      final speedMs = _lastPosition?.speed ?? 0.0;
+      final speedKph = (speedMs * 3.6);
+      final altitude = _lastPosition?.altitude;
+      final ageSeconds =
+          _lastUpdate != null ? DateTime.now().difference(_lastUpdate!).inSeconds : null;
+
+      return Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              _StatItem(
+                label: 'Precisione',
+                value: _accuracy != null ? '${_accuracy!.toStringAsFixed(1)} m' : '--',
+                icon: Icons.my_location,
               ),
-            )
-          : const Text(
-              'In attesa del segnale...',
-              style: TextStyle(
-                fontSize: 13,
-                color: kFgColor,
+              Container(width: 1, height: 30, color: kLineColor),
+              _StatItem(
+                label: 'Velocità',
+                value: '${speedKph.toStringAsFixed(1)} km/h',
+                icon: Icons.speed,
               ),
-            );
+              Container(width: 1, height: 30, color: kLineColor),
+              _StatItem(
+                label: 'Altitudine',
+                value: altitude != null ? '${altitude.toStringAsFixed(0)} m' : '--',
+                icon: Icons.landscape,
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            ageSeconds != null
+                ? 'Ultimo fix ${ageSeconds}s fa'
+                : 'In attesa del segnale...',
+            style: const TextStyle(
+              fontSize: 12,
+              color: kMutedColor,
+            ),
+          ),
+        ],
+      );
     }
   }
 
