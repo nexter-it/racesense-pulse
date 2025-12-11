@@ -4,7 +4,9 @@ import '../theme.dart';
 import '../widgets/pulse_background.dart';
 
 class BleScanPage extends StatefulWidget {
-  const BleScanPage({super.key});
+  final Set<String> existingDeviceIds;
+
+  const BleScanPage({super.key, this.existingDeviceIds = const {}});
 
   @override
   State<BleScanPage> createState() => _BleScanPageState();
@@ -147,8 +149,9 @@ class _BleScanPageState extends State<BleScanPage> {
                   final devices = snapshot.data ?? {};
                   final filtered = devices.values
                       .where((d) =>
-                          d.name.startsWith(_targetPrefix) ||
-                          d.id.startsWith(_targetPrefix))
+                          (d.name.startsWith(_targetPrefix) ||
+                              d.id.startsWith(_targetPrefix)) &&
+                          !widget.existingDeviceIds.contains(d.id))
                       .toList();
                   if (filtered.isEmpty) {
                     return Center(

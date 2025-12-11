@@ -44,7 +44,7 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
   Future<void> _addDevice() async {
     final result = await Navigator.of(context).push<Map<String, String>>(
       MaterialPageRoute(
-        builder: (_) => const BleScanPage(),
+        builder: (_) => BleScanPage(existingDeviceIds: _devices.keys.toSet()),
       ),
     );
     if (result != null) {
@@ -52,6 +52,46 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
       if (uid != null) {
         await _firestore.saveUserDevice(uid, result['id']!, result['name']!);
       }
+      await _loadDevices();
+    }
+  }
+
+  Future<void> _deleteDevice(String deviceId) async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A1A),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          'Elimina dispositivo',
+          style: TextStyle(color: kFgColor, fontWeight: FontWeight.w900),
+        ),
+        content: const Text(
+          'Sei sicuro di voler rimuovere questo dispositivo dalla lista?',
+          style: TextStyle(color: kMutedColor),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Annulla', style: TextStyle(color: kMutedColor)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: kErrorColor,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Elimina'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await _firestore.deleteUserDevice(uid, deviceId);
       await _loadDevices();
     }
   }
@@ -65,7 +105,8 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
           children: [
             // Premium header
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12),
               decoration: const BoxDecoration(
                 border: Border(
                   bottom: BorderSide(color: kLineColor, width: 1),
@@ -120,7 +161,9 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
                                           kBrandColor.withAlpha(20),
                                         ],
                                       ),
-                                      border: Border.all(color: kBrandColor.withAlpha(100), width: 2),
+                                      border: Border.all(
+                                          color: kBrandColor.withAlpha(100),
+                                          width: 2),
                                     ),
                                     child: const Icon(
                                       Icons.bluetooth_disabled,
@@ -142,7 +185,8 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
                                   const Text(
                                     'Aggiungi un dispositivo GPS-Tracker\nper iniziare a tracciare le tue sessioni',
                                     textAlign: TextAlign.center,
-                                    style: TextStyle(color: kMutedColor, fontSize: 14),
+                                    style: TextStyle(
+                                        color: kMutedColor, fontSize: 14),
                                   ),
                                 ],
                               ),
@@ -160,12 +204,14 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
                             final visible = snap != null;
                             final connected = snap?.isConnected ?? false;
                             final rssiStrength = (snap?.rssi ?? -100) + 100;
-                            final signalQuality = rssiStrength.clamp(0, 100) / 100;
+                            final signalQuality =
+                                rssiStrength.clamp(0, 100) / 100;
                             return InkWell(
                               onTap: connected
                                   ? () => Navigator.of(context).push(
                                         MaterialPageRoute(
-                                          builder: (_) => DeviceCheckPage(deviceId: id),
+                                          builder: (_) =>
+                                              DeviceCheckPage(deviceId: id),
                                         ),
                                       )
                                   : null,
@@ -212,27 +258,35 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
                                                       kBrandColor.withAlpha(20),
                                                     ]
                                                   : [
-                                                      Colors.white.withAlpha(20),
-                                                      Colors.white.withAlpha(10),
+                                                      Colors.white
+                                                          .withAlpha(20),
+                                                      Colors.white
+                                                          .withAlpha(10),
                                                     ],
                                             ),
                                             border: Border.all(
-                                              color: connected ? kBrandColor : kLineColor,
+                                              color: connected
+                                                  ? kBrandColor
+                                                  : kLineColor,
                                               width: 1.5,
                                             ),
                                           ),
                                           child: Icon(
                                             connected
                                                 ? Icons.bluetooth_connected
-                                                : Icons.bluetooth_searching,
-                                            color: connected ? kBrandColor : kMutedColor,
+                                                : Icons.bluetooth,
+                                            color: connected
+                                                ? kBrandColor
+                                                : const Color.fromARGB(
+                                                    255, 233, 233, 233),
                                             size: 24,
                                           ),
                                         ),
                                         const SizedBox(width: 14),
                                         Expanded(
                                           child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
                                             children: [
                                               Text(
                                                 name,
@@ -252,11 +306,15 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
                                                       shape: BoxShape.circle,
                                                       color: connected
                                                           ? kBrandColor
-                                                          : (visible ? kPulseColor : kMutedColor),
+                                                          : (visible
+                                                              ? kPulseColor
+                                                              : kMutedColor),
                                                       boxShadow: connected
                                                           ? [
                                                               BoxShadow(
-                                                                color: kBrandColor.withAlpha(128),
+                                                                color: kBrandColor
+                                                                    .withAlpha(
+                                                                        128),
                                                                 blurRadius: 8,
                                                                 spreadRadius: 2,
                                                               ),
@@ -267,14 +325,19 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
                                                   const SizedBox(width: 8),
                                                   Text(
                                                     visible
-                                                        ? (connected ? 'Connesso' : 'Rilevato')
+                                                        ? (connected
+                                                            ? 'Connesso'
+                                                            : 'Rilevato')
                                                         : 'Non rilevato',
                                                     style: TextStyle(
                                                       color: connected
                                                           ? kBrandColor
-                                                          : (visible ? kPulseColor : kMutedColor),
+                                                          : (visible
+                                                              ? kPulseColor
+                                                              : kMutedColor),
                                                       fontSize: 13,
-                                                      fontWeight: FontWeight.w600,
+                                                      fontWeight:
+                                                          FontWeight.w600,
                                                     ),
                                                   ),
                                                 ],
@@ -285,16 +348,22 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
                                         if (visible)
                                           Row(
                                             children: List.generate(4, (i) {
-                                              final isActive = signalQuality >= (i + 1) / 4;
+                                              final isActive =
+                                                  signalQuality >= (i + 1) / 4;
                                               return Container(
-                                                margin: const EdgeInsets.only(right: 3),
+                                                margin: const EdgeInsets.only(
+                                                    right: 3),
                                                 width: 5,
                                                 height: 8 + (i * 3.5),
                                                 decoration: BoxDecoration(
                                                   color: isActive
-                                                      ? (connected ? kBrandColor : kPulseColor)
-                                                      : kMutedColor.withAlpha(80),
-                                                  borderRadius: BorderRadius.circular(2),
+                                                      ? (connected
+                                                          ? kBrandColor
+                                                          : kPulseColor)
+                                                      : kMutedColor
+                                                          .withAlpha(80),
+                                                  borderRadius:
+                                                      BorderRadius.circular(2),
                                                 ),
                                               );
                                             }),
@@ -307,13 +376,18 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
                                         Expanded(
                                           child: ElevatedButton.icon(
                                             style: ElevatedButton.styleFrom(
-                                              backgroundColor:
-                                                  connected ? kErrorColor : kBrandColor,
-                                              foregroundColor:
-                                                  connected ? Colors.white : Colors.black,
-                                              padding: const EdgeInsets.symmetric(vertical: 14),
+                                              backgroundColor: connected
+                                                  ? kErrorColor
+                                                  : kBrandColor,
+                                              foregroundColor: connected
+                                                  ? Colors.white
+                                                  : Colors.black,
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      vertical: 14),
                                               shape: RoundedRectangleBorder(
-                                                borderRadius: BorderRadius.circular(12),
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
                                               ),
                                             ),
                                             onPressed: () {
@@ -324,11 +398,15 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
                                               }
                                             },
                                             icon: Icon(
-                                              connected ? Icons.link_off : Icons.link,
+                                              connected
+                                                  ? Icons.link_off
+                                                  : Icons.link,
                                               size: 18,
                                             ),
                                             label: Text(
-                                              connected ? 'Disconnetti' : 'Connetti',
+                                              connected
+                                                  ? 'Disconnetti'
+                                                  : 'Connetti',
                                               style: const TextStyle(
                                                 fontSize: 14,
                                                 fontWeight: FontWeight.w900,
@@ -336,27 +414,54 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
                                             ),
                                           ),
                                         ),
-                                        if (connected) ...[
-                                          const SizedBox(width: 8),
+                                        const SizedBox(width: 8),
+                                        if (connected)
                                           ElevatedButton(
                                             style: ElevatedButton.styleFrom(
                                               backgroundColor: kBrandColor,
                                               foregroundColor: Colors.black,
-                                              padding: const EdgeInsets.symmetric(
-                                                  horizontal: 16, vertical: 14),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 16,
+                                                      vertical: 14),
                                               shape: RoundedRectangleBorder(
-                                                borderRadius: BorderRadius.circular(12),
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
                                               ),
                                             ),
-                                            onPressed: () => Navigator.of(context).push(
+                                            onPressed: () =>
+                                                Navigator.of(context).push(
                                               MaterialPageRoute(
-                                                builder: (_) =>
-                                                    DeviceCheckPage(deviceId: id),
+                                                builder: (_) => DeviceCheckPage(
+                                                    deviceId: id),
                                               ),
                                             ),
-                                            child: const Icon(Icons.location_on, size: 20),
+                                            child: const Icon(Icons.location_on,
+                                                size: 20),
+                                          )
+                                        else
+                                          ElevatedButton(
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor:
+                                                  kErrorColor.withAlpha(30),
+                                              foregroundColor: kErrorColor,
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 16,
+                                                      vertical: 14),
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
+                                              ),
+                                              side: BorderSide(
+                                                  color: kErrorColor,
+                                                  width: 1.5),
+                                            ),
+                                            onPressed: () => _deleteDevice(id),
+                                            child: const Icon(
+                                                Icons.delete_outline,
+                                                size: 20),
                                           ),
-                                        ],
                                       ],
                                     ),
                                   ],
@@ -364,7 +469,8 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
                               ),
                             );
                           },
-                          separatorBuilder: (_, __) => const SizedBox(height: 12),
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(height: 12),
                           itemCount: _devices.length,
                         );
                       },

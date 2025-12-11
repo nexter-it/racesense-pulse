@@ -138,6 +138,15 @@ class FirestoreService {
     return devices;
   }
 
+  Future<void> deleteUserDevice(String userId, String deviceId) async {
+    await _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('devices')
+        .doc(deviceId)
+        .delete();
+  }
+
   // Recupera i dati utente da Firestore
   Future<Map<String, dynamic>?> getUserData(String userId) async {
     try {

@@ -19,6 +19,22 @@ class BleDeviceSnapshot {
   });
 }
 
+class GpsData {
+  final LatLng position;
+  final int? satellites;
+  final int? fix;
+  final double? speed;
+  final int? battery;
+
+  GpsData({
+    required this.position,
+    this.satellites,
+    this.fix,
+    this.speed,
+    this.battery,
+  });
+}
+
 /// Gestione BLE centralizzata, condivisa tra tutte le pagine.
 class BleTrackingService {
   BleTrackingService._internal();
@@ -28,18 +44,18 @@ class BleTrackingService {
   final Map<String, ScanResult> _lastScans = {};
   final Map<String, BluetoothDevice> _connected = {};
   final Map<String, BluetoothCharacteristic> _notifiers = {};
-  final Map<String, LatLng> _lastPositions = {};
+  final Map<String, GpsData> _lastGpsData = {};
 
   StreamSubscription<List<ScanResult>>? _scanSub;
   final StreamController<Map<String, BleDeviceSnapshot>> _scanController =
       StreamController.broadcast();
-  final StreamController<Map<String, LatLng>> _positionController =
+  final StreamController<Map<String, GpsData>> _gpsController =
       StreamController.broadcast();
 
   /// Stream con lo stato di tutti i dispositivi visti/collegati.
   Stream<Map<String, BleDeviceSnapshot>> get deviceStream =>
       _scanController.stream;
-  Stream<Map<String, LatLng>> get positionStream => _positionController.stream;
+  Stream<Map<String, GpsData>> get gpsStream => _gpsController.stream;
 
   bool get isScanning => _scanSub != null;
 
@@ -177,13 +193,27 @@ class BleTrackingService {
 
   void _parsePosition(String deviceId, String text) {
     final parts = text.split('/');
-    if (parts.length < 3) return;
+    if (parts.length < 10) return; // Need all 10 fields: id/lat/lon/sat/fix/speed/datetime/tms/bat/sig
+
     final lat = double.tryParse(parts[1].replaceAll('+', ''));
     final lon = double.tryParse(parts[2].replaceAll('+', ''));
     if (lat == null || lon == null) return;
-    final pos = LatLng(lat, lon);
-    _lastPositions[deviceId] = pos;
-    _positionController.add(Map<String, LatLng>.from(_lastPositions));
+
+    final sat = int.tryParse(parts[3]);
+    final fix = int.tryParse(parts[4]);
+    final speed = double.tryParse(parts[5]);
+    final bat = int.tryParse(parts[8]);
+
+    final gpsData = GpsData(
+      position: LatLng(lat, lon),
+      satellites: sat,
+      fix: fix,
+      speed: speed,
+      battery: bat,
+    );
+
+    _lastGpsData[deviceId] = gpsData;
+    _gpsController.add(Map<String, GpsData>.from(_lastGpsData));
   }
 
   void _pushSnapshot() {

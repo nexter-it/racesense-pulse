@@ -16,7 +16,7 @@ class DeviceCheckPage extends StatefulWidget {
 class _DeviceCheckPageState extends State<DeviceCheckPage> {
   final BleTrackingService _ble = BleTrackingService();
   final MapController _mapController = MapController();
-  LatLng? _lastPos;
+  GpsData? _lastGpsData;
   final List<LatLng> _trail = [];
   static const int _maxTrailPoints = 100;
 
@@ -25,23 +25,24 @@ class _DeviceCheckPageState extends State<DeviceCheckPage> {
     return Scaffold(
       body: PulseBackground(
         withTopPadding: false,
-        child: StreamBuilder<Map<String, LatLng>>(
-          stream: _ble.positionStream,
+        child: StreamBuilder<Map<String, GpsData>>(
+          stream: _ble.gpsStream,
           builder: (context, snapshot) {
-            final newPos = snapshot.data?[widget.deviceId];
-            if (newPos != null && newPos != _lastPos) {
-              _lastPos = newPos;
-              _trail.add(newPos);
+            final newGpsData = snapshot.data?[widget.deviceId];
+            if (newGpsData != null && newGpsData.position != _lastGpsData?.position) {
+              _lastGpsData = newGpsData;
+              _trail.add(newGpsData.position);
               if (_trail.length > _maxTrailPoints) {
                 _trail.removeAt(0);
               }
               // Auto-center map on new position
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 try {
-                  _mapController.move(newPos, _mapController.camera.zoom);
+                  _mapController.move(newGpsData.position, _mapController.camera.zoom);
                 } catch (_) {}
               });
             }
+            final lastPos = _lastGpsData?.position;
             return Column(
               children: [
                 // Premium header
@@ -115,7 +116,7 @@ class _DeviceCheckPageState extends State<DeviceCheckPage> {
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(12),
                           gradient: LinearGradient(
-                            colors: _lastPos != null
+                            colors: lastPos != null
                                 ? [
                                     kBrandColor.withAlpha(40),
                                     kBrandColor.withAlpha(20),
@@ -126,7 +127,7 @@ class _DeviceCheckPageState extends State<DeviceCheckPage> {
                                   ],
                           ),
                           border: Border.all(
-                            color: _lastPos != null ? kBrandColor : kLineColor,
+                            color: lastPos != null ? kBrandColor : kLineColor,
                             width: 1.5,
                           ),
                         ),
@@ -138,8 +139,8 @@ class _DeviceCheckPageState extends State<DeviceCheckPage> {
                               height: 8,
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
-                                color: _lastPos != null ? kBrandColor : kMutedColor,
-                                boxShadow: _lastPos != null
+                                color: lastPos != null ? kBrandColor : kMutedColor,
+                                boxShadow: lastPos != null
                                     ? [
                                         BoxShadow(
                                           color: kBrandColor.withAlpha(128),
@@ -152,9 +153,9 @@ class _DeviceCheckPageState extends State<DeviceCheckPage> {
                             ),
                             const SizedBox(width: 8),
                             Text(
-                              _lastPos != null ? 'GPS OK' : 'In attesa',
+                              lastPos != null ? 'GPS OK' : 'In attesa',
                               style: TextStyle(
-                                color: _lastPos != null ? kBrandColor : kMutedColor,
+                                color: lastPos != null ? kBrandColor : kMutedColor,
                                 fontSize: 12,
                                 fontWeight: FontWeight.w900,
                               ),
@@ -167,7 +168,7 @@ class _DeviceCheckPageState extends State<DeviceCheckPage> {
                 ),
                 // Map
                 Expanded(
-                  child: _lastPos == null
+                  child: lastPos == null
                       ? Center(
                           child: Padding(
                             padding: const EdgeInsets.all(32),
@@ -216,7 +217,7 @@ class _DeviceCheckPageState extends State<DeviceCheckPage> {
                       : FlutterMap(
                           mapController: _mapController,
                           options: MapOptions(
-                            initialCenter: _lastPos!,
+                            initialCenter: lastPos,
                             initialZoom: 17.5,
                             minZoom: 15,
                             maxZoom: 20,
@@ -250,7 +251,7 @@ class _DeviceCheckPageState extends State<DeviceCheckPage> {
                             MarkerLayer(
                               markers: [
                                 Marker(
-                                  point: _lastPos!,
+                                  point: lastPos,
                                   width: 56,
                                   height: 56,
                                   child: Stack(
@@ -308,7 +309,7 @@ class _DeviceCheckPageState extends State<DeviceCheckPage> {
                         ),
                 ),
                 // Bottom info panel
-                if (_lastPos != null)
+                if (_lastGpsData != null)
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: const BoxDecoration(
@@ -320,9 +321,9 @@ class _DeviceCheckPageState extends State<DeviceCheckPage> {
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
                         _buildInfoItem(
-                          icon: Icons.my_location,
-                          label: 'Latitudine',
-                          value: _lastPos!.latitude.toStringAsFixed(6),
+                          icon: Icons.gps_fixed,
+                          label: 'Fix del GPS',
+                          value: _lastGpsData!.fix?.toString() ?? '-',
                         ),
                         Container(
                           width: 1,
@@ -330,9 +331,9 @@ class _DeviceCheckPageState extends State<DeviceCheckPage> {
                           color: kLineColor,
                         ),
                         _buildInfoItem(
-                          icon: Icons.explore,
-                          label: 'Longitudine',
-                          value: _lastPos!.longitude.toStringAsFixed(6),
+                          icon: Icons.satellite_alt,
+                          label: 'Numero satelliti',
+                          value: _lastGpsData!.satellites?.toString() ?? '-',
                         ),
                         Container(
                           width: 1,
@@ -340,9 +341,23 @@ class _DeviceCheckPageState extends State<DeviceCheckPage> {
                           color: kLineColor,
                         ),
                         _buildInfoItem(
-                          icon: Icons.route,
-                          label: 'Punti traccia',
-                          value: '${_trail.length}',
+                          icon: Icons.speed,
+                          label: 'Velocità',
+                          value: _lastGpsData!.speed != null
+                              ? '${_lastGpsData!.speed!.toStringAsFixed(1)} km/h'
+                              : '-',
+                        ),
+                        Container(
+                          width: 1,
+                          height: 40,
+                          color: kLineColor,
+                        ),
+                        _buildInfoItem(
+                          icon: Icons.battery_charging_full,
+                          label: 'Liv. batteria',
+                          value: _lastGpsData!.battery != null
+                              ? '${_lastGpsData!.battery}%'
+                              : '-',
                         ),
                       ],
                     ),
