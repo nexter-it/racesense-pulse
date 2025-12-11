@@ -19,6 +19,7 @@ dependencies:
   geolocator: ^13.0.1
   sensors_plus: ^5.0.0
   geocoding: ^3.0.0
+  flutter_blue_plus: ^1.32.5
 
   # Mappa OpenStreetMap
   flutter_map: ^7.0.2

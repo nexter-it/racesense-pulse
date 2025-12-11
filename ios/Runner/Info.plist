@@ -34,6 +34,11 @@
 	<!-- 🚀 Permesso per sensori di movimento / IMU -->
 	<key>NSMotionUsageDescription</key>
 	<string>Racesense Pulse usa i sensori di movimento per migliorare la precisione del tracciamento e dei tempi.</string>
+	<!-- ✅ Permessi BLE -->
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>Racesense Pulse usa il Bluetooth per collegarsi ai tracker GPS esterni.</string>
+	<key>NSBluetoothPeripheralUsageDescription</key>
+	<string>Racesense Pulse usa il Bluetooth per collegarsi ai tracker GPS esterni.</string>
 
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
