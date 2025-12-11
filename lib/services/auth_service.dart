@@ -33,6 +33,7 @@ class AuthService {
     String password,
     String displayName,
     String usernameInput,
+    DateTime birthDate,
   ) async {
     try {
       final firestoreService = FirestoreService();
@@ -63,6 +64,7 @@ class AuthService {
           fullName: displayName.trim(),
           email: email.trim(),
           username: sanitizedUsername,
+          birthDate: birthDate,
         );
       }
 

@@ -1,7 +1,10 @@
+import 'dart:ui' as ui;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:geolocator/geolocator.dart';
 import 'dart:math' as math;
+import 'package:shared_preferences/shared_preferences.dart';
 import '../theme.dart';
 import '../widgets/pulse_background.dart';
 import '../widgets/pulse_chip.dart';
@@ -168,10 +171,14 @@ class _FeedPageState extends State<FeedPage> {
       25; // batch più ampio per filtrare senza troppe read
   static const double _nearbyRadiusKm = 80;
 
+  bool _showDisclaimer = false;
+  bool _dontShowAgain = false;
+
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+    _loadDisclaimer();
     _bootstrapFeed();
   }
 
@@ -197,6 +204,32 @@ class _FeedPageState extends State<FeedPage> {
       if (mounted) {
         setState(() => _isLoading = false);
       }
+    }
+  }
+
+  Future<void> _loadDisclaimer() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid ?? 'anonymous';
+    final prefs = await SharedPreferences.getInstance();
+    final hidden = prefs.getBool('disclaimer_hidden_$uid') ?? false;
+    if (mounted) {
+      setState(() {
+        _showDisclaimer = !hidden;
+        _dontShowAgain = hidden;
+      });
+    }
+  }
+
+  Future<void> _hideDisclaimer({bool forever = false}) async {
+    final uid = FirebaseAuth.instance.currentUser?.uid ?? 'anonymous';
+    if (forever) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('disclaimer_hidden_$uid', true);
+    }
+    if (mounted) {
+      setState(() {
+        _showDisclaimer = false;
+        _dontShowAgain = forever || _dontShowAgain;
+      });
     }
   }
 
@@ -315,9 +348,11 @@ class _FeedPageState extends State<FeedPage> {
   Widget build(BuildContext context) {
     return PulseBackground(
       withTopPadding: true,
-      child: Column(
+      child: Stack(
         children: [
-          const _TopBar(),
+          Column(
+            children: [
+              const _TopBar(),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4),
             child: Row(
@@ -391,7 +426,211 @@ class _FeedPageState extends State<FeedPage> {
                         },
                       ),
           ),
+            ],
+          ),
+          // Overlay scuro e banner disclaimer centrato
+          if (_showDisclaimer)
+            Positioned.fill(
+              child: Container(
+                color: Colors.black.withAlpha(200),
+                child: Center(
+                  child: _DisclaimerBanner(
+                    dontShowAgain: _dontShowAgain,
+                    onToggleDontShow: (value) async {
+                      if (value) {
+                        await _hideDisclaimer(forever: true);
+                      } else {
+                        setState(() {
+                          _dontShowAgain = false;
+                        });
+                      }
+                    },
+                    onClose: () => _hideDisclaimer(forever: _dontShowAgain),
+                  ),
+                ),
+              ),
+            ),
         ],
+      ),
+    );
+  }
+}
+
+class _DisclaimerBanner extends StatelessWidget {
+  final bool dontShowAgain;
+  final ValueChanged<bool> onToggleDontShow;
+  final VoidCallback onClose;
+
+  const _DisclaimerBanner({
+    required this.dontShowAgain,
+    required this.onToggleDontShow,
+    required this.onClose,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 24),
+      constraints: const BoxConstraints(maxWidth: 500),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(220),
+            blurRadius: 32,
+            spreadRadius: 8,
+            offset: const Offset(0, 8),
+          ),
+          BoxShadow(
+            color: kBrandColor.withAlpha(60),
+            blurRadius: 24,
+            spreadRadius: 0,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: BackdropFilter(
+          filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              gradient: LinearGradient(
+                colors: [
+                  const Color(0xFF1A1A1A).withAlpha(250),
+                  const Color(0xFF0F0F0F).withAlpha(250),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              border: Border.all(
+                color: kBrandColor.withAlpha(100),
+                width: 1.5,
+              ),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: kBrandColor.withAlpha(30),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: kBrandColor.withAlpha(100)),
+                      ),
+                      child: const Icon(
+                        Icons.shield_outlined,
+                        color: kBrandColor,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Text(
+                        'Avviso responsabilità',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w900,
+                          fontSize: 16,
+                          color: kFgColor,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, color: kMutedColor, size: 20),
+                      onPressed: onClose,
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withAlpha(80),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: kLineColor.withAlpha(100),
+                    ),
+                  ),
+                  child: const Text(
+                    'RaceSense non è progettata per gare illecite. '
+                    'Usa l\'app solo in contesti sicuri e legali: non ci assumiamo responsabilità '
+                    'per usi impropri o conseguenze di qualsiasi tipo.',
+                    style: TextStyle(
+                      color: kMutedColor,
+                      fontSize: 13,
+                      height: 1.4,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                InkWell(
+                  onTap: () => onToggleDontShow(!dontShowAgain),
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: dontShowAgain
+                          ? kBrandColor.withAlpha(20)
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: dontShowAgain
+                            ? kBrandColor.withAlpha(100)
+                            : kLineColor.withAlpha(80),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 20,
+                          height: 20,
+                          decoration: BoxDecoration(
+                            color: dontShowAgain
+                                ? kBrandColor
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(
+                              color: dontShowAgain
+                                  ? kBrandColor
+                                  : kMutedColor,
+                              width: 2,
+                            ),
+                          ),
+                          child: dontShowAgain
+                              ? const Icon(
+                                  Icons.check,
+                                  size: 14,
+                                  color: Colors.black,
+                                )
+                              : null,
+                        ),
+                        const SizedBox(width: 12),
+                        const Expanded(
+                          child: Text(
+                            'Non mostrare più questo messaggio',
+                            style: TextStyle(
+                              color: kFgColor,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

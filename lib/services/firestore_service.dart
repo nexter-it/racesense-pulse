@@ -82,6 +82,7 @@ class FirestoreService {
     required String fullName,
     required String email,
     required String username,
+    required DateTime birthDate,
   }) async {
     try {
       final tokens = _buildSearchTokens(fullName);
@@ -91,6 +92,7 @@ class FirestoreService {
         'fullName': fullName,
         'email': email,
         'username': username,
+        'birthDate': Timestamp.fromDate(birthDate),
         'searchTokens': tokens,
         'createdAt': FieldValue.serverTimestamp(),
         'stats': {
@@ -107,6 +109,27 @@ class FirestoreService {
     } catch (e) {
       throw 'Errore nella creazione del profilo: $e';
     }
+  }
+
+  Future<void> saveUserDevice(String userId, String deviceId) async {
+    final doc = _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('devices')
+        .doc(deviceId);
+    await doc.set({
+      'deviceId': deviceId,
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  Future<List<String>> getUserDevices(String userId) async {
+    final snap = await _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('devices')
+        .get();
+    return snap.docs.map((d) => d.id).toList();
   }
 
   // Recupera i dati utente da Firestore

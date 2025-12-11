@@ -13,6 +13,8 @@ import '../widgets/follow_counts.dart';
 import '../widgets/session_metadata_dialog.dart';
 import 'story_composer_page.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'connect_devices_page.dart';
+import 'connect_devices_page.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -411,6 +413,14 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
                         const SizedBox(height: 14),
                         _ProfileHighlights(stats: _userStats),
                         const SizedBox(height: 26),
+                        _ConnectDevicesTile(onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const ConnectDevicesPage(),
+                            ),
+                          );
+                        }),
+                        const SizedBox(height: 18),
                         const Text(
                           'Ultime attività',
                           style: TextStyle(
@@ -482,6 +492,8 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
                               onLongPress: null,
                             ),
                           ),
+                        const SizedBox(height: 20),
+                        const _HelpCenterCard(),
                         const SizedBox(height: 30),
                       ],
                     ),
@@ -598,6 +610,120 @@ class _ProfileHeader extends StatelessWidget {
             ),
           )
         ],
+      ),
+    );
+  }
+}
+
+class _HelpCenterCard extends StatelessWidget {
+  const _HelpCenterCard();
+
+  static const _email = 'info@nexter.it';
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        color: const Color.fromRGBO(255, 255, 255, 0.06),
+        border: Border.all(color: kLineColor),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: kBrandColor.withOpacity(0.12),
+            ),
+            child: const Icon(Icons.help_outline, color: kBrandColor),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: const [
+                Text(
+                  'Help Center',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 15,
+                  ),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  'Per assistenza o comunicazioni invia una mail a $_email '
+                  'con oggetto: "TICKET APP RACESENSE".',
+                  style: TextStyle(
+                    color: kMutedColor,
+                    fontSize: 12,
+                    height: 1.3,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ConnectDevicesTile extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _ConnectDevicesTile({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          color: const Color.fromRGBO(255, 255, 255, 0.06),
+          border: Border.all(color: kLineColor),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: kBrandColor.withOpacity(0.12),
+              ),
+              child: const Icon(Icons.bluetooth, color: kBrandColor),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Collega dispositivi tracking',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w900,
+                      fontSize: 15,
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'Gestisci e collega i tracker GPS-Tracker-F10N al tuo profilo.',
+                    style: TextStyle(
+                      color: kMutedColor,
+                      fontSize: 12,
+                      height: 1.3,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right, color: kMutedColor),
+          ],
+        ),
       ),
     );
   }

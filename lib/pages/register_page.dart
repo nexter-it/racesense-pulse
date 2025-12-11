@@ -17,6 +17,8 @@ class _RegisterPageState extends State<RegisterPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  final TextEditingController _birthDateController = TextEditingController();
+  DateTime? _birthDate;
   bool _isLoading = false;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
@@ -29,6 +31,7 @@ class _RegisterPageState extends State<RegisterPage> {
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _birthDateController.dispose();
     super.dispose();
   }
 
@@ -45,6 +48,27 @@ class _RegisterPageState extends State<RegisterPage> {
       return;
     }
 
+    if (_birthDate == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Inserisci la tua data di nascita'),
+          backgroundColor: kErrorColor,
+        ),
+      );
+      return;
+    }
+
+    final age = _calculateAge(_birthDate!);
+    if (age < 13) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Devi avere almeno 13 anni per registrarti'),
+          backgroundColor: kErrorColor,
+        ),
+      );
+      return;
+    }
+
     setState(() => _isLoading = true);
 
     try {
@@ -54,6 +78,7 @@ class _RegisterPageState extends State<RegisterPage> {
         _passwordController.text,
         _nameController.text.trim(),
         _usernameController.text.trim(),
+        _birthDate!,
       );
 
       // Torna al LoginPage, AuthGate rileverà l'autenticazione e reindirizzerà alla home
@@ -70,6 +95,36 @@ class _RegisterPageState extends State<RegisterPage> {
           ),
         );
       }
+    }
+  }
+
+  int _calculateAge(DateTime birthDate) {
+    final now = DateTime.now();
+    int age = now.year - birthDate.year;
+    if (now.month < birthDate.month ||
+        (now.month == birthDate.month && now.day < birthDate.day)) {
+      age--;
+    }
+    return age;
+  }
+
+  Future<void> _pickBirthDate() async {
+    final now = DateTime.now();
+    final initial = _birthDate ??
+        DateTime(now.year - 18, now.month, now.day); // default 18 anni
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initial,
+      firstDate: DateTime(1900),
+      lastDate: now,
+      helpText: 'Seleziona la data di nascita',
+    );
+    if (picked != null) {
+      setState(() {
+        _birthDate = picked;
+        _birthDateController.text =
+            '${picked.day.toString().padLeft(2, '0')}/${picked.month.toString().padLeft(2, '0')}/${picked.year}';
+      });
     }
   }
 
@@ -264,6 +319,61 @@ class _RegisterPageState extends State<RegisterPage> {
                             }
                             return null;
                           },
+                        ),
+
+                        const SizedBox(height: 20),
+
+                        // Data di nascita
+                        Text(
+                          'DATA DI NASCITA',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: kMutedColor,
+                            letterSpacing: 1.2,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        GestureDetector(
+                          onTap: _isLoading ? null : _pickBirthDate,
+                          child: AbsorbPointer(
+                            child: TextFormField(
+                              controller: _birthDateController,
+                              decoration: InputDecoration(
+                                hintText: 'Seleziona la data',
+                                hintStyle: TextStyle(
+                                    color: kMutedColor.withOpacity(0.5)),
+                                filled: true,
+                                fillColor: const Color(0xFF1a1a1a),
+                                prefixIcon: const Icon(Icons.cake_outlined,
+                                    color: kBrandColor),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide.none,
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide:
+                                      const BorderSide(color: kLineColor),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: const BorderSide(
+                                      color: kBrandColor, width: 2),
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 16,
+                                ),
+                              ),
+                              validator: (_) {
+                                if (_birthDate == null) {
+                                  return 'Inserisci la data di nascita';
+                                }
+                                return null;
+                              },
+                            ),
+                          ),
                         ),
 
                         const SizedBox(height: 20),
