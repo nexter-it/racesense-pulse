@@ -111,7 +111,7 @@ class FirestoreService {
     }
   }
 
-  Future<void> saveUserDevice(String userId, String deviceId) async {
+  Future<void> saveUserDevice(String userId, String deviceId, String deviceName) async {
     final doc = _firestore
         .collection('users')
         .doc(userId)
@@ -119,17 +119,23 @@ class FirestoreService {
         .doc(deviceId);
     await doc.set({
       'deviceId': deviceId,
+      'deviceName': deviceName,
       'updatedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
   }
 
-  Future<List<String>> getUserDevices(String userId) async {
+  Future<Map<String, String>> getUserDevices(String userId) async {
     final snap = await _firestore
         .collection('users')
         .doc(userId)
         .collection('devices')
         .get();
-    return snap.docs.map((d) => d.id).toList();
+    final Map<String, String> devices = {};
+    for (final doc in snap.docs) {
+      final data = doc.data();
+      devices[doc.id] = data['deviceName'] as String? ?? doc.id;
+    }
+    return devices;
   }
 
   // Recupera i dati utente da Firestore

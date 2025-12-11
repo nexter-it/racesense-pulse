@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import '../services/ble_tracking_service.dart';
 import '../theme.dart';
 import '../widgets/pulse_background.dart';
@@ -36,10 +35,10 @@ class _BleScanPageState extends State<BleScanPage> {
     setState(() => _scanning = false);
   }
 
-  Future<void> _connect(String deviceId) async {
+  Future<void> _connect(String deviceId, String deviceName) async {
     final ok = await _bleService.connect(deviceId);
     if (ok && mounted) {
-      Navigator.of(context).pop(deviceId);
+      Navigator.of(context).pop({'id': deviceId, 'name': deviceName});
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -328,7 +327,7 @@ class _BleScanPageState extends State<BleScanPage> {
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                               ),
-                              onPressed: () => _connect(d.id),
+                              onPressed: () => _connect(d.id, d.name),
                               icon: const Icon(Icons.link, size: 18),
                               label: const Text(
                                 'Connetti',

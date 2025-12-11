@@ -1,4 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../services/ble_tracking_service.dart';
@@ -19,7 +18,7 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
   final FirestoreService _firestore = FirestoreService();
   final BleTrackingService _bleService = BleTrackingService();
 
-  List<String> _devices = [];
+  Map<String, String> _devices = {}; // Map of deviceId -> deviceName
   bool _loading = true;
 
   @override
@@ -33,25 +32,25 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
     setState(() => _loading = true);
-    final list = await _firestore.getUserDevices(uid);
+    final devices = await _firestore.getUserDevices(uid);
     if (mounted) {
       setState(() {
-        _devices = list;
+        _devices = devices;
         _loading = false;
       });
     }
   }
 
   Future<void> _addDevice() async {
-    final id = await Navigator.of(context).push<String>(
+    final result = await Navigator.of(context).push<Map<String, String>>(
       MaterialPageRoute(
         builder: (_) => const BleScanPage(),
       ),
     );
-    if (id != null) {
+    if (result != null) {
       final uid = FirebaseAuth.instance.currentUser?.uid;
       if (uid != null) {
-        await _firestore.saveUserDevice(uid, id);
+        await _firestore.saveUserDevice(uid, result['id']!, result['name']!);
       }
       await _loadDevices();
     }
@@ -150,13 +149,18 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
                             ),
                           );
                         }
+                        final deviceEntries = _devices.entries.toList();
                         return ListView.separated(
                           padding: const EdgeInsets.all(16),
                           itemBuilder: (context, index) {
-                            final id = _devices[index];
+                            final entry = deviceEntries[index];
+                            final id = entry.key;
+                            final name = entry.value;
                             final snap = scans[id];
                             final visible = snap != null;
                             final connected = snap?.isConnected ?? false;
+                            final rssiStrength = (snap?.rssi ?? -100) + 100;
+                            final signalQuality = rssiStrength.clamp(0, 100) / 100;
                             return InkWell(
                               onTap: connected
                                   ? () => Navigator.of(context).push(
@@ -231,7 +235,7 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
                                             crossAxisAlignment: CrossAxisAlignment.start,
                                             children: [
                                               Text(
-                                                id,
+                                                name,
                                                 style: const TextStyle(
                                                   fontWeight: FontWeight.w900,
                                                   fontSize: 16,
@@ -279,49 +283,21 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
                                           ),
                                         ),
                                         if (visible)
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                                horizontal: 12, vertical: 8),
-                                            decoration: BoxDecoration(
-                                              borderRadius: BorderRadius.circular(12),
-                                              gradient: LinearGradient(
-                                                colors: connected
-                                                    ? [
-                                                        kBrandColor.withAlpha(30),
-                                                        kBrandColor.withAlpha(20),
-                                                      ]
-                                                    : [
-                                                        Colors.white.withAlpha(15),
-                                                        Colors.white.withAlpha(8),
-                                                      ],
-                                              ),
-                                              border: Border.all(
-                                                color: connected
-                                                    ? kBrandColor.withAlpha(100)
-                                                    : kLineColor,
-                                              ),
-                                            ),
-                                            child: Column(
-                                              children: [
-                                                Text(
-                                                  snap.rssi != null ? '${snap.rssi}' : '--',
-                                                  style: TextStyle(
-                                                    color: connected ? kBrandColor : kFgColor,
-                                                    fontSize: 16,
-                                                    fontWeight: FontWeight.w900,
-                                                  ),
+                                          Row(
+                                            children: List.generate(4, (i) {
+                                              final isActive = signalQuality >= (i + 1) / 4;
+                                              return Container(
+                                                margin: const EdgeInsets.only(right: 3),
+                                                width: 5,
+                                                height: 8 + (i * 3.5),
+                                                decoration: BoxDecoration(
+                                                  color: isActive
+                                                      ? (connected ? kBrandColor : kPulseColor)
+                                                      : kMutedColor.withAlpha(80),
+                                                  borderRadius: BorderRadius.circular(2),
                                                 ),
-                                                Text(
-                                                  'dBm',
-                                                  style: TextStyle(
-                                                    color: connected
-                                                        ? kBrandColor.withAlpha(180)
-                                                        : kMutedColor,
-                                                    fontSize: 10,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
+                                              );
+                                            }),
                                           ),
                                       ],
                                     ),
