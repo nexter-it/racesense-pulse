@@ -1,9 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../theme.dart';
 import '../models/track_definition.dart';
+import '../services/ble_tracking_service.dart';
 import '../services/custom_circuit_service.dart';
 
 enum StartMode { existing, privateCustom, manualLine }
@@ -370,11 +374,88 @@ class ManualLinePage extends StatefulWidget {
 class _ManualLinePageState extends State<ManualLinePage> {
   LatLng? _start;
   LatLng? _end;
+  LatLng? _currentPosition;
   final MapController _mapController = MapController();
+  final BleTrackingService _bleService = BleTrackingService();
+
+  StreamSubscription<Position>? _gpsSubscription;
+  StreamSubscription<Map<String, GpsData>>? _bleGpsSubscription;
+  String? _connectedDeviceId;
+  bool _isUsingBleDevice = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkConnectedDevices();
+    _startLocationTracking();
+  }
+
+  @override
+  void dispose() {
+    _gpsSubscription?.cancel();
+    _bleGpsSubscription?.cancel();
+    super.dispose();
+  }
+
+  void _checkConnectedDevices() {
+    _bleService.deviceStream.listen((devices) {
+      final connected = devices.values.firstWhere(
+        (d) => d.isConnected,
+        orElse: () => BleDeviceSnapshot(
+          id: '',
+          name: '',
+          rssi: null,
+          isConnected: false,
+        ),
+      );
+
+      if (mounted) {
+        setState(() {
+          if (connected.isConnected) {
+            _connectedDeviceId = connected.id;
+            _isUsingBleDevice = true;
+          } else {
+            _connectedDeviceId = null;
+            _isUsingBleDevice = false;
+          }
+        });
+      }
+    });
+  }
+
+  void _startLocationTracking() {
+    // Listen to BLE GPS data
+    _bleGpsSubscription = _bleService.gpsStream.listen((gpsData) {
+      if (_connectedDeviceId != null && _isUsingBleDevice) {
+        final data = gpsData[_connectedDeviceId!];
+        if (data != null && mounted) {
+          setState(() {
+            _currentPosition = data.position;
+          });
+        }
+      }
+    });
+
+    // Listen to cellular GPS data (fallback)
+    if (!_isUsingBleDevice) {
+      _gpsSubscription = Geolocator.getPositionStream(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          distanceFilter: 1,
+        ),
+      ).listen((position) {
+        if (mounted && !_isUsingBleDevice) {
+          setState(() {
+            _currentPosition = LatLng(position.latitude, position.longitude);
+          });
+        }
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final center = widget.initialCenter ?? const LatLng(45.4642, 9.19);
+    final center = widget.initialCenter ?? _currentPosition ?? const LatLng(45.4642, 9.19);
     final hasLine = _start != null && _end != null;
 
     return Scaffold(
@@ -382,12 +463,24 @@ class _ManualLinePageState extends State<ManualLinePage> {
         title: const Text('Linea start/finish'),
         backgroundColor: kBgColor,
         actions: [
+          // Bottone per centrare sulla posizione corrente
+          if (_currentPosition != null)
+            IconButton(
+              icon: const Icon(Icons.my_location, color: kBrandColor),
+              onPressed: () {
+                _mapController.move(_currentPosition!, 17.5);
+              },
+              tooltip: 'Centra su posizione',
+            ),
           TextButton(
             onPressed:
                 hasLine ? () => Navigator.of(context).pop(LineResult(_start!, _end!)) : null,
-            child: const Text(
+            child: Text(
               'Salva',
-              style: TextStyle(color: kBrandColor),
+              style: TextStyle(
+                color: hasLine ? kBrandColor : kMutedColor,
+                fontWeight: FontWeight.w900,
+              ),
             ),
           ),
         ],
@@ -396,15 +489,61 @@ class _ManualLinePageState extends State<ManualLinePage> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             decoration: BoxDecoration(
               border: Border(bottom: BorderSide(color: kLineColor)),
-              color: const Color.fromRGBO(255, 255, 255, 0.02),
+              gradient: LinearGradient(
+                colors: [
+                  kBrandColor.withAlpha(15),
+                  Colors.transparent,
+                ],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ),
             ),
-            child: const Text(
-              'Tocca due punti sulla mappa per fissare Start e Finish.\n'
-              'A = inizio linea, B = fine linea.',
-              style: TextStyle(color: kMutedColor, fontSize: 12),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: kBrandColor.withAlpha(40),
+                    border: Border.all(color: kBrandColor, width: 1.5),
+                  ),
+                  child: const Icon(
+                    Icons.info_outline,
+                    color: kBrandColor,
+                    size: 18,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Seleziona la linea start/finish',
+                        style: TextStyle(
+                          color: kFgColor,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _currentPosition != null
+                            ? 'Il marker giallo mostra la tua posizione attuale.\nTocca due punti sulla mappa: A (inizio) e B (fine).'
+                            : 'Tocca due punti sulla mappa per definire la linea:\nA = inizio linea, B = fine linea.',
+                        style: const TextStyle(
+                          color: kMutedColor,
+                          fontSize: 11,
+                          height: 1.3,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
           Expanded(
@@ -412,7 +551,9 @@ class _ManualLinePageState extends State<ManualLinePage> {
               mapController: _mapController,
               options: MapOptions(
                 initialCenter: center,
-                initialZoom: 17,
+                initialZoom: 17.5,
+                minZoom: 15,
+                maxZoom: 20,
                 interactionOptions: const InteractionOptions(
                   flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
                 ),
@@ -428,76 +569,225 @@ class _ManualLinePageState extends State<ManualLinePage> {
                 },
               ),
               children: [
+                // Mappa satellitare
                 TileLayer(
-                  urlTemplate: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-                  subdomains: const ['a', 'b', 'c'],
+                  urlTemplate:
+                      'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
                   userAgentPackageName: 'com.racesense.pulse',
                 ),
-                if (_start != null || _end != null)
+                // Linea start/finish
+                if (_start != null && _end != null)
                   PolylineLayer(
                     polylines: [
-                      if (_start != null && _end != null)
-                        Polyline(
-                          points: [_start!, _end!],
-                          strokeWidth: 6,
-                          color: kBrandColor.withOpacity(0.8),
-                        ),
+                      Polyline(
+                        points: [_start!, _end!],
+                        strokeWidth: 6,
+                        color: kBrandColor,
+                        borderStrokeWidth: 2,
+                        borderColor: Colors.black.withAlpha(150),
+                      ),
                     ],
                   ),
-                if (_start != null || _end != null)
-                  MarkerLayer(
-                    markers: [
-                      if (_start != null)
-                        Marker(
-                          width: 42,
-                          height: 42,
-                          point: _start!,
-                          child: _FlagMarker(
-                            label: 'A',
-                            color: kBrandColor,
-                          ),
+                // Markers per start/finish e posizione corrente
+                MarkerLayer(
+                  markers: [
+                    // Posizione corrente dell'utente
+                    if (_currentPosition != null)
+                      Marker(
+                        width: 56,
+                        height: 56,
+                        point: _currentPosition!,
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            // Outer pulsing ring
+                            Container(
+                              width: 56,
+                              height: 56,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: kBrandColor.withAlpha(30),
+                                border: Border.all(
+                                  color: kBrandColor.withAlpha(100),
+                                  width: 2,
+                                ),
+                              ),
+                            ),
+                            // Inner marker
+                            Container(
+                              width: 36,
+                              height: 36,
+                              decoration: BoxDecoration(
+                                color: kBrandColor,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.black,
+                                  width: 3,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: kBrandColor.withAlpha(180),
+                                    blurRadius: 16,
+                                    spreadRadius: 4,
+                                  ),
+                                  const BoxShadow(
+                                    color: Colors.black,
+                                    blurRadius: 8,
+                                    spreadRadius: 0,
+                                  ),
+                                ],
+                              ),
+                              child: const Icon(
+                                Icons.navigation,
+                                color: Colors.black,
+                                size: 20,
+                              ),
+                            ),
+                          ],
                         ),
-                      if (_end != null)
-                        Marker(
-                          width: 42,
-                          height: 42,
-                          point: _end!,
-                          child: _FlagMarker(
-                            label: 'B',
-                            color: Colors.redAccent,
-                          ),
+                      ),
+                    // Start marker (A)
+                    if (_start != null)
+                      Marker(
+                        width: 42,
+                        height: 42,
+                        point: _start!,
+                        child: _FlagMarker(
+                          label: 'A',
+                          color: const Color(0xFF00E676),
                         ),
-                    ],
-                  ),
+                      ),
+                    // End marker (B)
+                    if (_end != null)
+                      Marker(
+                        width: 42,
+                        height: 42,
+                        point: _end!,
+                        child: _FlagMarker(
+                          label: 'B',
+                          color: const Color(0xFFFF1744),
+                        ),
+                      ),
+                  ],
+                ),
               ],
             ),
           ),
           Container(
-            padding: const EdgeInsets.all(12),
-            child: Row(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              border: Border(top: BorderSide(color: kLineColor)),
+              gradient: LinearGradient(
+                colors: [
+                  Colors.transparent,
+                  kBgColor.withAlpha(250),
+                ],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ),
+            ),
+            child: Column(
               children: [
-                OutlinedButton.icon(
-                  onPressed: () {
-                    setState(() {
-                      _start = null;
-                      _end = null;
-                    });
-                  },
-                  icon: const Icon(Icons.restart_alt),
-                  label: const Text('Reset'),
+                // Status row
+                Row(
+                  children: [
+                    // Reset button
+                    OutlinedButton.icon(
+                      onPressed: (_start != null || _end != null)
+                          ? () {
+                              setState(() {
+                                _start = null;
+                                _end = null;
+                              });
+                            }
+                          : null,
+                      icon: const Icon(Icons.restart_alt, size: 18),
+                      label: const Text(
+                        'Reset',
+                        style: TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: kBrandColor,
+                        side: BorderSide(
+                          color: (_start != null || _end != null) ? kBrandColor : kLineColor,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    // Status indicator
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(10),
+                          color: hasLine
+                              ? kBrandColor.withAlpha(20)
+                              : const Color.fromRGBO(255, 255, 255, 0.03),
+                          border: Border.all(
+                            color: hasLine ? kBrandColor : kLineColor,
+                            width: 1.5,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              hasLine ? Icons.check_circle : Icons.radio_button_unchecked,
+                              color: hasLine ? kBrandColor : kMutedColor,
+                              size: 18,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                hasLine
+                                    ? 'Linea definita (${(_start!.latitude - _end!.latitude).abs().toStringAsFixed(5)}°)'
+                                    : (_start != null ? 'Seleziona punto B' : 'Seleziona punto A'),
+                                style: TextStyle(
+                                  color: hasLine ? kBrandColor : kMutedColor,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                const Spacer(),
-                if (hasLine)
-                  Text(
-                    'Linea: ${_start!.latitude.toStringAsFixed(5)}, ${_start!.longitude.toStringAsFixed(5)} '
-                    '→ ${_end!.latitude.toStringAsFixed(5)}, ${_end!.longitude.toStringAsFixed(5)}',
-                    style: const TextStyle(color: kMutedColor, fontSize: 11),
-                  )
-                else
-                  const Text(
-                    'Seleziona due punti per procedere',
-                    style: TextStyle(color: kMutedColor, fontSize: 11),
+                // Position info (if available)
+                if (_currentPosition != null) ...[
+                  const SizedBox(height: 10),
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(10),
+                      color: const Color.fromRGBO(255, 255, 255, 0.03),
+                      border: Border.all(color: kLineColor.withAlpha(100)),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          _isUsingBleDevice ? Icons.bluetooth_connected : Icons.gps_fixed,
+                          color: kBrandColor,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Posizione: ${_currentPosition!.latitude.toStringAsFixed(6)}, ${_currentPosition!.longitude.toStringAsFixed(6)}',
+                            style: const TextStyle(
+                              color: kMutedColor,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
+                ],
               ],
             ),
           ),
