@@ -83,6 +83,8 @@ class FirestoreService {
     required String email,
     required String username,
     required DateTime birthDate,
+    String? referredByCode,
+    String? referredByUserId,
   }) async {
     try {
       final tokens = _buildSearchTokens(fullName);
@@ -93,6 +95,9 @@ class FirestoreService {
         'email': email,
         'username': username,
         'birthDate': Timestamp.fromDate(birthDate),
+        'affiliateCode': null,
+        'referredByCode': referredByCode,
+        'referredByUserId': referredByUserId,
         'searchTokens': tokens,
         'createdAt': FieldValue.serverTimestamp(),
         'stats': {
@@ -145,6 +150,41 @@ class FirestoreService {
         .collection('devices')
         .doc(deviceId)
         .delete();
+  }
+
+  // ===================== AFFILIATE CODES =====================
+  String sanitizeAffiliateCode(String raw) {
+    return raw.trim().replaceAll(RegExp(r'[^a-zA-Z0-9]'), '').toUpperCase();
+  }
+
+  Future<String?> getAffiliateOwnerUserId(String code) async {
+    final clean = sanitizeAffiliateCode(code);
+    if (clean.isEmpty) return null;
+    final doc = await _firestore.collection('affiliate_codes').doc(clean).get();
+    if (!doc.exists) return null;
+    return doc.data()?['userId'] as String?;
+  }
+
+  Future<String> claimAffiliateCode(String userId, String desiredCode) async {
+    final clean = sanitizeAffiliateCode(desiredCode);
+    if (clean.isEmpty) throw 'Codice non valido';
+
+    final codeRef = _firestore.collection('affiliate_codes').doc(clean);
+    await _firestore.runTransaction((tx) async {
+      final snap = await tx.get(codeRef);
+      if (snap.exists) {
+        throw 'Codice già utilizzato';
+      }
+      tx.set(codeRef, {
+        'userId': userId,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+      tx.set(_firestore.collection('users').doc(userId), {
+        'affiliateCode': clean,
+      }, SetOptions(merge: true));
+    });
+
+    return clean;
   }
 
   // Recupera i dati utente da Firestore

@@ -34,6 +34,7 @@ class AuthService {
     String displayName,
     String usernameInput,
     DateTime birthDate,
+    {String? referralCode, String? referrerUserId}
   ) async {
     try {
       final firestoreService = FirestoreService();
@@ -65,6 +66,8 @@ class AuthService {
           email: email.trim(),
           username: sanitizedUsername,
           birthDate: birthDate,
+          referredByCode: referralCode,
+          referredByUserId: referrerUserId,
         );
       }
 

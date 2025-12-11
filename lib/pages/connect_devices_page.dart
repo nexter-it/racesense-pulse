@@ -498,7 +498,7 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: kBrandColor,
                   foregroundColor: Colors.black,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  padding: const EdgeInsets.all(16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
                   ),

@@ -14,6 +14,7 @@ import '../widgets/session_metadata_dialog.dart';
 import 'story_composer_page.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'connect_devices_page.dart';
+import 'package:flutter/services.dart';
 import 'connect_devices_page.dart';
 
 class ProfilePage extends StatefulWidget {
@@ -37,12 +38,15 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
   bool _hasAllSessions = false;
   int _followerCount = 0;
   int _followingCount = 0;
+  bool _creatingCode = false;
 
   UserStats _userStats = UserStats.empty();
   List<SessionModel> _recentSessions = [];
   List<Map<String, dynamic>> _followNotifs = [];
   List<SessionModel> _allSessions = [];
   bool _showNotifPanel = false;
+  String? _affiliateCode;
+  String? _referredByCode;
 
   Future<void> _editSession(SessionModel session) async {
     final user = FirebaseAuth.instance.currentUser;
@@ -232,6 +236,8 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
           _followNotifs = notifs;
           _followerCount = stats.followerCount;
           _followingCount = stats.followingCount;
+          _affiliateCode = userData?['affiliateCode'] as String?;
+          _referredByCode = userData?['referredByCode'] as String?;
           _isLoading = false;
           _hasAllSessions = sessions.length < 5 ? true : false;
         });
@@ -257,6 +263,81 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
     final minutes = d.inMinutes;
     final seconds = d.inSeconds % 60;
     return '$minutes:${seconds.toString().padLeft(2, '0')}';
+  }
+
+  Future<void> _showCreateAffiliateDialog() async {
+    final controller = TextEditingController(
+      text: (_username.isNotEmpty ? _username.toUpperCase() : 'RSPULSE'),
+    );
+    final code = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A1A),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          'Crea codice affiliato',
+          style: TextStyle(color: kFgColor, fontWeight: FontWeight.w900),
+        ),
+        content: TextField(
+          controller: controller,
+          textCapitalization: TextCapitalization.characters,
+          style: const TextStyle(color: kFgColor),
+          decoration: const InputDecoration(
+            hintText: 'RSPULSE',
+            hintStyle: TextStyle(color: kMutedColor),
+            labelText: 'Codice',
+            labelStyle: TextStyle(color: kMutedColor),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Annulla', style: TextStyle(color: kMutedColor)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: kBrandColor,
+              foregroundColor: Colors.black,
+            ),
+            onPressed: () => Navigator.of(context).pop(controller.text.trim()),
+            child: const Text('Salva'),
+          ),
+        ],
+      ),
+    );
+
+    if (code == null || code.isEmpty) return;
+
+    setState(() => _creatingCode = true);
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) throw 'Utente non autenticato';
+      final clean = _firestoreService.sanitizeAffiliateCode(code);
+      final claimed =
+          await _firestoreService.claimAffiliateCode(user.uid, clean);
+      if (mounted) {
+        setState(() {
+          _affiliateCode = claimed;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Codice creato: $claimed'),
+            backgroundColor: kBrandColor,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString()),
+            backgroundColor: kErrorColor,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _creatingCode = false);
+    }
   }
 
   Future<void> _loadAllSessions() async {
@@ -412,7 +493,13 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
                         ),
                         const SizedBox(height: 14),
                         _ProfileHighlights(stats: _userStats),
-                        const SizedBox(height: 26),
+                        const SizedBox(height: 15),
+                        _AffiliateCard(
+                          code: _affiliateCode,
+                          referredByCode: _referredByCode,
+                          onGenerate: _showCreateAffiliateDialog,
+                        ),
+                        const SizedBox(height: 18),
                         _ConnectDevicesTile(onTap: () {
                           Navigator.of(context).push(
                             MaterialPageRoute(
@@ -664,6 +751,123 @@ class _HelpCenterCard extends StatelessWidget {
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AffiliateCard extends StatelessWidget {
+  final String? code;
+  final String? referredByCode;
+  final VoidCallback onGenerate;
+
+  const _AffiliateCard({
+    required this.code,
+    required this.referredByCode,
+    required this.onGenerate,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final hasCode = code != null && code!.isNotEmpty;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        color: const Color.fromRGBO(255, 255, 255, 0.06),
+        border: Border.all(color: kLineColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: kBrandColor.withOpacity(0.12),
+                ),
+                child: const Icon(Icons.card_membership, color: kBrandColor),
+              ),
+              const SizedBox(width: 10),
+              const Text(
+                'Codice affiliato',
+                style: TextStyle(
+                  fontWeight: FontWeight.w900,
+                  fontSize: 15,
+                ),
+              ),
+              const Spacer(),
+              if (hasCode)
+                IconButton(
+                  icon: const Icon(Icons.copy, color: kMutedColor),
+                  onPressed: () {
+                    final value = code ?? '';
+                    Clipboard.setData(ClipboardData(text: value));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Codice copiato'),
+                        backgroundColor: kBrandColor,
+                      ),
+                    );
+                  },
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          if (hasCode) ...[
+            Text(
+              code!,
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 1.5,
+              ),
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              'Condividi il tuo codice per attribuire le affiliazioni.',
+              style: TextStyle(color: kMutedColor, fontSize: 12),
+            ),
+          ] else ...[
+            const Text(
+              'Crea il tuo codice affiliato e condividilo con i tuoi contatti.',
+              style: TextStyle(color: kMutedColor, fontSize: 12),
+            ),
+            const SizedBox(height: 10),
+            ElevatedButton(
+              onPressed: onGenerate,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: kBrandColor,
+                foregroundColor: Colors.black,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+              ),
+              child: const Text(
+                'Crea codice',
+                style: TextStyle(fontWeight: FontWeight.w900),
+              ),
+            ),
+          ],
+          if (referredByCode != null && referredByCode!.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                const Icon(Icons.link, color: kPulseColor, size: 18),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    'Sei stato invitato con il codice $referredByCode',
+                    style: const TextStyle(color: kMutedColor, fontSize: 12),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );

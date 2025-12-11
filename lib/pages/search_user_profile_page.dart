@@ -389,8 +389,8 @@ class _SearchUserProfilePageState extends State<SearchUserProfilePage> {
                                   ),
                                 ),
                               const SizedBox(height: 20),
-                              const _HelpCenterCard(),
-                              const SizedBox(height: 30),
+                              // const _HelpCenterCard(),
+                              // const SizedBox(height: 30),
                             ],
                           ),
                         ),
@@ -531,60 +531,6 @@ class _ProfileHeader extends StatelessWidget {
               ],
             ),
           )
-        ],
-      ),
-    );
-  }
-}
-
-class _HelpCenterCard extends StatelessWidget {
-  const _HelpCenterCard();
-
-  static const _email = 'info@nexter.it';
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        color: const Color.fromRGBO(255, 255, 255, 0.06),
-        border: Border.all(color: kLineColor),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: kBrandColor.withOpacity(0.12),
-            ),
-            child: const Icon(Icons.help_outline, color: kBrandColor),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
-                Text(
-                  'Help Center',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w900,
-                    fontSize: 15,
-                  ),
-                ),
-                SizedBox(height: 4),
-                Text(
-                  'Per assistenza invia una mail a $_email con oggetto: "TICKET APP RACESENSE".',
-                  style: TextStyle(
-                    color: kMutedColor,
-                    fontSize: 12,
-                    height: 1.3,
-                  ),
-                ),
-              ],
-            ),
-          ),
         ],
       ),
     );

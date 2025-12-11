@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../theme.dart';
 import '../widgets/pulse_background.dart';
 import '../services/auth_service.dart';
+import '../services/firestore_service.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -18,6 +19,7 @@ class _RegisterPageState extends State<RegisterPage> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   final TextEditingController _birthDateController = TextEditingController();
+  final TextEditingController _referralController = TextEditingController();
   DateTime? _birthDate;
   bool _isLoading = false;
   bool _obscurePassword = true;
@@ -32,6 +34,7 @@ class _RegisterPageState extends State<RegisterPage> {
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     _birthDateController.dispose();
+    _referralController.dispose();
     super.dispose();
   }
 
@@ -73,12 +76,29 @@ class _RegisterPageState extends State<RegisterPage> {
 
     try {
       final authService = AuthService();
+      String? referrerId;
+      String? referralCode;
+      final rawReferral = _referralController.text.trim();
+      if (rawReferral.isNotEmpty) {
+        final clean = FirestoreService().sanitizeAffiliateCode(rawReferral);
+        if (clean.isEmpty) {
+          throw 'Codice affiliazione non valido';
+        }
+        referralCode = clean;
+        referrerId = await FirestoreService().getAffiliateOwnerUserId(clean);
+        if (referrerId == null) {
+          throw 'Codice affiliazione non valido';
+        }
+      }
+
       await authService.registerWithEmailPassword(
         _emailController.text.trim(),
         _passwordController.text,
         _nameController.text.trim(),
         _usernameController.text.trim(),
         _birthDate!,
+        referralCode: referralCode,
+        referrerUserId: referrerId,
       );
 
       // Torna al LoginPage, AuthGate rileverà l'autenticazione e reindirizzerà alla home
@@ -438,6 +458,55 @@ class _RegisterPageState extends State<RegisterPage> {
                             }
                             return null;
                           },
+                        ),
+
+                        const SizedBox(height: 20),
+
+                        // Codice affiliazione (opzionale)
+                        Text(
+                          'CODICE AFFILIAZIONE (OPZIONALE)',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: kMutedColor,
+                            letterSpacing: 1.2,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        TextFormField(
+                          controller: _referralController,
+                          enabled: !_isLoading,
+                          textCapitalization: TextCapitalization.characters,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            color: kFgColor,
+                          ),
+                          decoration: InputDecoration(
+                            hintText: 'ES: RSPULSE23',
+                            hintStyle:
+                                TextStyle(color: kMutedColor.withOpacity(0.5)),
+                            filled: true,
+                            fillColor: const Color(0xFF1a1a1a),
+                            prefixIcon:
+                                const Icon(Icons.card_giftcard, color: kBrandColor),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide.none,
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: kLineColor),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide:
+                                  const BorderSide(color: kBrandColor, width: 2),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 16,
+                            ),
+                          ),
                         ),
 
                         const SizedBox(height: 20),
