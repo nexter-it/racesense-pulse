@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../services/ble_tracking_service.dart';
 import '../theme.dart';
 import '../models/track_definition.dart';
 import 'live_session_page.dart';
@@ -18,7 +19,9 @@ class GpsWaitPage extends StatefulWidget {
 }
 
 class _GpsWaitPageState extends State<GpsWaitPage> {
+  final BleTrackingService _bleService = BleTrackingService();
   StreamSubscription<Position>? _gpsSub;
+  StreamSubscription<Map<String, GpsData>>? _bleGpsSub;
   Timer? _timer;
 
   bool _checkingPermissions = true;
@@ -29,6 +32,11 @@ class _GpsWaitPageState extends State<GpsWaitPage> {
   DateTime? _lastUpdate;
   int _elapsedSeconds = 0;
   Position? _lastPosition;
+
+  // Stato BLE
+  String? _connectedDeviceId;
+  String? _connectedDeviceName;
+  GpsData? _lastBleGpsData;
 
   // Soglia "fix buono" (puoi tarare)
   static const double _targetAccuracy = 10.0; // metri
@@ -42,15 +50,66 @@ class _GpsWaitPageState extends State<GpsWaitPage> {
   @override
   void initState() {
     super.initState();
+    _checkConnectedDevices();
     _initGps();
   }
 
   @override
   void dispose() {
     _gpsSub?.cancel();
+    _bleGpsSub?.cancel();
     _timer?.cancel();
     super.dispose();
   }
+
+  void _checkConnectedDevices() {
+    // Ascolta lo stream dei dispositivi per trovare quello connesso
+    _bleService.deviceStream.listen((devices) {
+      final connected = devices.values.firstWhere(
+        (d) => d.isConnected,
+        orElse: () => BleDeviceSnapshot(
+          id: '',
+          name: '',
+          rssi: null,
+          isConnected: false,
+        ),
+      );
+
+      if (mounted) {
+        setState(() {
+          if (connected.isConnected) {
+            _connectedDeviceId = connected.id;
+            _connectedDeviceName = connected.name;
+            // Se connesso, ascoltiamo il GPS BLE
+            _listenBleGps();
+          } else {
+            _connectedDeviceId = null;
+            _connectedDeviceName = null;
+            _lastBleGpsData = null;
+            _bleGpsSub?.cancel();
+            _bleGpsSub = null;
+          }
+        });
+      }
+    });
+  }
+
+  void _listenBleGps() {
+    _bleGpsSub?.cancel();
+    _bleGpsSub = _bleService.gpsStream.listen((gpsData) {
+      if (_connectedDeviceId != null) {
+        final data = gpsData[_connectedDeviceId!];
+        if (data != null && mounted) {
+          setState(() {
+            _lastBleGpsData = data;
+            _lastUpdate = DateTime.now();
+          });
+        }
+      }
+    });
+  }
+
+  bool get _isUsingBleDevice => _connectedDeviceId != null;
 
   Future<void> _initGps() async {
     try {
@@ -76,7 +135,7 @@ class _GpsWaitPageState extends State<GpsWaitPage> {
           _checkingPermissions = false;
           _hasError = true;
           _errorMessage =
-              'Permesso GPS negato. Concedi l’accesso alla posizione dalle impostazioni.';
+              'Permesso GPS negato. Concedi l\'accesso alla posizione dalle impostazioni.';
         });
         return;
       }
@@ -130,59 +189,106 @@ class _GpsWaitPageState extends State<GpsWaitPage> {
   }
 
   bool get _hasFix {
-    if (_accuracy == null) return false;
-    if (_elapsedSeconds < 3) return false;
+    if (_isUsingBleDevice) {
+      // Per dispositivo BLE, controlliamo se abbiamo dati GPS recenti e un buon fix
+      if (_lastBleGpsData == null) return false;
+      if (_elapsedSeconds < 3) return false;
 
-    // Se l'ultimo sample è troppo vecchio, considera il fix perso
-    if (_lastUpdate != null) {
-      final age = DateTime.now().difference(_lastUpdate!);
-      if (age.inSeconds > 6) {
-        return false;
+      if (_lastUpdate != null) {
+        final age = DateTime.now().difference(_lastUpdate!);
+        if (age.inSeconds > 6) return false;
       }
-    }
 
-    return _accuracy! <= _targetAccuracy;
+      // Fix valido se fix >= 1 e ci sono satelliti
+      return (_lastBleGpsData!.fix ?? 0) >= 1 &&
+             (_lastBleGpsData!.satellites ?? 0) >= 4;
+    } else {
+      // GPS del cellulare
+      if (_accuracy == null) return false;
+      if (_elapsedSeconds < 3) return false;
+
+      if (_lastUpdate != null) {
+        final age = DateTime.now().difference(_lastUpdate!);
+        if (age.inSeconds > 6) return false;
+      }
+
+      return _accuracy! <= _targetAccuracy;
+    }
   }
 
   double get _qualityProgress {
-    if (_accuracy == null) return 0.0;
-
-    // clamp inverso: 0 = pessimo, 1 = ottimo
-    final clampedAcc = _accuracy!.clamp(0.0, _worstAccuracy);
-    final v = 1.0 - (clampedAcc / _worstAccuracy); // 0..1
-    return v;
+    if (_isUsingBleDevice) {
+      // Per BLE mostriamo la qualità basata sul numero di satelliti
+      final sats = _lastBleGpsData?.satellites ?? 0;
+      if (sats == 0) return 0.0;
+      // 4 satelliti = 0.3, 12+ satelliti = 1.0
+      return (sats / 12).clamp(0.0, 1.0);
+    } else {
+      if (_accuracy == null) return 0.0;
+      final clampedAcc = _accuracy!.clamp(0.0, _worstAccuracy);
+      final v = 1.0 - (clampedAcc / _worstAccuracy);
+      return v;
+    }
   }
 
   String get _statusLabel {
     if (_checkingPermissions) return 'Controllo permessi GPS...';
     if (_hasError) return 'Problema con il GPS';
 
-    if (_accuracy == null) {
-      return 'In attesa del primo fix...';
-    }
+    if (_isUsingBleDevice) {
+      if (_lastBleGpsData == null) {
+        return 'In attesa dati dal dispositivo...';
+      }
+      final fix = _lastBleGpsData!.fix ?? 0;
+      final sats = _lastBleGpsData!.satellites ?? 0;
 
-    if (_accuracy! > 30) {
-      return 'Segnale debole, attendi ancora un po’';
-    } else if (_accuracy! > 15) {
-      return 'Segnale in miglioramento...';
-    } else if (!_hasFix) {
-      return 'Quasi pronto, ancora un istante';
+      if (fix == 0 || sats < 4) {
+        return 'Aggancio satelliti in corso...';
+      } else if (sats < 8) {
+        return 'Segnale in miglioramento...';
+      } else if (!_hasFix) {
+        return 'Quasi pronto, ancora un istante';
+      } else {
+        return 'GPS professionale pronto';
+      }
     } else {
-      return 'GPS pronto, puoi iniziare la registrazione';
+      // GPS cellulare
+      if (_accuracy == null) {
+        return 'In attesa del primo fix...';
+      }
+
+      if (_accuracy! > 30) {
+        return 'Segnale debole, attendi ancora un po\'';
+      } else if (_accuracy! > 15) {
+        return 'Segnale in miglioramento...';
+      } else if (!_hasFix) {
+        return 'Quasi pronto, ancora un istante';
+      } else {
+        return 'GPS pronto, puoi iniziare la registrazione';
+      }
     }
   }
 
   Color get _indicatorColor {
     if (_hasError) return kErrorColor;
-    if (_accuracy == null) return kMutedColor;
 
-    if (_hasFix) return kBrandColor;
+    if (_isUsingBleDevice) {
+      if (_lastBleGpsData == null) return kMutedColor;
+      if (_hasFix) return kBrandColor;
 
-    // interpolate fra rosso e verde
-    final start = kErrorColor;
-    final end = kBrandColor;
-    final t = _qualityProgress.clamp(0.0, 1.0);
-    return Color.lerp(start, end, t) ?? kBrandColor;
+      final start = kErrorColor;
+      final end = kBrandColor;
+      final t = _qualityProgress.clamp(0.0, 1.0);
+      return Color.lerp(start, end, t) ?? kBrandColor;
+    } else {
+      if (_accuracy == null) return kMutedColor;
+      if (_hasFix) return kBrandColor;
+
+      final start = kErrorColor;
+      final end = kBrandColor;
+      final t = _qualityProgress.clamp(0.0, 1.0);
+      return Color.lerp(start, end, t) ?? kBrandColor;
+    }
   }
 
   void _goToLivePage() {
@@ -263,7 +369,7 @@ class _GpsWaitPageState extends State<GpsWaitPage> {
                 children: [
                   IconButton(
                     onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.close),
+                    icon: const Icon(Icons.close, color: kFgColor),
                   ),
                   const SizedBox(width: 4),
                   const Text(
@@ -271,40 +377,11 @@ class _GpsWaitPageState extends State<GpsWaitPage> {
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w900,
+                      color: kFgColor,
                     ),
                   ),
                   const Spacer(),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(999),
-                      color: const Color.fromRGBO(255, 255, 255, 0.06),
-                      border: Border.all(color: kLineColor),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 7,
-                          height: 7,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: _hasFix ? kBrandColor : kMutedColor,
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          'CELLULAR GPS',
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.8,
-                            color: kMutedColor,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                  _buildSourceIndicator(),
                 ],
               ),
             ),
@@ -314,74 +391,10 @@ class _GpsWaitPageState extends State<GpsWaitPage> {
                 padding: const EdgeInsets.only(bottom: 10),
                 child: Column(
                   children: [
-                    // INDICATORE CENTRALE
+                    // CARD GPS STATUS
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                      child: Container(
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(24),
-                          gradient: const LinearGradient(
-                            colors: [
-                              Color.fromRGBO(255, 255, 255, 0.06),
-                              Color.fromRGBO(255, 255, 255, 0.03),
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          border: Border.all(color: kLineColor),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.4),
-                              blurRadius: 16,
-                              spreadRadius: -4,
-                              offset: const Offset(0, 10),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          children: [
-                            Text(
-                              _statusLabel,
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                fontSize: 14,
-                                color: kMutedColor,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            _buildCircularIndicator(),
-                            const SizedBox(height: 12),
-                            if (_accuracy != null)
-                              Text(
-                                'Precisione stimata: ${_accuracy!.toStringAsFixed(1)} m',
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  color: kFgColor,
-                                ),
-                              )
-                            else
-                              const Text(
-                                'In attesa del segnale...',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: kFgColor,
-                                ),
-                              ),
-                            if (_hasError) ...[
-                              const SizedBox(height: 12),
-                              Text(
-                                _errorMessage,
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: kErrorColor,
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
+                      child: _buildGpsStatusCard(),
                     ),
 
                     const SizedBox(height: 16),
@@ -391,7 +404,6 @@ class _GpsWaitPageState extends State<GpsWaitPage> {
                       child: ModeSelector(
                         selected: _selectedMode,
                         onSelect: (mode) async {
-                          // Rimuovendo il check del fix GPS - i bottoni sono sempre attivi
                           switch (mode) {
                             case StartMode.existing:
                               final track =
@@ -433,7 +445,9 @@ class _GpsWaitPageState extends State<GpsWaitPage> {
                                     initialCenter: _lastPosition != null
                                         ? LatLng(_lastPosition!.latitude,
                                             _lastPosition!.longitude)
-                                        : null,
+                                        : (_lastBleGpsData != null
+                                            ? _lastBleGpsData!.position
+                                            : null),
                                   ),
                                 ),
                               );
@@ -460,14 +474,14 @@ class _GpsWaitPageState extends State<GpsWaitPage> {
 
                     const SizedBox(height: 18),
 
-                    // CONSIGLI + BOX
+                    // CONSIGLI
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 24.0),
                       child: Align(
                         alignment: Alignment.centerLeft,
-                        child: Text(
+                        child: const Text(
                           'Consigli',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w800,
                             letterSpacing: 0.6,
@@ -479,94 +493,9 @@ class _GpsWaitPageState extends State<GpsWaitPage> {
 
                     const SizedBox(height: 10),
 
-                    // BOX 1 — Dentro al circuito
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 14),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(18),
-                          gradient: const LinearGradient(
-                            colors: [
-                              Color(0xFF15171E),
-                              Color(0xFF101114),
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          border: Border.all(color: kLineColor),
-                        ),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Icon(
-                              Icons.route_outlined,
-                              color: kBrandColor,
-                              size: 22,
-                            ),
-                            const SizedBox(width: 10),
-                            const Expanded(
-                              child: Text(
-                                'Inizia la registrazione quando sei già dentro al circuito. '
-                                'Scegli un tracciato o disegna la linea Start/Finish fissa '
-                                'per rilevare i giri in modo affidabile.',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  height: 1.4,
-                                  color: kFgColor,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 10),
-
-                    // BOX 2 — Posizionamento telefono / dispositivo
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 14),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(18),
-                          gradient: const LinearGradient(
-                            colors: [
-                              Color(0xFF14161C),
-                              Color(0xFF101015),
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          border: Border.all(color: kLineColor),
-                        ),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Icon(
-                              Icons.phone_android_outlined,
-                              color: kPulseColor,
-                              size: 22,
-                            ),
-                            const SizedBox(width: 10),
-                            const Expanded(
-                              child: Text(
-                                'Tieni il telefono o il dispositivo con il cielo ben visibile e in una posizione stabile.\n'
-                                'Evita tasche schermate o punti in cui la carrozzeria copre troppo il segnale GPS: '
-                                'aiuta a mantenere il fix preciso durante tutta la sessione.',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  height: 1.4,
-                                  color: kFgColor,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                      child: _buildTipsCard(),
                     ),
 
                     const SizedBox(height: 12),
@@ -585,10 +514,22 @@ class _GpsWaitPageState extends State<GpsWaitPage> {
                     onPressed: (!_hasError && _canStartRecording)
                         ? _goToLivePage
                         : null,
-                    icon: const Icon(Icons.play_circle_outline),
+                    icon: const Icon(Icons.play_circle_outline, size: 24),
                     label: const Text(
                       'Inizia registrazione LIVE',
-                      style: TextStyle(fontSize: 16),
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: kBrandColor,
+                      foregroundColor: Colors.black,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      elevation: 0,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -628,6 +569,214 @@ class _GpsWaitPageState extends State<GpsWaitPage> {
     );
   }
 
+  Widget _buildSourceIndicator() {
+    if (_isUsingBleDevice) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(999),
+          gradient: LinearGradient(
+            colors: [
+              kBrandColor.withAlpha(40),
+              kBrandColor.withAlpha(25),
+            ],
+          ),
+          border: Border.all(color: kBrandColor, width: 1.5),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 7,
+              height: 7,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: _hasFix ? kBrandColor : kMutedColor,
+                boxShadow: _hasFix
+                    ? [
+                        BoxShadow(
+                          color: kBrandColor.withAlpha(128),
+                          blurRadius: 6,
+                          spreadRadius: 1,
+                        ),
+                      ]
+                    : null,
+              ),
+            ),
+            const SizedBox(width: 6),
+            const Icon(
+              Icons.bluetooth_connected,
+              color: kBrandColor,
+              size: 12,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              _connectedDeviceName ?? 'BLE GPS',
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0.5,
+                color: kBrandColor,
+              ),
+            ),
+          ],
+        ),
+      );
+    } else {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(999),
+          color: const Color.fromRGBO(255, 255, 255, 0.06),
+          border: Border.all(color: kLineColor),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 7,
+              height: 7,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: _hasFix ? kBrandColor : kMutedColor,
+              ),
+            ),
+            const SizedBox(width: 6),
+            const Text(
+              'CELLULAR GPS',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.8,
+                color: kMutedColor,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+
+  Widget _buildGpsStatusCard() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        gradient: LinearGradient(
+          colors: _isUsingBleDevice
+              ? [
+                  kBrandColor.withAlpha(25),
+                  kBrandColor.withAlpha(15),
+                ]
+              : [
+                  const Color.fromRGBO(255, 255, 255, 0.06),
+                  const Color.fromRGBO(255, 255, 255, 0.03),
+                ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        border: Border.all(
+          color: _isUsingBleDevice ? kBrandColor : kLineColor,
+          width: _isUsingBleDevice ? 2 : 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: _isUsingBleDevice
+                ? kBrandColor.withAlpha(40)
+                : Colors.black.withAlpha(100),
+            blurRadius: 16,
+            spreadRadius: -4,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Text(
+            _statusLabel,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 14,
+              color: _isUsingBleDevice ? kFgColor : kMutedColor,
+              fontWeight: _isUsingBleDevice ? FontWeight.w600 : FontWeight.normal,
+            ),
+          ),
+          const SizedBox(height: 16),
+          _buildCircularIndicator(),
+          const SizedBox(height: 12),
+          _buildGpsStats(),
+          if (_hasError) ...[
+            const SizedBox(height: 12),
+            Text(
+              _errorMessage,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 12,
+                color: kErrorColor,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGpsStats() {
+    if (_isUsingBleDevice && _lastBleGpsData != null) {
+      return Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              _StatItem(
+                label: 'Satelliti',
+                value: '${_lastBleGpsData!.satellites ?? '-'}',
+                icon: Icons.satellite_alt,
+              ),
+              Container(
+                width: 1,
+                height: 30,
+                color: kLineColor,
+              ),
+              _StatItem(
+                label: 'Fix',
+                value: '${_lastBleGpsData!.fix ?? '-'}',
+                icon: Icons.gps_fixed,
+              ),
+              Container(
+                width: 1,
+                height: 30,
+                color: kLineColor,
+              ),
+              _StatItem(
+                label: 'Batteria',
+                value: _lastBleGpsData!.battery != null
+                    ? '${_lastBleGpsData!.battery}%'
+                    : '-',
+                icon: Icons.battery_charging_full,
+              ),
+            ],
+          ),
+        ],
+      );
+    } else {
+      return _accuracy != null
+          ? Text(
+              'Precisione stimata: ${_accuracy!.toStringAsFixed(1)} m',
+              style: const TextStyle(
+                fontSize: 13,
+                color: kFgColor,
+              ),
+            )
+          : const Text(
+              'In attesa del segnale...',
+              style: TextStyle(
+                fontSize: 13,
+                color: kFgColor,
+              ),
+            );
+    }
+  }
 
   Widget _buildCircularIndicator() {
     final progress = _qualityProgress.clamp(0.0, 1.0);
@@ -682,6 +831,80 @@ class _GpsWaitPageState extends State<GpsWaitPage> {
     );
   }
 
+  Widget _buildTipsCard() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        gradient: const LinearGradient(
+          colors: [
+            Color(0xFF15171E),
+            Color(0xFF101114),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        border: Border.all(color: kLineColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: const [
+              Icon(
+                Icons.route_outlined,
+                color: kBrandColor,
+                size: 22,
+              ),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Inizia la registrazione quando sei già dentro al circuito. '
+                  'Scegli un tracciato o disegna la linea Start/Finish fissa '
+                  'per rilevare i giri in modo affidabile.',
+                  style: TextStyle(
+                    fontSize: 13,
+                    height: 1.4,
+                    color: kFgColor,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Divider(color: kLineColor, height: 1),
+          const SizedBox(height: 14),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                _isUsingBleDevice ? Icons.bluetooth : Icons.phone_android_outlined,
+                color: kPulseColor,
+                size: 22,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  _isUsingBleDevice
+                      ? 'Posiziona il dispositivo GPS con il cielo ben visibile e in una posizione stabile. '
+                        'Evita coperture metalliche che possono bloccare il segnale.'
+                      : 'Tieni il telefono con il cielo ben visibile e in una posizione stabile. '
+                        'Evita tasche schermate o punti in cui la carrozzeria copre troppo il segnale GPS.',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    height: 1.4,
+                    color: kFgColor,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _selectionSummaryCard() {
     String title = 'Nessuna modalità selezionata';
     String subtitle = 'Scegli un\'opzione per iniziare';
@@ -709,9 +932,7 @@ class _GpsWaitPageState extends State<GpsWaitPage> {
       case StartMode.manualLine:
         title = 'Linea start/finish manuale';
         if (_hasManualLine) {
-          subtitle =
-              'Linea impostata: A(${_manualLineStart!.latitude.toStringAsFixed(4)}, ${_manualLineStart!.longitude.toStringAsFixed(4)}) '
-              '→ B(${_manualLineEnd!.latitude.toStringAsFixed(4)}, ${_manualLineEnd!.longitude.toStringAsFixed(4)})';
+          subtitle = 'Linea impostata sulla mappa';
           ready = true;
         } else {
           subtitle = 'Definisci la linea su mappa';
@@ -726,8 +947,19 @@ class _GpsWaitPageState extends State<GpsWaitPage> {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: ready ? kBrandColor : kLineColor),
-        color: const Color.fromRGBO(255, 255, 255, 0.03),
+        border: Border.all(
+          color: ready ? kBrandColor : kLineColor,
+          width: ready ? 2 : 1,
+        ),
+        gradient: ready
+            ? LinearGradient(
+                colors: [
+                  kBrandColor.withAlpha(20),
+                  kBrandColor.withAlpha(10),
+                ],
+              )
+            : null,
+        color: ready ? null : const Color.fromRGBO(255, 255, 255, 0.03),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -735,6 +967,7 @@ class _GpsWaitPageState extends State<GpsWaitPage> {
           Icon(
             ready ? Icons.check_circle : Icons.info_outline,
             color: ready ? kBrandColor : kMutedColor,
+            size: 22,
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -743,16 +976,17 @@ class _GpsWaitPageState extends State<GpsWaitPage> {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w800,
+                    color: ready ? kFgColor : kMutedColor,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   subtitle,
-                  style: const TextStyle(
-                    color: kMutedColor,
+                  style: TextStyle(
+                    color: ready ? kFgColor : kMutedColor,
                     fontSize: 12,
                   ),
                 ),
@@ -761,6 +995,45 @@ class _GpsWaitPageState extends State<GpsWaitPage> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _StatItem extends StatelessWidget {
+  final String label;
+  final String value;
+  final IconData icon;
+
+  const _StatItem({
+    required this.label,
+    required this.value,
+    required this.icon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Icon(icon, color: kBrandColor, size: 18),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 10,
+            color: kMutedColor,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 13,
+            color: kFgColor,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -782,7 +1055,7 @@ class _ArcPainter extends CustomPainter {
     );
 
     final bgPaint = Paint()
-      ..color = Colors.white.withOpacity(0.06)
+      ..color = Colors.white.withAlpha(15)
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth;
     canvas.drawArc(rect, -math.pi / 2, 2 * math.pi, false, bgPaint);
