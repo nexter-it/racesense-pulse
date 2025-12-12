@@ -396,12 +396,42 @@ class _PrivateCircuitsPageState extends State<PrivateCircuitsPage> {
                               overflow: TextOverflow.ellipsis,
                             ),
                             const SizedBox(height: 4),
-                            Text(
-                              '${c.city} ${c.country}'.trim(),
-                              style: const TextStyle(
-                                color: kMutedColor,
-                                fontSize: 12,
-                              ),
+                            Row(
+                              children: [
+                                Text(
+                                  '${c.city} ${c.country}'.trim(),
+                                  style: const TextStyle(
+                                    color: kMutedColor,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                if (c.usedBleDevice) ...[
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(4),
+                                      color: kBrandColor.withOpacity(0.15),
+                                      border: Border.all(color: kBrandColor.withOpacity(0.5)),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: const [
+                                        Icon(Icons.bluetooth_connected, color: kBrandColor, size: 10),
+                                        SizedBox(width: 3),
+                                        Text(
+                                          'BLE',
+                                          style: TextStyle(
+                                            color: kBrandColor,
+                                            fontSize: 9,
+                                            fontWeight: FontWeight.w800,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ],
                             ),
                           ],
                         ),

@@ -6,7 +6,9 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../services/custom_circuit_service.dart';
+import '../services/ble_tracking_service.dart';
 import '../theme.dart';
+import '../widgets/pulse_background.dart';
 
 class CustomCircuitBuilderPage extends StatefulWidget {
   const CustomCircuitBuilderPage({super.key});
@@ -16,90 +18,153 @@ class CustomCircuitBuilderPage extends StatefulWidget {
       _CustomCircuitBuilderPageState();
 }
 
+enum BuilderStep { selectStartLine, tracking, finished }
+
 class _CustomCircuitBuilderPageState extends State<CustomCircuitBuilderPage> {
   final MapController _mapController = MapController();
   final CustomCircuitService _service = CustomCircuitService();
-  StreamSubscription<Position>? _gpsSub;
+  final BleTrackingService _bleService = BleTrackingService();
 
-  bool _hasPermission = false;
-  bool _hasFix = false;
-  bool _recording = false;
+  StreamSubscription<Position>? _cellularGpsSubscription;
+  StreamSubscription<Map<String, GpsData>>? _bleGpsSubscription;
+
+  BuilderStep _step = BuilderStep.selectStartLine;
   bool _saving = false;
 
-  List<LatLng> _track = [];
-  Position? _lastPos;
+  // Step 1: Selezione linea del via
+  LatLng? _startLinePointA;
+  LatLng? _startLinePointB;
+  LatLng? _currentPosition;
+
+  // Tracking GPS source
+  String? _connectedDeviceId;
+  bool _isUsingBleDevice = false;
+
+  // Step 2: Tracciamento
+  List<LatLng> _trackPoints = [];
+  double _currentSpeed = 0.0;
 
   @override
   void initState() {
     super.initState();
-    _initGps();
+    _checkBleConnection();
+    _startLocationTracking();
   }
 
   @override
   void dispose() {
-    _gpsSub?.cancel();
+    _cellularGpsSubscription?.cancel();
+    _bleGpsSubscription?.cancel();
     super.dispose();
   }
 
-  Future<void> _initGps() async {
-    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) return;
-    LocationPermission permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-    }
-    if (permission == LocationPermission.denied ||
-        permission == LocationPermission.deniedForever) {
-      return;
-    }
-    setState(() => _hasPermission = true);
+  void _checkBleConnection() {
+    _bleService.deviceStream.listen((devices) {
+      final connected = devices.values.firstWhere(
+        (d) => d.isConnected,
+        orElse: () => BleDeviceSnapshot(
+          id: '',
+          name: '',
+          rssi: null,
+          isConnected: false,
+        ),
+      );
 
-    const settings = LocationSettings(
-      accuracy: LocationAccuracy.high,
-      distanceFilter: 1,
-    );
-    _gpsSub = Geolocator.getPositionStream(locationSettings: settings).listen(
-      (pos) {
-        _lastPos = pos;
-        if (!_hasFix) {
-          setState(() {
-            _hasFix = true;
-          });
-        }
-        if (_recording) {
-          final p = LatLng(pos.latitude, pos.longitude);
-          _track.add(p);
-          _mapController.move(p, _mapController.camera.zoom);
-          setState(() {});
-        }
-      },
-    );
+      if (mounted) {
+        setState(() {
+          if (connected.isConnected) {
+            _connectedDeviceId = connected.id;
+            _isUsingBleDevice = true;
+          } else {
+            _connectedDeviceId = null;
+            _isUsingBleDevice = false;
+          }
+        });
+      }
+    });
   }
 
-  Future<void> _toggleRecording() async {
-    if (!_recording) {
-      if (!_hasFix || _lastPos == null) return;
-      setState(() {
-        _track = [LatLng(_lastPos!.latitude, _lastPos!.longitude)];
-        _recording = true;
-      });
-    } else {
-      setState(() => _recording = false);
-      await _finalizeCircuit();
-    }
+  void _startLocationTracking() {
+    // Listen to BLE GPS data
+    _bleGpsSubscription = _bleService.gpsStream.listen((gpsData) {
+      if (_connectedDeviceId != null && _isUsingBleDevice) {
+        final data = gpsData[_connectedDeviceId!];
+        if (data != null && mounted) {
+          setState(() {
+            _currentPosition = data.position;
+            _currentSpeed = data.speed ?? 0.0;
+          });
+
+          // Auto-center map during start line selection
+          if (_step == BuilderStep.selectStartLine) {
+            try {
+              _mapController.move(data.position, _mapController.camera.zoom);
+            } catch (_) {}
+          }
+
+          // Durante il tracciamento, aggiungi i punti
+          if (_step == BuilderStep.tracking) {
+            _trackPoints.add(data.position);
+          }
+        }
+      }
+    });
+
+    // Listen to cellular GPS data (fallback)
+    _cellularGpsSubscription = Geolocator.getPositionStream(
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 1,
+      ),
+    ).listen((position) {
+      if (mounted && !_isUsingBleDevice) {
+        final newPosition = LatLng(position.latitude, position.longitude);
+        setState(() {
+          _currentPosition = newPosition;
+          _currentSpeed = position.speed * 3.6; // m/s -> km/h
+        });
+
+        // Auto-center map during start line selection
+        if (_step == BuilderStep.selectStartLine) {
+          try {
+            _mapController.move(newPosition, _mapController.camera.zoom);
+          } catch (_) {}
+        }
+
+        // Durante il tracciamento, aggiungi i punti
+        if (_step == BuilderStep.tracking) {
+          _trackPoints.add(newPosition);
+        }
+      }
+    });
+  }
+
+  void _startTracking() {
+    if (_currentPosition == null) return;
+    setState(() {
+      _step = BuilderStep.tracking;
+      _trackPoints = [_currentPosition!];
+    });
+  }
+
+  Future<void> _finishTracking() async {
+    setState(() {
+      _step = BuilderStep.finished;
+    });
+    await _finalizeCircuit();
   }
 
   Future<void> _finalizeCircuit() async {
-    if (_track.length < 5 || _saving) return;
+    if (_trackPoints.length < 5 || _saving) return;
     setState(() => _saving = true);
     try {
-      final length = _calculateLength(_track);
-      final sectors = _densifyEveryMeter(_track);
+      final length = _calculateLength(_trackPoints);
+      final sectors = _densifyEveryMeter(_trackPoints);
       String city = '';
       String country = '';
       try {
         final placemarks = await placemarkFromCoordinates(
-            _track.first.latitude, _track.first.longitude);
+            _trackPoints.first.latitude, _trackPoints.first.longitude);
         if (placemarks.isNotEmpty) {
           city = placemarks.first.locality ?? placemarks.first.administrativeArea ?? '';
           country = placemarks.first.country ?? '';
@@ -122,19 +187,23 @@ class _CustomCircuitBuilderPageState extends State<CustomCircuitBuilderPage> {
               children: [
                 TextField(
                   controller: nameCtrl,
+                  style: const TextStyle(color: kFgColor),
                   decoration: const InputDecoration(
                     labelText: 'Nome circuito',
+                    labelStyle: TextStyle(color: kMutedColor),
                   ),
                 ),
                 TextField(
                   controller: widthCtrl,
+                  style: const TextStyle(color: kFgColor),
                   decoration: const InputDecoration(
                     labelText: 'Larghezza (metri)',
+                    labelStyle: TextStyle(color: kMutedColor),
                   ),
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 12),
                 Text(
                   'Lunghezza: ${length.toStringAsFixed(0)} m',
                   style: const TextStyle(color: kMutedColor, fontSize: 12),
@@ -143,6 +212,27 @@ class _CustomCircuitBuilderPageState extends State<CustomCircuitBuilderPage> {
                   Text(
                     '$city $country'.trim(),
                     style: const TextStyle(color: kMutedColor, fontSize: 12),
+                  ),
+                const SizedBox(height: 8),
+                if (_isUsingBleDevice)
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      color: kBrandColor.withAlpha(20),
+                      border: Border.all(color: kBrandColor),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: const [
+                        Icon(Icons.bluetooth_connected, color: kBrandColor, size: 16),
+                        SizedBox(width: 6),
+                        Text(
+                          'Tracciato con dispositivo BLE',
+                          style: TextStyle(color: kBrandColor, fontSize: 11),
+                        ),
+                      ],
+                    ),
                   ),
               ],
             ),
@@ -159,6 +249,10 @@ class _CustomCircuitBuilderPageState extends State<CustomCircuitBuilderPage> {
                     widthMeters: width,
                   ));
                 },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: kBrandColor,
+                  foregroundColor: Colors.black,
+                ),
                 child: const Text('Salva'),
               ),
             ],
@@ -180,6 +274,7 @@ class _CustomCircuitBuilderPageState extends State<CustomCircuitBuilderPage> {
         createdAt: DateTime.now(),
         points: sectors,
         microSectors: CustomCircuitInfo.buildSectorsFromPoints(sectors, widthMeters: result.widthMeters),
+        usedBleDevice: _isUsingBleDevice,
       );
 
       await _service.saveCircuit(circuit);
@@ -233,219 +328,569 @@ class _CustomCircuitBuilderPageState extends State<CustomCircuitBuilderPage> {
 
   @override
   Widget build(BuildContext context) {
-    final currentCenter = _track.isNotEmpty
-        ? _track.last
-        : (_lastPos != null
-            ? LatLng(_lastPos!.latitude, _lastPos!.longitude)
-            : const LatLng(45.0, 9.0));
-
     return Scaffold(
-      body: SafeArea(
-        child: Column(
-          children: [
-            Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10),
-              child: Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back),
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
-                  const SizedBox(width: 8),
-                  const Text(
-                    'Traccia circuito custom',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  const Spacer(),
-                  if (_recording)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.red.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: Colors.red),
-                      ),
-                      child: const Text(
-                        'REC',
-                        style: TextStyle(
-                          color: Colors.red,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                ],
+      body: PulseBackground(
+        withTopPadding: false,
+        child: SafeArea(
+          child: Column(
+            children: [
+              _buildHeader(),
+              Expanded(
+                child: _step == BuilderStep.selectStartLine
+                    ? _buildStartLineSelection()
+                    : _buildTrackingView(),
               ),
-            ),
-            Expanded(
-              child: Stack(
-                children: [
-                  FlutterMap(
-                    mapController: _mapController,
-                    options: MapOptions(
-                      initialCenter: currentCenter,
-                      initialZoom: 17,
-                      backgroundColor: const Color(0xFF0A0A0A),
-                    ),
-                    children: [
-                      TileLayer(
-                        urlTemplate:
-                            'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-                        subdomains: const ['a', 'b', 'c'],
-                        userAgentPackageName: 'racesense_pulse',
-                      ),
-                      if (_track.isNotEmpty)
-                        PolylineLayer(
-                          polylines: [
-                            Polyline(
-                              points: _track,
-                              strokeWidth: 5,
-                              color: kBrandColor,
-                            ),
-                          ],
-                        ),
-                      if (_track.isNotEmpty)
-                        MarkerLayer(
-                          markers: [
-                            Marker(
-                              point: _track.last,
-                              width: 14,
-                              height: 14,
-                              child: Container(
-                                decoration: const BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: kBrandColor,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                    ],
-                  ),
-                  // Banner istruzioni quando non si sta registrando
-                  if (!_recording && _hasFix)
-                    Positioned(
-                      top: 20,
-                      left: 16,
-                      right: 16,
-                      child: Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(16),
-                          gradient: LinearGradient(
-                            colors: [
-                              kBrandColor.withOpacity(0.95),
-                              kBrandWeakColor.withOpacity(0.95),
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          border: Border.all(color: kBrandColor, width: 2),
-                          boxShadow: [
-                            BoxShadow(
-                              color: kBrandColor.withOpacity(0.3),
-                              blurRadius: 20,
-                              spreadRadius: 2,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: Colors.black.withOpacity(0.3),
-                              ),
-                              child: const Icon(
-                                Icons.info_outline,
-                                color: Colors.black,
-                                size: 24,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            const Expanded(
-                              child: Text(
-                                'Posizionati sulla linea del via e premi "Inizia tracciamento"',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w800,
-                                  color: Colors.black,
-                                  height: 1.3,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          _recording
-                              ? 'Tracciamento in corso...'
-                              : (_hasFix
-                                  ? 'GPS pronto'
-                                  : 'Attendi fix GPS...'),
-                          style: TextStyle(
-                            color:
-                                _hasFix ? kMutedColor : kMutedColor.withOpacity(0.7),
-                          ),
-                        ),
-                      ),
-                      if (_track.isNotEmpty)
-                        Text(
-                          '${_calculateLength(_track).toStringAsFixed(0)} m',
-                          style: const TextStyle(
-                              color: kFgColor, fontWeight: FontWeight.w700),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  ElevatedButton.icon(
-                    onPressed:
-                        (!_hasPermission || (!_hasFix && !_recording) || _saving)
-                            ? null
-                            : _toggleRecording,
-                    icon: Icon(_recording ? Icons.stop : Icons.play_arrow),
-                    label: Text(_recording
-                        ? 'Fine tracciamento'
-                        : 'Inizia tracciamento'),
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      backgroundColor:
-                          _recording ? Colors.redAccent : kBrandColor,
-                      foregroundColor:
-                          _recording ? Colors.white : Colors.black,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    'Premi “Inizia” dopo il fix GPS. “Fine” salva il circuito.',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(color: kMutedColor, fontSize: 12),
-                  ),
-                ],
-              ),
-            )
-          ],
+              if (_step == BuilderStep.selectStartLine)
+                _buildStartLineBottomPanel()
+              else
+                _buildTrackingBottomPanel(),
+            ],
+          ),
         ),
       ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12),
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: kLineColor, width: 1)),
+      ),
+      child: Row(
+        children: [
+          IconButton(
+            icon: const Icon(Icons.arrow_back, color: kFgColor),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Crea circuito custom',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    color: kFgColor,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Row(
+                  children: [
+                    Icon(
+                      _isUsingBleDevice ? Icons.bluetooth_connected : Icons.gps_fixed,
+                      color: kBrandColor,
+                      size: 12,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      _isUsingBleDevice ? 'Dispositivo BLE connesso' : 'GPS cellulare',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: kMutedColor,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          if (_step == BuilderStep.tracking)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.red.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.red),
+              ),
+              child: const Text(
+                'REC',
+                style: TextStyle(
+                  color: Colors.red,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStartLineSelection() {
+    final center = _currentPosition ?? const LatLng(45.4642, 9.19);
+    final hasLine = _startLinePointA != null && _startLinePointB != null;
+
+    return Stack(
+      children: [
+        FlutterMap(
+          mapController: _mapController,
+          options: MapOptions(
+            initialCenter: center,
+            initialZoom: 17.5,
+            minZoom: 15,
+            maxZoom: 20,
+            interactionOptions: const InteractionOptions(
+              flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
+            ),
+            onTap: (tapPos, point) {
+              setState(() {
+                if (_startLinePointA == null || (_startLinePointA != null && _startLinePointB != null)) {
+                  _startLinePointA = point;
+                  _startLinePointB = null;
+                } else {
+                  _startLinePointB = point;
+                }
+              });
+            },
+          ),
+          children: [
+            // Mappa satellitare
+            TileLayer(
+              urlTemplate:
+                  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+              userAgentPackageName: 'com.racesense.pulse',
+            ),
+            // Linea start/finish
+            if (_startLinePointA != null && _startLinePointB != null)
+              PolylineLayer(
+                polylines: [
+                  Polyline(
+                    points: [_startLinePointA!, _startLinePointB!],
+                    strokeWidth: 6,
+                    color: kBrandColor,
+                    borderStrokeWidth: 2,
+                    borderColor: Colors.black.withAlpha(150),
+                  ),
+                ],
+              ),
+            // Markers
+            MarkerLayer(
+              markers: [
+                // Posizione corrente
+                if (_currentPosition != null)
+                  Marker(
+                    width: 56,
+                    height: 56,
+                    point: _currentPosition!,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Container(
+                          width: 56,
+                          height: 56,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: kBrandColor.withAlpha(30),
+                            border: Border.all(
+                              color: kBrandColor.withAlpha(100),
+                              width: 2,
+                            ),
+                          ),
+                        ),
+                        Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: kBrandColor,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: Colors.black,
+                              width: 3,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: kBrandColor.withAlpha(180),
+                                blurRadius: 16,
+                                spreadRadius: 4,
+                              ),
+                              const BoxShadow(
+                                color: Colors.black,
+                                blurRadius: 8,
+                                spreadRadius: 0,
+                              ),
+                            ],
+                          ),
+                          child: const Icon(
+                            Icons.navigation,
+                            color: Colors.black,
+                            size: 20,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                // Point A
+                if (_startLinePointA != null)
+                  Marker(
+                    width: 42,
+                    height: 42,
+                    point: _startLinePointA!,
+                    child: _FlagMarker(
+                      label: 'A',
+                      color: const Color(0xFF00E676),
+                    ),
+                  ),
+                // Point B
+                if (_startLinePointB != null)
+                  Marker(
+                    width: 42,
+                    height: 42,
+                    point: _startLinePointB!,
+                    child: _FlagMarker(
+                      label: 'B',
+                      color: const Color(0xFFFF1744),
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        ),
+        // Info banner
+        Positioned(
+          top: 20,
+          left: 16,
+          right: 16,
+          child: Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              gradient: LinearGradient(
+                colors: [
+                  kBrandColor.withAlpha(15),
+                  Colors.transparent,
+                ],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ),
+              border: Border.all(color: kBrandColor, width: 1.5),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: kBrandColor.withAlpha(40),
+                    border: Border.all(color: kBrandColor, width: 1.5),
+                  ),
+                  child: const Icon(
+                    Icons.info_outline,
+                    color: kBrandColor,
+                    size: 18,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Text(
+                    'Tocca due punti sulla mappa per definire la linea del via: A (inizio) e B (fine)',
+                    style: TextStyle(
+                      color: kFgColor,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      height: 1.3,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStartLineBottomPanel() {
+    final hasLine = _startLinePointA != null && _startLinePointB != null;
+    final canStart = hasLine && _currentPosition != null;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        border: Border(top: BorderSide(color: kLineColor)),
+        gradient: LinearGradient(
+          colors: [
+            Colors.transparent,
+            kBgColor.withAlpha(250),
+          ],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              OutlinedButton.icon(
+                onPressed: (_startLinePointA != null || _startLinePointB != null)
+                    ? () {
+                        setState(() {
+                          _startLinePointA = null;
+                          _startLinePointB = null;
+                        });
+                      }
+                    : null,
+                icon: const Icon(Icons.restart_alt, size: 18),
+                label: const Text(
+                  'Reset',
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: kBrandColor,
+                  side: BorderSide(
+                    color: (_startLinePointA != null || _startLinePointB != null) ? kBrandColor : kLineColor,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(10),
+                    color: hasLine
+                        ? kBrandColor.withAlpha(20)
+                        : const Color.fromRGBO(255, 255, 255, 0.03),
+                    border: Border.all(
+                      color: hasLine ? kBrandColor : kLineColor,
+                      width: 1.5,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        hasLine ? Icons.check_circle : Icons.radio_button_unchecked,
+                        color: hasLine ? kBrandColor : kMutedColor,
+                        size: 18,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          hasLine
+                              ? 'Linea definita'
+                              : (_startLinePointA != null ? 'Seleziona punto B' : 'Seleziona punto A'),
+                          style: TextStyle(
+                            color: hasLine ? kBrandColor : kMutedColor,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (_currentPosition != null) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(10),
+                color: const Color.fromRGBO(255, 255, 255, 0.03),
+                border: Border.all(color: kLineColor.withAlpha(100)),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    _isUsingBleDevice ? Icons.bluetooth_connected : Icons.gps_fixed,
+                    color: kBrandColor,
+                    size: 16,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Posizione: ${_currentPosition!.latitude.toStringAsFixed(6)}, ${_currentPosition!.longitude.toStringAsFixed(6)}',
+                      style: const TextStyle(
+                        color: kMutedColor,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          const SizedBox(height: 12),
+          ElevatedButton.icon(
+            onPressed: canStart ? _startTracking : null,
+            icon: const Icon(Icons.play_arrow),
+            label: const Text(
+              'Inizia tracciamento',
+              style: TextStyle(fontWeight: FontWeight.w900),
+            ),
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              backgroundColor: kBrandColor,
+              foregroundColor: Colors.black,
+              minimumSize: const Size(double.infinity, 48),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTrackingView() {
+    final center = _trackPoints.isNotEmpty
+        ? _trackPoints.last
+        : (_currentPosition ?? const LatLng(45.0, 9.0));
+
+    return FlutterMap(
+      mapController: _mapController,
+      options: MapOptions(
+        initialCenter: center,
+        initialZoom: 17.5,
+        backgroundColor: const Color(0xFF0A0A0A),
+      ),
+      children: [
+        // Mappa satellitare
+        TileLayer(
+          urlTemplate:
+              'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+          userAgentPackageName: 'com.racesense.pulse',
+        ),
+        // Traccia
+        if (_trackPoints.length > 1)
+          PolylineLayer(
+            polylines: [
+              Polyline(
+                points: _trackPoints,
+                strokeWidth: 5,
+                color: kBrandColor,
+                borderStrokeWidth: 2,
+                borderColor: Colors.black.withAlpha(100),
+              ),
+            ],
+          ),
+        // Marker posizione corrente
+        if (_trackPoints.isNotEmpty)
+          MarkerLayer(
+            markers: [
+              Marker(
+                point: _trackPoints.last,
+                width: 14,
+                height: 14,
+                child: Container(
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: kBrandColor,
+                    boxShadow: [
+                      BoxShadow(
+                        color: kBrandColor,
+                        blurRadius: 12,
+                        spreadRadius: 4,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+      ],
+    );
+  }
+
+  Widget _buildTrackingBottomPanel() {
+    final length = _calculateLength(_trackPoints);
+    final speedColor = (_currentSpeed >= 10 && _currentSpeed <= 40)
+        ? const Color(0xFF00E676)
+        : Colors.red;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: const BoxDecoration(
+        border: Border(top: BorderSide(color: kLineColor, width: 1)),
+      ),
+      child: Column(
+        children: [
+          // Info boxes in a single row with dividers
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildInfoItem(
+                icon: Icons.straighten,
+                label: 'Metri',
+                value: length.toStringAsFixed(0),
+              ),
+              Container(
+                width: 1,
+                height: 40,
+                color: kLineColor,
+              ),
+              _buildInfoItem(
+                icon: Icons.gps_fixed,
+                label: 'Punti GPS',
+                value: _trackPoints.length.toString(),
+              ),
+              Container(
+                width: 1,
+                height: 40,
+                color: kLineColor,
+              ),
+              _buildInfoItem(
+                icon: Icons.speed,
+                label: 'Velocità',
+                value: '${_currentSpeed.toStringAsFixed(1)} km/h',
+                valueColor: speedColor,
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton.icon(
+            onPressed: _saving ? null : _finishTracking,
+            icon: const Icon(Icons.stop),
+            label: const Text(
+              'Fine tracciamento',
+              style: TextStyle(fontWeight: FontWeight.w900),
+            ),
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              backgroundColor: Colors.redAccent,
+              foregroundColor: Colors.white,
+              minimumSize: const Size(double.infinity, 48),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoItem({
+    required IconData icon,
+    required String label,
+    required String value,
+    Color? valueColor,
+  }) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, color: kBrandColor, size: 20),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: const TextStyle(
+            color: kMutedColor,
+            fontSize: 10,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: TextStyle(
+            color: valueColor ?? kFgColor,
+            fontSize: 12,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -455,4 +900,36 @@ class _CircuitMeta {
   final double widthMeters;
 
   _CircuitMeta({required this.name, required this.widthMeters});
+}
+
+class _FlagMarker extends StatelessWidget {
+  final String label;
+  final Color color;
+
+  const _FlagMarker({required this.label, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(10),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.4),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        label,
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
+    );
+  }
 }

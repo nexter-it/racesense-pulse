@@ -14,6 +14,7 @@ class CustomCircuitInfo {
   final DateTime createdAt;
   final List<LatLng> points;
   final List<MicroSector> microSectors;
+  final bool usedBleDevice;
 
   CustomCircuitInfo({
     required this.name,
@@ -24,6 +25,7 @@ class CustomCircuitInfo {
     required this.createdAt,
     required this.points,
     required this.microSectors,
+    this.usedBleDevice = false,
   });
 
   Map<String, dynamic> toJson() {
@@ -41,6 +43,7 @@ class CustomCircuitInfo {
               })
           .toList(),
       'microSectors': microSectors.map((s) => s.toJson()).toList(),
+      'usedBleDevice': usedBleDevice,
     };
   }
 
@@ -64,6 +67,7 @@ class CustomCircuitInfo {
               ?.map((s) => MicroSector.fromJson(s as Map<String, dynamic>))
               .toList() ??
           buildSectorsFromPoints(pts),
+      usedBleDevice: json['usedBleDevice'] as bool? ?? false,
     );
   }
 
