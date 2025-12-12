@@ -51,7 +51,7 @@ class _SearchPageState extends State<SearchPage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 2, vsync: this);
     _initCurrentUser();
     _loadTopUsers();
     _loadTopCircuits();
@@ -148,7 +148,6 @@ class _SearchPageState extends State<SearchPage>
               children: [
                 _buildUsersTab(),
                 _buildCircuitsTab(),
-                _buildCountriesTab(),
               ],
             ),
           ),
@@ -189,7 +188,7 @@ class _SearchPageState extends State<SearchPage>
         controller: _searchController,
         style: const TextStyle(fontSize: 16, color: kFgColor),
         decoration: InputDecoration(
-          hintText: 'Cerca utenti, circuiti, paesi...',
+          hintText: 'Cerca utenti o circuiti...',
           hintStyle: TextStyle(color: kMutedColor.withOpacity(0.5)),
           prefixIcon: const Icon(Icons.search, color: kBrandColor),
           suffixIcon: _searchController.text.isNotEmpty
@@ -236,11 +235,10 @@ class _SearchPageState extends State<SearchPage>
         unselectedLabelColor: kMutedColor,
         labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
         dividerColor: Colors.transparent,
-        tabs: const [
-          Tab(text: 'UTENTI'),
-          Tab(text: 'CIRCUITI'),
-          Tab(text: 'PAESI'),
-        ],
+      tabs: const [
+        Tab(text: 'UTENTI'),
+        Tab(text: 'CIRCUITI'),
+      ],
       ),
     );
   }
@@ -671,25 +669,6 @@ class _SearchPageState extends State<SearchPage>
       ],
     );
   }
-
-  Widget _buildCountriesTab() {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        const Text(
-          'Esplora per paese',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 0.3,
-          ),
-        ),
-        const SizedBox(height: 16),
-        ..._mockCountries.map((country) => _buildCountryCard(country)),
-      ],
-    );
-  }
-
   Widget _buildCountryCard(Map<String, dynamic> country) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -1032,10 +1011,3 @@ final _mockCircuits = [
   },
 ];
 
-final _mockCountries = [
-  {'flag': '🇮🇹', 'name': 'Italia', 'circuits': 24, 'users': 3420},
-  {'flag': '🇩🇪', 'name': 'Germania', 'circuits': 18, 'users': 2840},
-  {'flag': '🇫🇷', 'name': 'Francia', 'circuits': 16, 'users': 2310},
-  {'flag': '🇬🇧', 'name': 'Regno Unito', 'circuits': 22, 'users': 4100},
-  {'flag': '🇪🇸', 'name': 'Spagna', 'circuits': 14, 'users': 1980},
-];
