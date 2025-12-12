@@ -11,6 +11,7 @@ import 'package:sensors_plus/sensors_plus.dart';
 import '../theme.dart';
 import '../models/track_definition.dart';
 import '../widgets/pulse_background.dart';
+import '../services/ble_tracking_service.dart';
 import 'session_recap_page.dart';
 
 class LiveSessionPage extends StatefulWidget {
@@ -95,6 +96,12 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
   // Subscriptions
   StreamSubscription<Position>? _gpsSub;
   StreamSubscription<UserAccelerometerEvent>? _accelSub;
+  StreamSubscription<Map<String, GpsData>>? _bleGpsSub;
+
+  // BLE GPS tracking
+  final BleTrackingService _bleService = BleTrackingService();
+  String? _connectedBleDeviceId;
+  bool _isUsingBleGps = false;
 
   // 🔁 Timer simulatore GPS
   Timer? _simTimer;
@@ -187,15 +194,57 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
       }
     });
 
-    // GPS reale o simulatore
+    // Controlla se c'è un dispositivo BLE GPS connesso
+    _checkBleGpsDevice();
+
+    // GPS: usa simulatore, BLE (se disponibile), o GPS cellulare
     if (_useGpsSimulator) {
       _startGpsSimulator();
+    } else if (_isUsingBleGps) {
+      _startBleGpsStream();
     } else {
       _startGpsStream();
     }
 
     // Inizio IMU stream (solo per G-force display)
     _startImuStream();
+  }
+
+  void _checkBleGpsDevice() {
+    // Verifica se c'è un dispositivo BLE connesso
+    _bleService.deviceStream.listen((devices) {
+      final connected = devices.values.firstWhere(
+        (d) => d.isConnected,
+        orElse: () => BleDeviceSnapshot(
+          id: '',
+          name: '',
+          rssi: null,
+          isConnected: false,
+        ),
+      );
+
+      if (connected.isConnected && !_isUsingBleGps) {
+        // Dispositivo BLE trovato, passa all'uso del GPS BLE
+        setState(() {
+          _connectedBleDeviceId = connected.id;
+          _isUsingBleGps = true;
+        });
+        // Ferma il GPS cellulare e inizia quello BLE
+        _gpsSub?.cancel();
+        _startBleGpsStream();
+      } else if (!connected.isConnected && _isUsingBleGps) {
+        // Dispositivo BLE disconnesso, torna al GPS cellulare
+        setState(() {
+          _connectedBleDeviceId = null;
+          _isUsingBleGps = false;
+        });
+        // Ferma il GPS BLE e inizia quello cellulare
+        _bleGpsSub?.cancel();
+        if (!_useGpsSimulator) {
+          _startGpsStream();
+        }
+      }
+    });
   }
 
   void _startGpsStream() {
@@ -213,6 +262,50 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
         });
       },
     );
+  }
+
+  void _startBleGpsStream() {
+    _bleGpsSub?.cancel();
+    _bleGpsSub = _bleService.gpsStream.listen((gpsDataMap) {
+      if (_connectedBleDeviceId != null) {
+        final gpsData = gpsDataMap[_connectedBleDeviceId!];
+        if (gpsData != null) {
+          // Converti GpsData BLE in Position per compatibilità
+          final position = _bleGpsDataToPosition(gpsData);
+          _onGpsData(position);
+        }
+      }
+    });
+  }
+
+  Position _bleGpsDataToPosition(GpsData gpsData) {
+    return Position(
+      longitude: gpsData.position.longitude,
+      latitude: gpsData.position.latitude,
+      timestamp: DateTime.now(),
+      accuracy: _calculateAccuracyFromFix(gpsData.fix, gpsData.satellites),
+      altitude: 0.0,
+      altitudeAccuracy: 3.0,
+      heading: 0.0,
+      headingAccuracy: 1.0,
+      speed: gpsData.speed ?? 0.0,
+      speedAccuracy: 0.5,
+      floor: null,
+      isMocked: false,
+    );
+  }
+
+  double _calculateAccuracyFromFix(int? fix, int? satellites) {
+    // Stima l'accuratezza in base al fix e ai satelliti
+    // Fix 0 = no fix, Fix 1 = GPS fix, Fix 2+ = differenziale/RTK
+    if (fix == null || fix == 0) return 50.0;
+    if (satellites == null || satellites < 4) return 30.0;
+
+    // Con GPS BLE a 15Hz e buon fix, l'accuratezza è molto migliore
+    if (fix >= 2 && satellites >= 10) return 1.0; // RTK/Differenziale
+    if (satellites >= 8) return 2.5;
+    if (satellites >= 6) return 5.0;
+    return 10.0;
   }
 
   // ============================================================
@@ -559,9 +652,13 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
     }
 
     setState(() {
-      _gpsStatus = _useGpsSimulator
-          ? 'GPS simulato'
-          : 'GPS: ${pos.accuracy.toStringAsFixed(1)}m';
+      if (_useGpsSimulator) {
+        _gpsStatus = 'GPS simulato';
+      } else if (_isUsingBleGps) {
+        _gpsStatus = 'BLE GPS 15Hz: ${pos.accuracy.toStringAsFixed(1)}m';
+      } else {
+        _gpsStatus = 'GPS cellulare 1Hz: ${pos.accuracy.toStringAsFixed(1)}m';
+      }
     });
 
     _lastGpsPos = pos;
@@ -881,6 +978,8 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
     _gpsSub = null;
     _accelSub?.cancel();
     _accelSub = null;
+    _bleGpsSub?.cancel();
+    _bleGpsSub = null;
     _uiTimer?.cancel();
     _uiTimer = null;
 
@@ -949,14 +1048,75 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
                       ],
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 8),
+                  // Badge sorgente GPS
+                  if (_isUsingBleGps)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            kBrandColor.withOpacity(0.3),
+                            kBrandColor.withOpacity(0.2),
+                          ],
+                        ),
+                        border: Border.all(color: kBrandColor, width: 1.5),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: const [
+                          Icon(Icons.bluetooth_connected,
+                              size: 11, color: kBrandColor),
+                          SizedBox(width: 4),
+                          Text(
+                            '15Hz',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w900,
+                              fontSize: 11,
+                              color: kBrandColor,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  else
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.1),
+                        border: Border.all(
+                            color: Colors.white.withOpacity(0.3), width: 1),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: const [
+                          Icon(Icons.smartphone, size: 11, color: Colors.white70),
+                          SizedBox(width: 4),
+                          Text(
+                            '1Hz',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 11,
+                              color: Colors.white70,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       _gpsStatus,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        fontSize: 13,
+                        fontSize: 12,
                         color: Colors.white70,
                       ),
                     ),
