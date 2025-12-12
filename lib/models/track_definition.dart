@@ -1,5 +1,33 @@
 import 'package:latlong2/latlong.dart';
 
+/// Micro settore - linea perpendicolare che definisce una sezione del tracciato
+class TrackMicroSector {
+  final LatLng start; // Punto su un bordo (es. interno)
+  final LatLng end;   // Punto su altro bordo (es. esterno)
+
+  const TrackMicroSector({required this.start, required this.end});
+
+  Map<String, dynamic> toMap() {
+    return {
+      'start': {'lat': start.latitude, 'lon': start.longitude},
+      'end': {'lat': end.latitude, 'lon': end.longitude},
+    };
+  }
+
+  factory TrackMicroSector.fromMap(Map<String, dynamic> map) {
+    return TrackMicroSector(
+      start: LatLng(
+        map['start']['lat'] as double,
+        map['start']['lon'] as double,
+      ),
+      end: LatLng(
+        map['end']['lat'] as double,
+        map['end']['lon'] as double,
+      ),
+    );
+  }
+}
+
 /// Definizione di un circuito con linea di traguardo fissa
 class TrackDefinition {
   final String id;
@@ -18,6 +46,15 @@ class TrackDefinition {
   /// URL o path dell'immagine del circuito (opzionale)
   final String? imageUrl;
 
+  /// Tracciato completo del circuito (lista di punti GPS)
+  final List<LatLng>? trackPath;
+
+  /// Microsettori per definire i bordi del circuito
+  final List<TrackMicroSector>? microSectors;
+
+  /// Larghezza del circuito in metri (per circuiti custom)
+  final double? widthMeters;
+
   const TrackDefinition({
     required this.id,
     required this.name,
@@ -26,6 +63,9 @@ class TrackDefinition {
     required this.finishLineEnd,
     this.estimatedLengthMeters,
     this.imageUrl,
+    this.trackPath,
+    this.microSectors,
+    this.widthMeters,
   });
 
   /// Calcola il punto centrale della linea di traguardo
@@ -63,6 +103,13 @@ class TrackDefinition {
       if (estimatedLengthMeters != null)
         'estimatedLengthMeters': estimatedLengthMeters,
       if (imageUrl != null) 'imageUrl': imageUrl,
+      if (trackPath != null)
+        'trackPath': trackPath!
+            .map((p) => {'lat': p.latitude, 'lon': p.longitude})
+            .toList(),
+      if (microSectors != null)
+        'microSectors': microSectors!.map((s) => s.toMap()).toList(),
+      if (widthMeters != null) 'widthMeters': widthMeters,
     };
   }
 
@@ -82,6 +129,17 @@ class TrackDefinition {
       ),
       estimatedLengthMeters: map['estimatedLengthMeters'] as double?,
       imageUrl: map['imageUrl'] as String?,
+      trackPath: map['trackPath'] != null
+          ? (map['trackPath'] as List)
+              .map((p) => LatLng(p['lat'] as double, p['lon'] as double))
+              .toList()
+          : null,
+      microSectors: map['microSectors'] != null
+          ? (map['microSectors'] as List)
+              .map((s) => TrackMicroSector.fromMap(s as Map<String, dynamic>))
+              .toList()
+          : null,
+      widthMeters: map['widthMeters'] as double?,
     );
   }
 

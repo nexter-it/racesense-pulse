@@ -305,12 +305,22 @@ class _PrivateCircuitsPageState extends State<PrivateCircuitsPage> {
 
   TrackDefinition? _toTrack(CustomCircuitInfo c) {
     if (c.points.length < 2) return null;
+
+    // Converti MicroSector in TrackMicroSector
+    final trackMicroSectors = c.microSectors
+        .map((ms) => TrackMicroSector(start: ms.start, end: ms.end))
+        .toList();
+
     return TrackDefinition(
       id: 'custom-${c.name}-${c.createdAt.millisecondsSinceEpoch}',
       name: c.name,
       location: '${c.city} ${c.country}'.trim(),
       finishLineStart: c.points.first,
-      finishLineEnd: c.points[1],
+      finishLineEnd: c.points.length > 1 ? c.points[1] : c.points.first,
+      estimatedLengthMeters: c.lengthMeters,
+      trackPath: c.points,
+      microSectors: trackMicroSectors,
+      widthMeters: c.widthMeters,
     );
   }
 
