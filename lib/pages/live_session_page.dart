@@ -14,6 +14,14 @@ import '../widgets/pulse_background.dart';
 import '../services/ble_tracking_service.dart';
 import 'session_recap_page.dart';
 
+// Helper class per risultato intersezione segmenti
+class _IntersectionResult {
+  final double t; // Parametro lungo il primo segmento (traiettoria GPS)
+  final double u; // Parametro lungo il secondo segmento (linea finish)
+
+  _IntersectionResult({required this.t, required this.u});
+}
+
 class LiveSessionPage extends StatefulWidget {
   final TrackDefinition? trackDefinition;
 
@@ -747,7 +755,7 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
   }
 
   // ============================================================
-  // RILEVAMENTO GIRI (gate + distanza firmata + interpolazione tempo)
+  // RILEVAMENTO GIRI (gate + intersezione geometrica + interpolazione tempo)
   // ============================================================
   void _checkLapCrossing(
     Offset prevLocal,
@@ -762,7 +770,7 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
       return;
     }
 
-    // Distanza firmata (metri) dai due sample alla linea
+    // 1. GATE VALIDATION - Verifica che almeno un punto sia nel gate
     final prevDist = _signedDistanceToFinish(prevLocal);
     final curDist = _signedDistanceToFinish(currentLocal);
 
@@ -775,51 +783,97 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
     final double gateStart = -_gateHalfLength;
     final double gateEnd = _finishLength + _gateHalfLength;
 
+    // Se entrambi i punti sono completamente fuori dal gate longitudinale, scarta
     if (maxProj < gateStart || minProj > gateEnd) {
       return;
     }
 
+    // Verifica che almeno un punto sia nel gate trasversale
+    final prevInGate = prevDist.abs() <= _gateHalfWidth;
+    final curInGate = curDist.abs() <= _gateHalfWidth;
+
+    if (!prevInGate && !curInGate) {
+      // Entrambi lontani dalla linea, scarta
+      return;
+    }
+
+    // 2. SEGMENT INTERSECTION - Verifica intersezione geometrica
+    final intersection = _segmentIntersection(
+      prevLocal,
+      currentLocal,
+      _finishLineStartLocal!,
+      _finishLineEndLocal!,
+    );
+
+    if (intersection != null) {
+      // Crossing geometrico verificato!
+      final t = intersection.t; // Parametro 0..1 lungo prev->curr
+      final crossingTime = _interpolateTime(prevTime, currentTime, t);
+
+      if (_canMarkLap(crossingTime)) {
+        _registerLapAtTime(crossingTime);
+      }
+      return;
+    }
+
+    // 3. FALLBACK - Cambio di segno (per robustezza con jitter GPS)
+    // Usa questo solo se segment intersection fallisce per errori numerici
     final sameSide = prevDist * curDist > 0;
-    if (sameSide) {
-      // Fallback per campionamenti lenti: se siamo comunque molto vicini alla linea
-      // e dentro al gate, considera un crossing approssimato.
-      final minDist = math.min(prevDist.abs(), curDist.abs());
-      final maxDist = math.max(prevDist.abs(), curDist.abs());
-      if (minDist > _gateHalfWidth && maxDist > _gateHalfWidth) {
+    if (!sameSide) {
+      // I punti sono su lati opposti, calcola t dove distanza = 0
+      final denom = prevDist - curDist;
+      if (denom.abs() < 1e-6) {
         return;
       }
-      final approxTime = _interpolateTime(prevTime, currentTime, 0.5);
-      if (_canMarkLap(approxTime)) {
-        _registerLapAtTime(approxTime);
+
+      final double t = prevDist / denom;
+      if (t >= 0.0 && t <= 1.0) {
+        final crossingTime = _interpolateTime(prevTime, currentTime, t);
+
+        if (_canMarkLap(crossingTime)) {
+          _registerLapAtTime(crossingTime);
+        }
       }
-      return;
-    }
-
-    // Se entrambi molto lontani dalla linea, scarta
-    if (prevDist.abs() > _gateHalfWidth && curDist.abs() > _gateHalfWidth) {
-      return;
-    }
-
-    // Trova t (0..1) dove la distanza firmata diventa zero (crossing esatto)
-    final denom = prevDist - curDist;
-    if (denom.abs() < 1e-6) {
-      return;
-    }
-
-    final double t =
-        prevDist / (prevDist - curDist); // soluzione di prev + (cur-prev)*t = 0
-    if (t < 0.0 || t > 1.0) {
-      // Crossing fuori dal segmento, scarta
-      return;
-    }
-
-    // Interpola il tempo esatto del crossing
-    final crossingTime = _interpolateTime(prevTime, currentTime, t);
-
-    if (_canMarkLap(crossingTime)) {
-      _registerLapAtTime(crossingTime);
     }
   }
+
+  // Calcola intersezione tra segmento traiettoria GPS e linea di finish
+  // Returns null se non c'è intersezione valida, altrimenti parametri t e u
+  _IntersectionResult? _segmentIntersection(
+    Offset p1,
+    Offset p2, // Segmento traiettoria GPS
+    Offset q1,
+    Offset q2, // Segmento linea di finish
+  ) {
+    // Parametric equations:
+    // P(t) = p1 + t(p2-p1), t ∈ [0,1]  (traiettoria GPS)
+    // Q(u) = q1 + u(q2-q1), u ∈ [0,1]  (linea finish)
+    // Risolviamo: P(t) = Q(u)
+
+    final r = p2 - p1; // Direzione traiettoria
+    final s = q2 - q1; // Direzione linea finish
+    final qp = q1 - p1; // Vettore da p1 a q1
+
+    final rxs = _cross2D(r, s);
+
+    // Paralleli o coincidenti
+    if (rxs.abs() < 1e-10) {
+      return null;
+    }
+
+    final u = _cross2D(qp, r) / rxs;
+    final t = _cross2D(qp, s) / rxs;
+
+    // Intersezione valida solo se entrambi i parametri sono in [0,1]
+    if (t >= 0.0 && t <= 1.0 && u >= 0.0 && u <= 1.0) {
+      return _IntersectionResult(t: t, u: u);
+    }
+
+    return null;
+  }
+
+  // Prodotto vettoriale 2D (restituisce lo scalare z)
+  double _cross2D(Offset a, Offset b) => a.dx * b.dy - a.dy * b.dx;
 
   bool _canMarkLap(Duration time) {
     // Min 10s dall'inizio sessione per evitare falsi positivi iniziali
