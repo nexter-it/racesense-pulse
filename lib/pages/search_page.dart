@@ -158,24 +158,18 @@ class _SearchPageState extends State<SearchPage>
 
   Widget _buildHeader() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
       child: Row(
         children: [
           const Text(
-            'CERCA',
+            'Ricerca',
             style: TextStyle(
-              fontSize: 24,
+              fontSize: 22,
               fontWeight: FontWeight.w900,
-              letterSpacing: 0.5,
+              letterSpacing: 0.8,
             ),
           ),
-          // const Spacer(),
-          // IconButton(
-          //   icon: const Icon(Icons.tune),
-          //   onPressed: () {
-          //     // Future: filtri avanzati
-          //   },
-          // ),
+          const Spacer(),
         ],
       ),
     );
@@ -184,38 +178,56 @@ class _SearchPageState extends State<SearchPage>
   Widget _buildSearchBar() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: TextField(
-        controller: _searchController,
-        style: const TextStyle(fontSize: 16, color: kFgColor),
-        decoration: InputDecoration(
-          hintText: 'Cerca utenti o circuiti...',
-          hintStyle: TextStyle(color: kMutedColor.withOpacity(0.5)),
-          prefixIcon: const Icon(Icons.search, color: kBrandColor),
-          suffixIcon: _searchController.text.isNotEmpty
-              ? IconButton(
-                  icon: const Icon(Icons.clear, color: kMutedColor),
-                  onPressed: () {
-                    _searchController.clear();
-                    _onQueryChanged('');
-                  },
-                )
-              : null,
-          filled: true,
-          fillColor: const Color(0xFF0d0d0d),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: BorderSide.none,
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: const BorderSide(color: kBrandColor, width: 2),
-          ),
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withAlpha(120),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
-        onChanged: (value) {
-          _onQueryChanged(value);
-        },
+        child: TextField(
+          controller: _searchController,
+          style: const TextStyle(
+              fontSize: 16, color: kFgColor, fontWeight: FontWeight.w600),
+          decoration: InputDecoration(
+            hintText: 'Cerca utenti o circuiti...',
+            hintStyle: TextStyle(
+                color: kMutedColor.withAlpha(130), fontWeight: FontWeight.w500),
+            prefixIcon: const Icon(Icons.search, color: kBrandColor, size: 22),
+            suffixIcon: _searchController.text.isNotEmpty
+                ? IconButton(
+                    icon: const Icon(Icons.clear, color: kMutedColor, size: 20),
+                    onPressed: () {
+                      _searchController.clear();
+                      _onQueryChanged('');
+                    },
+                  )
+                : null,
+            filled: true,
+            fillColor: const Color(0xFF1A1A20),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(18),
+              borderSide: const BorderSide(color: kLineColor, width: 1),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(18),
+              borderSide: const BorderSide(color: kLineColor, width: 1),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(18),
+              borderSide: const BorderSide(color: kBrandColor, width: 2),
+            ),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+          ),
+          onChanged: (value) {
+            _onQueryChanged(value);
+          },
+        ),
       ),
     );
   }
@@ -223,22 +235,54 @@ class _SearchPageState extends State<SearchPage>
   Widget _buildTabs() {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: const Color(0xFF0d0d0d),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: kLineColor),
+        gradient: LinearGradient(
+          colors: [
+            const Color(0xFF1A1A20).withAlpha(255),
+            const Color(0xFF0F0F15).withAlpha(255),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: kLineColor, width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(100),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: TabBar(
         controller: _tabController,
-        indicator: const BoxDecoration(),
+        indicator: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          gradient: LinearGradient(
+            colors: [
+              kBrandColor.withAlpha(40),
+              kBrandColor.withAlpha(25),
+            ],
+          ),
+          border: Border.all(color: kBrandColor, width: 1.5),
+          boxShadow: [
+            BoxShadow(
+              color: kBrandColor.withAlpha(60),
+              blurRadius: 8,
+              spreadRadius: 0,
+            ),
+          ],
+        ),
         labelColor: kBrandColor,
         unselectedLabelColor: kMutedColor,
-        labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+        labelStyle: const TextStyle(
+            fontSize: 13, fontWeight: FontWeight.w900, letterSpacing: 0.5),
+        unselectedLabelStyle:
+            const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
         dividerColor: Colors.transparent,
-      tabs: const [
-        Tab(text: 'UTENTI'),
-        Tab(text: 'CIRCUITI'),
-      ],
+        tabs: const [
+          Tab(text: 'PILOTI'),
+          Tab(text: 'CIRCUITI'),
+        ],
       ),
     );
   }
@@ -299,30 +343,58 @@ class _SearchPageState extends State<SearchPage>
               );
             }
           : null,
+      borderRadius: BorderRadius.circular(20),
       child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(14),
+        margin: const EdgeInsets.only(bottom: 14),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: const Color(0xFF10121A),
+          gradient: LinearGradient(
+            colors: [
+              const Color(0xFF1A1A20).withAlpha(255),
+              const Color(0xFF0F0F15).withAlpha(255),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: kLineColor),
+          border: Border.all(color: kLineColor, width: 1),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withAlpha(140),
+              blurRadius: 12,
+              spreadRadius: -2,
+              offset: const Offset(0, 6),
+            ),
+          ],
         ),
         child: Row(
           children: [
             // Avatar
-            CircleAvatar(
-              radius: 24,
-              backgroundColor: kBrandColor.withOpacity(0.2),
-              child: Text(
-                initials.toString(),
-                style: const TextStyle(
-                  color: kBrandColor,
-                  fontWeight: FontWeight.w900,
-                  fontSize: 16,
+            Container(
+              padding: const EdgeInsets.all(3),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  colors: [
+                    kBrandColor.withAlpha(60),
+                    kPulseColor.withAlpha(40)
+                  ],
+                ),
+              ),
+              child: CircleAvatar(
+                radius: 28,
+                backgroundColor: const Color(0xFF1A1A20),
+                child: Text(
+                  initials.toString(),
+                  style: const TextStyle(
+                    color: kBrandColor,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 18,
+                  ),
                 ),
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 14),
 
             // Info
             Expanded(
@@ -332,91 +404,163 @@ class _SearchPageState extends State<SearchPage>
                   Text(
                     fullName,
                     style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w900,
+                      color: kFgColor,
                     ),
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '$totalSessions sessioni · $totalDistance km',
-                    style: const TextStyle(fontSize: 12, color: kMutedColor),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '$followerCount follower · $followingCount seguiti',
-                    style: const TextStyle(fontSize: 11, color: kMutedColor),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(8),
+                          color: const Color.fromRGBO(255, 255, 255, 0.05),
+                          border: Border.all(color: kLineColor.withAlpha(100)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.directions_run,
+                                color: kBrandColor, size: 12),
+                            const SizedBox(width: 4),
+                            Text(
+                              '$totalSessions',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                                color: kFgColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(8),
+                          color: const Color.fromRGBO(255, 255, 255, 0.05),
+                          border: Border.all(color: kLineColor.withAlpha(100)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.people,
+                                color: kPulseColor, size: 12),
+                            const SizedBox(width: 4),
+                            Text(
+                              '$followerCount',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                                color: kFgColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
 
             if (!isMe)
-              OutlinedButton(
-                onPressed: userId == null
-                    ? null
-                    : () async {
-                        if (_currentUserId == null) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Devi essere loggato per seguire.'),
-                            ),
-                          );
-                          return;
-                        }
-                        try {
-                          if (isFollowing) {
-                            await _followService.unfollow(userId!);
-                            setState(() {
-                              _followingIds.remove(userId);
-                              if (user['stats'] != null) {
-                                final s = Map<String, dynamic>.from(
-                                    user['stats'] as Map);
-                                s['followerCount'] =
-                                    (s['followerCount'] ?? 0) - 1;
-                                user['stats'] = s;
-                              }
-                            });
-                          } else {
-                            await _followService.follow(userId!);
-                            setState(() {
-                              _followingIds.add(userId);
-                              if (user['stats'] != null) {
-                                final s = Map<String, dynamic>.from(
-                                    user['stats'] as Map);
-                                s['followerCount'] =
-                                    (s['followerCount'] ?? 0) + 1;
-                                user['stats'] = s;
-                              }
-                            });
-                          }
-                        } catch (e) {
-                          // ignore: avoid_print
-                          print('❌ Follow toggle error: $e');
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('Errore: $e'),
-                              backgroundColor: kErrorColor,
-                            ),
-                          );
-                        }
-                      },
-                style: OutlinedButton.styleFrom(
-                  side: BorderSide(
-                      color: isFollowing ? kMutedColor : kBrandColor),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  backgroundColor:
-                      isFollowing ? kMutedColor.withOpacity(0.1) : null,
-                ),
-                child: Text(
-                  isFollowing ? 'Segui già' : 'Segui',
-                  style: TextStyle(
+              Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  gradient: isFollowing
+                      ? null
+                      : LinearGradient(
+                          colors: [
+                            kBrandColor.withAlpha(40),
+                            kBrandColor.withAlpha(25),
+                          ],
+                        ),
+                  border: Border.all(
                     color: isFollowing ? kMutedColor : kBrandColor,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
+                    width: 1.5,
+                  ),
+                ),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: userId == null
+                        ? null
+                        : () async {
+                            if (_currentUserId == null) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content:
+                                      Text('Devi essere loggato per seguire.'),
+                                ),
+                              );
+                              return;
+                            }
+                            try {
+                              if (isFollowing) {
+                                await _followService.unfollow(userId!);
+                                setState(() {
+                                  _followingIds.remove(userId);
+                                  if (user['stats'] != null) {
+                                    final s = Map<String, dynamic>.from(
+                                        user['stats'] as Map);
+                                    s['followerCount'] =
+                                        (s['followerCount'] ?? 0) - 1;
+                                    user['stats'] = s;
+                                  }
+                                });
+                              } else {
+                                await _followService.follow(userId!);
+                                setState(() {
+                                  _followingIds.add(userId);
+                                  if (user['stats'] != null) {
+                                    final s = Map<String, dynamic>.from(
+                                        user['stats'] as Map);
+                                    s['followerCount'] =
+                                        (s['followerCount'] ?? 0) + 1;
+                                    user['stats'] = s;
+                                  }
+                                });
+                              }
+                            } catch (e) {
+                              print('❌ Follow toggle error: $e');
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Errore: $e'),
+                                  backgroundColor: kErrorColor,
+                                ),
+                              );
+                            }
+                          },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 10),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            isFollowing ? Icons.check : Icons.person_add,
+                            color: isFollowing ? kMutedColor : kBrandColor,
+                            size: 16,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            isFollowing ? 'Segui' : 'Segui',
+                            style: TextStyle(
+                              color: isFollowing ? kMutedColor : kBrandColor,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -482,89 +626,144 @@ class _SearchPageState extends State<SearchPage>
     final bestLapStr =
         bestLap != null ? _formatBestLap(bestLap.inMilliseconds) : '—';
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF10121A),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: kLineColor),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: kBrandColor.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: kBrandColor.withOpacity(0.3)),
+    return InkWell(
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => SearchTrackSessionsPage(
+              trackName: trackName,
+              preloaded: sessions,
+            ),
+          ),
+        );
+      },
+      borderRadius: BorderRadius.circular(24),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 14),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              const Color(0xFF1A1A20).withAlpha(255),
+              const Color(0xFF0F0F15).withAlpha(255),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: kLineColor, width: 1),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withAlpha(140),
+              blurRadius: 16,
+              spreadRadius: -3,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header with gradient overlay
+            Container(
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(24)),
+                gradient: LinearGradient(
+                  colors: [
+                    kPulseColor.withAlpha(25),
+                    Colors.transparent,
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
-                child: const Icon(Icons.track_changes,
-                    color: kBrandColor, size: 28),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      trackName,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w900,
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(16),
+                      gradient: LinearGradient(
+                        colors: [
+                          kPulseColor.withAlpha(40),
+                          kPulseColor.withAlpha(20),
+                        ],
                       ),
-                    ),
-                    const SizedBox(height: 2),
-                    Row(
-                      children: [
-                        const Icon(Icons.location_on,
-                            size: 12, color: kMutedColor),
-                        const SizedBox(width: 4),
-                        Text(
-                          location,
-                          style:
-                              const TextStyle(fontSize: 12, color: kMutedColor),
+                      border: Border.all(color: kPulseColor, width: 1.5),
+                      boxShadow: [
+                        BoxShadow(
+                          color: kPulseColor.withAlpha(80),
+                          blurRadius: 12,
+                          spreadRadius: 0,
                         ),
                       ],
                     ),
+                    child: const Icon(Icons.location_on,
+                        color: kPulseColor, size: 28),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          trackName,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w900,
+                            color: kFgColor,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            const Icon(Icons.place,
+                                size: 13, color: kMutedColor),
+                            const SizedBox(width: 4),
+                            Text(
+                              location,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                color: kMutedColor,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.chevron_right, color: kMutedColor, size: 24),
+                ],
+              ),
+            ),
+
+            // Stats section
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 0, 18, 18),
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  color: const Color.fromRGBO(255, 255, 255, 0.03),
+                  border: Border.all(color: kLineColor.withAlpha(100)),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _buildCircuitStat('Sessioni', totalSessions.toString()),
+                    Container(width: 1, height: 45, color: kLineColor),
+                    _buildCircuitStat(
+                        'Avg km', '${avgDistance.toStringAsFixed(1)}'),
+                    Container(width: 1, height: 45, color: kLineColor),
+                    _buildCircuitStat('Record', bestLapStr),
                   ],
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _buildCircuitStat(
-                  'Avg distanza', '${avgDistance.toStringAsFixed(1)} km'),
-              _buildCircuitStat('Sessioni', totalSessions.toString()),
-              _buildCircuitStat('Record', bestLapStr),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton.icon(
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => SearchTrackSessionsPage(
-                      trackName: trackName,
-                      preloaded: sessions,
-                    ),
-                  ),
-                );
-              },
-              icon: const Icon(Icons.list_alt_outlined),
-              label: const Text('Vedi sessioni'),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -650,25 +849,29 @@ class _SearchPageState extends State<SearchPage>
 
   Widget _buildCircuitStat(String label, String value) {
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
         Text(
           value,
           style: const TextStyle(
-            fontSize: 16,
+            fontSize: 17,
             fontWeight: FontWeight.w900,
-            color: kBrandColor,
+            color: kPulseColor,
           ),
         ),
+        const SizedBox(height: 4),
         Text(
           label,
-          style: TextStyle(
+          style: const TextStyle(
             fontSize: 10,
-            color: kMutedColor.withOpacity(0.7),
+            color: kMutedColor,
+            fontWeight: FontWeight.w600,
           ),
         ),
       ],
     );
   }
+
   Widget _buildCountryCard(Map<String, dynamic> country) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -1010,4 +1213,3 @@ final _mockCircuits = [
     'record': '1:41.252',
   },
 ];
-

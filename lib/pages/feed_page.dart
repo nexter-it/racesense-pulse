@@ -7,7 +7,6 @@ import 'dart:math' as math;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../theme.dart';
 import '../widgets/pulse_background.dart';
-import '../widgets/pulse_chip.dart';
 import 'activity_detail_page.dart';
 
 import '../services/session_service.dart';
@@ -861,12 +860,12 @@ class _ActivityCard extends StatelessWidget {
     final isPb = false; // se un domani salvi isPb nella sessione, cambialo qui.
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.only(bottom: 16),
       child: Material(
         color: Colors.transparent,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(24),
         child: InkWell(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(24),
           onTap: () {
             Navigator.of(context).pushNamed(
               ActivityDetailPage.routeName,
@@ -875,38 +874,38 @@ class _ActivityCard extends StatelessWidget {
           },
           child: Container(
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
-              gradient: const LinearGradient(
+              borderRadius: BorderRadius.circular(24),
+              gradient: LinearGradient(
                 colors: [
-                  Color(0xFF0E1118),
-                  Color(0xFF0A0C11),
+                  const Color(0xFF1A1A20).withAlpha(255),
+                  const Color(0xFF0F0F15).withAlpha(255),
                 ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
               border: Border.all(
-                color: kLineColor.withOpacity(0.45),
+                color: kLineColor,
                 width: 1,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.35),
-                  blurRadius: 14,
-                  spreadRadius: -2,
-                  offset: const Offset(0, 8),
+                  color: Colors.black.withAlpha(160),
+                  blurRadius: 20,
+                  spreadRadius: -4,
+                  offset: const Offset(0, 10),
                 ),
               ],
             ),
-            child: Padding(
-              padding: const EdgeInsets.all(14.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // ----- HEADER PILOTA -----
-                  Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ----- HEADER PILOTA -----
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Row(
                     children: [
                       _AvatarUser(userId: session.userId),
-                      const SizedBox(width: 10),
+                      const SizedBox(width: 12),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -915,211 +914,288 @@ class _ActivityCard extends StatelessWidget {
                               pilotName,
                               style: const TextStyle(
                                 fontWeight: FontWeight.w900,
-                                fontSize: 15,
+                                fontSize: 16,
+                                color: kFgColor,
                               ),
                             ),
-                            const SizedBox(height: 2),
-                            Text(
-                              '@$pilotTag',
-                              style: const TextStyle(
-                                color: kMutedColor,
-                                fontSize: 12,
-                              ),
+                            const SizedBox(height: 3),
+                            Row(
+                              children: [
+                                Text(
+                                  '@$pilotTag',
+                                  style: const TextStyle(
+                                    color: kMutedColor,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  '• ${_timeAgo()}',
+                                  style: const TextStyle(
+                                    color: kMutedColor,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
                       ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (isFollowed)
                             Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 10, vertical: 4),
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(999),
-                                color:
-                                    const Color.fromRGBO(255, 255, 255, 0.04),
-                                border: Border.all(
-                                  color: kLineColor.withOpacity(0.5),
-                                ),
+                                borderRadius: BorderRadius.circular(8),
+                                color: kBrandColor.withAlpha(30),
+                                border: Border.all(color: kBrandColor, width: 1),
                               ),
-                              child: Text(
-                                _timeAgo(),
-                                style: const TextStyle(
-                                  color: kMutedColor,
-                                  fontSize: 11,
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: const [
+                                  Icon(Icons.star, color: kBrandColor, size: 12),
+                                  SizedBox(width: 4),
+                                  Text(
+                                    'Seguito',
+                                    style: TextStyle(
+                                      color: kBrandColor,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          if (isNearby)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 6.0),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(8),
+                                  color: kPulseColor.withAlpha(30),
+                                  border: Border.all(color: kPulseColor, width: 1),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: const [
+                                    Icon(Icons.location_on, color: kPulseColor, size: 12),
+                                    SizedBox(width: 4),
+                                    Text(
+                                      'Vicino',
+                                      style: TextStyle(
+                                        color: kPulseColor,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ),
-                            if (isFollowed || isNearby)
-                              const SizedBox(height: 6),
-                            if (isFollowed)
-                              _TagBadge(
-                                label: 'Seguito',
-                                color: kBrandColor,
-                                icon: Icons.star,
-                              ),
-                            if (isNearby)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 6.0),
-                                child: _TagBadge(
-                                  label: 'Vicino a te',
-                                  color: kPulseColor,
-                                  icon: Icons.location_on_outlined,
-                                ),
-                              ),
-                          ],
-                        ),
+                        ],
                       ),
                     ],
                   ),
+                ),
 
-                  const SizedBox(height: 12),
-
-                  // ----- HERO / TRACK PREVIEW -----
-                  Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: kLineColor.withOpacity(0.35)),
-                      gradient: const LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          Color.fromRGBO(255, 255, 255, 0.10),
-                          Color.fromRGBO(255, 255, 255, 0.03),
-                        ],
+                // ----- TRACK VISUAL -----
+                Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 16),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: kLineColor.withAlpha(180), width: 1.5),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withAlpha(100),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
                       ),
-                    ),
-                    child: Column(
-                      children: [
-                        ClipRRect(
-                          borderRadius: const BorderRadius.vertical(
-                            top: Radius.circular(20),
-                          ),
-                          child: Container(
-                            height: 140,
-                            color: const Color.fromRGBO(6, 7, 12, 1),
-                            child: CustomPaint(
-                              painter: _MiniTrackPainter(
-                                isPb: isPb,
-                                path: track2d,
-                              ),
-                              child: const SizedBox.expand(),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(20),
+                    child: Container(
+                      height: 180,
+                      color: const Color.fromRGBO(6, 7, 12, 1),
+                      child: Stack(
+                        children: [
+                          // Track visualization
+                          CustomPaint(
+                            painter: _MiniTrackPainter(
+                              isPb: isPb,
+                              path: track2d,
                             ),
+                            child: const SizedBox.expand(),
                           ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 10,
-                          ),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      circuitName,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.w900,
-                                        fontSize: 15,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      city,
-                                      style: const TextStyle(
-                                        color: kMutedColor,
-                                        fontSize: 12,
-                                      ),
-                                    ),
+                          // Gradient overlay bottom
+                          Positioned(
+                            bottom: 0,
+                            left: 0,
+                            right: 0,
+                            child: Container(
+                              height: 80,
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: [
+                                    Colors.transparent,
+                                    const Color.fromRGBO(6, 7, 12, 1).withAlpha(240),
                                   ],
                                 ),
                               ),
-                              const SizedBox(width: 8),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  const Text(
-                                    'BEST LAP',
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      letterSpacing: 1.0,
-                                      color: kMutedColor,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                  Text(
-                                    bestLapText,
-                                    style: TextStyle(
-                                      fontSize: 17,
-                                      fontWeight: FontWeight.w900,
-                                      color: isPb ? kPulseColor : Colors.white,
-                                    ),
-                                  ),
-                                  if (isPb) ...[
-                                    const SizedBox(height: 2),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 6,
-                                        vertical: 2,
+                            ),
+                          ),
+                          // Circuit info overlay
+                          Positioned(
+                            bottom: 12,
+                            left: 12,
+                            right: 12,
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        circuitName,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w900,
+                                          fontSize: 17,
+                                          color: kFgColor,
+                                        ),
                                       ),
-                                      decoration: BoxDecoration(
-                                        borderRadius:
-                                            BorderRadius.circular(999),
-                                        color: kPulseColor.withOpacity(0.12),
+                                      const SizedBox(height: 2),
+                                      Row(
+                                        children: [
+                                          const Icon(
+                                            Icons.location_on,
+                                            color: kMutedColor,
+                                            size: 13,
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Expanded(
+                                            child: Text(
+                                              city,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: const TextStyle(
+                                                color: kMutedColor,
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                      child: const Text(
-                                        'PB',
-                                        style: TextStyle(
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.w800,
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(14),
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        kPulseColor.withAlpha(40),
+                                        kPulseColor.withAlpha(20),
+                                      ],
+                                    ),
+                                    border: Border.all(color: kPulseColor, width: 1.5),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: kPulseColor.withAlpha(80),
+                                        blurRadius: 12,
+                                        spreadRadius: 0,
+                                      ),
+                                    ],
+                                  ),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(
+                                        Icons.timer,
+                                        color: kPulseColor,
+                                        size: 18,
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        bestLapText,
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w900,
                                           color: kPulseColor,
                                         ),
                                       ),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                            ],
+                                      const SizedBox(height: 2),
+                                      const Text(
+                                        'BEST',
+                                        style: TextStyle(
+                                          fontSize: 9,
+                                          letterSpacing: 0.8,
+                                          color: kPulseColor,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
+                // ----- STATS ROW -----
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(14),
+                      color: const Color.fromRGBO(255, 255, 255, 0.03),
+                      border: Border.all(color: kLineColor.withAlpha(80)),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        _StatItem(
+                          icon: Icons.flag_outlined,
+                          label: 'Giri',
+                          value: laps.toString(),
+                        ),
+                        Container(width: 1, height: 40, color: kLineColor),
+                        _StatItem(
+                          icon: Icons.route,
+                          label: 'Distanza',
+                          value: '${distanceKm.toStringAsFixed(1)} km',
+                        ),
+                        Container(width: 1, height: 40, color: kLineColor),
+                        _StatItem(
+                          icon: Icons.favorite_border,
+                          label: 'Like',
+                          value: session.likesCount.toString(),
                         ),
                       ],
                     ),
                   ),
+                ),
 
-                  const SizedBox(height: 10),
-
-                  // ----- LIKE / CHALLENGE + info -----
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      PulseChip(
-                        icon: Icons.favorite_border,
-                        label: Text('${session.likesCount}'),
-                      ),
-                      PulseChip(
-                        icon: Icons.sports_martial_arts,
-                        label: Text('${session.challengeCount} '),
-                      ),
-                      PulseChip(
-                        icon: Icons.flag_outlined,
-                        label: Text('${laps} giri'),
-                      ),
-                      PulseChip(
-                        icon: Icons.speed,
-                        label: Text('${distanceKm.toStringAsFixed(1)} km'),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+                const SizedBox(height: 16),
+              ],
             ),
           ),
         ),
@@ -1128,41 +1204,42 @@ class _ActivityCard extends StatelessWidget {
   }
 }
 
-class _TagBadge extends StatelessWidget {
-  final String label;
-  final Color color;
+class _StatItem extends StatelessWidget {
   final IconData icon;
+  final String label;
+  final String value;
 
-  const _TagBadge({
-    required this.label,
-    required this.color,
+  const _StatItem({
     required this.icon,
+    required this.label,
+    required this.value,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.7)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: color, size: 14),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: TextStyle(
-              color: color,
-              fontSize: 12,
-              fontWeight: FontWeight.w800,
-            ),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, color: kBrandColor, size: 18),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: const TextStyle(
+            color: kMutedColor,
+            fontSize: 10,
+            fontWeight: FontWeight.w600,
           ),
-        ],
-      ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: const TextStyle(
+            color: kFgColor,
+            fontSize: 13,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+      ],
     );
   }
 }

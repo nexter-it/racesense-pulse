@@ -14,6 +14,7 @@ import '../widgets/session_metadata_dialog.dart';
 import '../services/session_service.dart';
 import '../services/firestore_service.dart';
 import '../models/session_model.dart';
+import '../models/track_definition.dart';
 
 class SessionRecapPage extends StatelessWidget {
   final List<Position> gpsTrack;
@@ -25,6 +26,7 @@ class SessionRecapPage extends StatelessWidget {
   final List<double> gForceHistory;
   final List<double> gpsAccuracyHistory;
   final List<Duration> timeHistory;
+  final TrackDefinition? trackDefinition;
 
   const SessionRecapPage({
     super.key,
@@ -37,6 +39,7 @@ class SessionRecapPage extends StatelessWidget {
     required this.gForceHistory,
     required this.gpsAccuracyHistory,
     required this.timeHistory,
+    this.trackDefinition,
   });
 
   String _formatDuration(Duration d) {
@@ -294,6 +297,7 @@ class SessionRecapPage extends StatelessWidget {
                       _MapSection(
                         path: smoothPath,
                         trackName: 'Sessione Live',
+                        trackDefinition: trackDefinition,
                       ),
                     const SizedBox(height: 24),
 
@@ -823,10 +827,12 @@ class _LapTimesList extends StatelessWidget {
 class _MapSection extends StatelessWidget {
   final List<LatLng> path;
   final String trackName;
+  final TrackDefinition? trackDefinition;
 
   const _MapSection({
     required this.path,
     required this.trackName,
+    this.trackDefinition,
   });
 
   @override
@@ -894,6 +900,20 @@ class _MapSection extends StatelessWidget {
                     urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                     userAgentPackageName: 'com.racesense.pulse',
                   ),
+                  // Custom circuit path (dark professional color)
+                  if (trackDefinition?.trackPath != null && trackDefinition!.trackPath!.isNotEmpty)
+                    PolylineLayer(
+                      polylines: [
+                        Polyline(
+                          points: trackDefinition!.trackPath!,
+                          strokeWidth: 3.0,
+                          color: const Color(0xFF3A3A3A),
+                          borderStrokeWidth: 1.5,
+                          borderColor: Colors.black.withOpacity(0.3),
+                        ),
+                      ],
+                    ),
+                  // User session path (fluo brand color)
                   PolylineLayer(
                     polylines: [
                       Polyline(

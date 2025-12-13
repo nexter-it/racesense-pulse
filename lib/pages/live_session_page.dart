@@ -1022,6 +1022,7 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
           gForceHistory: _gForceHistory,
           gpsAccuracyHistory: _gpsAccuracyHistory,
           timeHistory: _timeHistory,
+          trackDefinition: widget.trackDefinition,
         ),
       ),
     );
