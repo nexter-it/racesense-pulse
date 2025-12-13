@@ -352,79 +352,82 @@ class _FeedPageState extends State<FeedPage> {
           Column(
             children: [
               const _TopBar(),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4),
-            child: Row(
-              children: const [
-                Text(
-                  'Attività recenti',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Color.fromARGB(255, 255, 255, 255),
-                    letterSpacing: 0.4,
+              Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4),
+                child: Row(
+                  children: const [
+                    Text(
+                      'Attività recenti',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Color.fromARGB(255, 255, 255, 255),
+                        letterSpacing: 0.4,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (_locationError != null)
+                Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  child: Text(
+                    _locationError!,
+                    style: const TextStyle(color: kMutedColor, fontSize: 12),
                   ),
                 ),
-              ],
-            ),
-          ),
-          if (_locationError != null)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-              child: Text(
-                _locationError!,
-                style: const TextStyle(color: kMutedColor, fontSize: 12),
-              ),
-            ),
-          Expanded(
-            child: _isLoading
-                ? const Center(
-                    child: CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(kBrandColor),
-                    ),
-                  )
-                : _feedItems.isEmpty
-                    ? Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(32),
-                          child: Text(
-                            'Nessuna sessione da piloti che segui o vicina a te',
-                            style: TextStyle(color: kMutedColor),
-                            textAlign: TextAlign.center,
-                          ),
+              Expanded(
+                child: _isLoading
+                    ? const Center(
+                        child: CircularProgressIndicator(
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(kBrandColor),
                         ),
                       )
-                    : ListView.builder(
-                        controller: _scrollController,
-                        padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 8)
-                            .copyWith(bottom: 24),
-                        itemCount: _feedItems.length +
-                            (_isLoadingMore && _hasMore ? 1 : 0),
-                        itemBuilder: (context, index) {
-                          if (index >= _feedItems.length) {
-                            return const Padding(
-                              padding: EdgeInsets.all(16.0),
-                              child: Center(
-                                child: CircularProgressIndicator(
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                      kBrandColor),
-                                ),
+                    : _feedItems.isEmpty
+                        ? Center(
+                            child: Padding(
+                              padding: const EdgeInsets.all(32),
+                              child: Text(
+                                'Nessuna sessione da piloti che segui o vicina a te',
+                                style: TextStyle(color: kMutedColor),
+                                textAlign: TextAlign.center,
                               ),
-                            );
-                          }
+                            ),
+                          )
+                        : ListView.builder(
+                            controller: _scrollController,
+                            padding: const EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 8)
+                                .copyWith(bottom: 24),
+                            itemCount: _feedItems.length +
+                                (_isLoadingMore && _hasMore ? 1 : 0),
+                            itemBuilder: (context, index) {
+                              if (index >= _feedItems.length) {
+                                return const Padding(
+                                  padding: EdgeInsets.all(16.0),
+                                  child: Center(
+                                    child: CircularProgressIndicator(
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                          kBrandColor),
+                                    ),
+                                  ),
+                                );
+                              }
 
-                          final item = _feedItems[index];
-                          final track2d =
-                              _buildTrack2dFromSession(item.session);
-                          return _ActivityCard(
-                            session: item.session,
-                            track2d: track2d,
-                            isFollowed: item.isFollowed,
-                            isNearby: item.isNearby,
-                          );
-                        },
-                      ),
-          ),
+                              final item = _feedItems[index];
+                              final track2d =
+                                  _buildTrack2dFromSession(item.session);
+                              return _ActivityCard(
+                                session: item.session,
+                                track2d: track2d,
+                                isFollowed: item.isFollowed,
+                                isNearby: item.isNearby,
+                              );
+                            },
+                          ),
+              ),
             ],
           ),
           // Overlay scuro e banner disclaimer centrato
@@ -541,7 +544,8 @@ class _DisclaimerBanner extends StatelessWidget {
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.close, color: kMutedColor, size: 20),
+                      icon:
+                          const Icon(Icons.close, color: kMutedColor, size: 20),
                       onPressed: onClose,
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(),
@@ -574,7 +578,8 @@ class _DisclaimerBanner extends StatelessWidget {
                   onTap: () => onToggleDontShow(!dontShowAgain),
                   borderRadius: BorderRadius.circular(12),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 10),
                     decoration: BoxDecoration(
                       color: dontShowAgain
                           ? kBrandColor.withAlpha(20)
@@ -597,9 +602,7 @@ class _DisclaimerBanner extends StatelessWidget {
                                 : Colors.transparent,
                             borderRadius: BorderRadius.circular(6),
                             border: Border.all(
-                              color: dontShowAgain
-                                  ? kBrandColor
-                                  : kMutedColor,
+                              color: dontShowAgain ? kBrandColor : kMutedColor,
                               width: 2,
                             ),
                           ),
@@ -948,16 +951,19 @@ class _ActivityCard extends StatelessWidget {
                         children: [
                           if (isFollowed)
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(8),
                                 color: kBrandColor.withAlpha(30),
-                                border: Border.all(color: kBrandColor, width: 1),
+                                border:
+                                    Border.all(color: kBrandColor, width: 1),
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: const [
-                                  Icon(Icons.star, color: kBrandColor, size: 12),
+                                  Icon(Icons.star,
+                                      color: kBrandColor, size: 12),
                                   SizedBox(width: 4),
                                   Text(
                                     'Seguito',
@@ -974,16 +980,19 @@ class _ActivityCard extends StatelessWidget {
                             Padding(
                               padding: const EdgeInsets.only(top: 6.0),
                               child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 4),
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(8),
                                   color: kPulseColor.withAlpha(30),
-                                  border: Border.all(color: kPulseColor, width: 1),
+                                  border:
+                                      Border.all(color: kPulseColor, width: 1),
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: const [
-                                    Icon(Icons.location_on, color: kPulseColor, size: 12),
+                                    Icon(Icons.location_on,
+                                        color: kPulseColor, size: 12),
                                     SizedBox(width: 4),
                                     Text(
                                       'Vicino',
@@ -1008,7 +1017,8 @@ class _ActivityCard extends StatelessWidget {
                   margin: const EdgeInsets.symmetric(horizontal: 16),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: kLineColor.withAlpha(180), width: 1.5),
+                    border: Border.all(
+                        color: kLineColor.withAlpha(180), width: 1.5),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withAlpha(100),
@@ -1045,7 +1055,8 @@ class _ActivityCard extends StatelessWidget {
                                   end: Alignment.bottomCenter,
                                   colors: [
                                     Colors.transparent,
-                                    const Color.fromRGBO(6, 7, 12, 1).withAlpha(240),
+                                    const Color.fromRGBO(6, 7, 12, 1)
+                                        .withAlpha(240),
                                   ],
                                 ),
                               ),
@@ -1060,7 +1071,8 @@ class _ActivityCard extends StatelessWidget {
                               children: [
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         circuitName,
@@ -1109,7 +1121,8 @@ class _ActivityCard extends StatelessWidget {
                                         kPulseColor.withAlpha(20),
                                       ],
                                     ),
-                                    border: Border.all(color: kPulseColor, width: 1.5),
+                                    border: Border.all(
+                                        color: kPulseColor, width: 1.5),
                                     boxShadow: [
                                       BoxShadow(
                                         color: kPulseColor.withAlpha(80),

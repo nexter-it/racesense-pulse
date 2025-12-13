@@ -198,7 +198,8 @@ class _SearchUserProfilePageState extends State<SearchUserProfilePage> {
                         onTap: () => Navigator.of(context).pop(),
                         child: const Padding(
                           padding: EdgeInsets.all(10),
-                          child: Icon(Icons.arrow_back, color: kBrandColor, size: 20),
+                          child: Icon(Icons.arrow_back,
+                              color: kBrandColor, size: 20),
                         ),
                       ),
                     ),
@@ -257,7 +258,8 @@ class _SearchUserProfilePageState extends State<SearchUserProfilePage> {
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
                                     color: kErrorColor.withAlpha(20),
-                                    border: Border.all(color: kErrorColor, width: 2),
+                                    border: Border.all(
+                                        color: kErrorColor, width: 2),
                                   ),
                                   child: const Icon(Icons.error_outline,
                                       color: kErrorColor, size: 48),
@@ -280,7 +282,8 @@ class _SearchUserProfilePageState extends State<SearchUserProfilePage> {
                                         kBrandColor.withAlpha(25),
                                       ],
                                     ),
-                                    border: Border.all(color: kBrandColor, width: 1.5),
+                                    border: Border.all(
+                                        color: kBrandColor, width: 1.5),
                                   ),
                                   child: Material(
                                     color: Colors.transparent,
@@ -380,7 +383,9 @@ class _SearchUserProfilePageState extends State<SearchUserProfilePage> {
                                   ),
                                   const SizedBox(width: 10),
                                   Text(
-                                    isMe ? 'Ultime attività' : 'Attività pubbliche',
+                                    isMe
+                                        ? 'Ultime attività'
+                                        : 'Attività pubbliche',
                                     style: const TextStyle(
                                       fontWeight: FontWeight.w900,
                                       fontSize: 18,
@@ -407,8 +412,10 @@ class _SearchUserProfilePageState extends State<SearchUserProfilePage> {
                                             border: Border.all(
                                                 color: kMutedColor, width: 2),
                                           ),
-                                          child: const Icon(Icons.directions_run,
-                                              color: kMutedColor, size: 48),
+                                          child: const Icon(
+                                              Icons.directions_run,
+                                              color: kMutedColor,
+                                              size: 48),
                                         ),
                                         const SizedBox(height: 16),
                                         Text(
@@ -442,7 +449,8 @@ class _SearchUserProfilePageState extends State<SearchUserProfilePage> {
                                           kBrandColor.withAlpha(25),
                                         ],
                                       ),
-                                      border: Border.all(color: kBrandColor, width: 1.5),
+                                      border: Border.all(
+                                          color: kBrandColor, width: 1.5),
                                     ),
                                     child: Material(
                                       color: Colors.transparent,
@@ -452,7 +460,8 @@ class _SearchUserProfilePageState extends State<SearchUserProfilePage> {
                                             ? null
                                             : () {
                                                 if (_showAllSessions &&
-                                                    _allPublicSessions.isNotEmpty) {
+                                                    _allPublicSessions
+                                                        .isNotEmpty) {
                                                   setState(() {
                                                     _showAllSessions = false;
                                                   });
@@ -475,7 +484,8 @@ class _SearchUserProfilePageState extends State<SearchUserProfilePage> {
                                                 const SizedBox(
                                                   width: 16,
                                                   height: 16,
-                                                  child: CircularProgressIndicator(
+                                                  child:
+                                                      CircularProgressIndicator(
                                                     strokeWidth: 2,
                                                     valueColor:
                                                         AlwaysStoppedAnimation(
@@ -732,9 +742,8 @@ class _ProfileHighlights extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bestLapText = stats.bestLapEver != null
-        ? _formatDuration(stats.bestLapEver!)
-        : '—';
+    final bestLapText =
+        stats.bestLapEver != null ? _formatDuration(stats.bestLapEver!) : '—';
     final bestLapTrack = stats.bestLapTrack ?? 'N/A';
     final distanceTotal = stats.totalDistanceKm.toStringAsFixed(0);
     final sessionsTotal = stats.totalSessions.toString();
@@ -778,9 +787,11 @@ class _ProfileHighlights extends StatelessWidget {
                       kPulseColor.withAlpha(20),
                     ],
                   ),
-                  border: Border.all(color: kPulseColor.withAlpha(100), width: 1),
+                  border:
+                      Border.all(color: kPulseColor.withAlpha(100), width: 1),
                 ),
-                child: const Icon(Icons.auto_graph, color: kPulseColor, size: 20),
+                child:
+                    const Icon(Icons.auto_graph, color: kPulseColor, size: 20),
               ),
               const SizedBox(width: 12),
               const Text(
@@ -829,8 +840,8 @@ class _ProfileHighlights extends StatelessWidget {
               gradient: LinearGradient(
                 colors: [
                   kPulseColor.withAlpha(40),
-                  kBrandColor.withAlpha(40),
-                  const Color(0xFF0F0F15),
+                  kPulseColor.withAlpha(40),
+                  // const Color(0xFF0F0F15),
                 ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
@@ -850,13 +861,14 @@ class _ProfileHighlights extends StatelessWidget {
                         border: Border.all(
                             color: kPulseColor.withAlpha(120), width: 1),
                       ),
-                      child: const Icon(Icons.speed, color: kPulseColor, size: 20),
+                      child:
+                          const Icon(Icons.speed, color: kPulseColor, size: 20),
                     ),
                     const SizedBox(width: 12),
                     const Text(
                       'Best lap assoluto',
                       style: TextStyle(
-                        color: kMutedColor,
+                        color: kPulseColor,
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
                       ),
@@ -870,6 +882,7 @@ class _ProfileHighlights extends StatelessWidget {
                     fontSize: 28,
                     fontWeight: FontWeight.w900,
                     letterSpacing: 0.3,
+                    color: kPulseColor,
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -878,19 +891,19 @@ class _ProfileHighlights extends StatelessWidget {
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(10),
-                    color: kBrandColor.withAlpha(25),
-                    border: Border.all(color: kBrandColor.withAlpha(80)),
+                    color: kPulseColor.withAlpha(25),
+                    border: Border.all(color: kPulseColor.withAlpha(80)),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       const Icon(Icons.track_changes,
-                          size: 14, color: kBrandColor),
+                          size: 14, color: kPulseColor),
                       const SizedBox(width: 4),
                       Text(
                         bestLapTrack,
                         style: const TextStyle(
-                          color: kBrandColor,
+                          color: kPulseColor,
                           fontSize: 11,
                           fontWeight: FontWeight.w800,
                         ),
@@ -922,7 +935,7 @@ class _ProfileHighlights extends StatelessWidget {
                     icon: Icons.timeline,
                     label: 'Distanza',
                     value: '$distanceTotal km',
-                    accent: kPulseColor,
+                    accent: const Color.fromARGB(255, 255, 133, 133),
                     width: tileWidth,
                   ),
                   _HighlightTile(
@@ -968,54 +981,49 @@ class _HighlightTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: width,
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
-        color: const Color.fromRGBO(255, 255, 255, 0.03),
-        border: Border.all(color: kLineColor.withAlpha(70)),
+        borderRadius: BorderRadius.circular(16),
+        color: accent.withAlpha(15),
+        border: Border.all(color: accent.withAlpha(120), width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: accent.withAlpha(60),
-            blurRadius: 10,
-            spreadRadius: -4,
-            offset: const Offset(0, 8),
+            color: accent.withAlpha(40),
+            blurRadius: 0,
+            spreadRadius: 0,
+            offset: const Offset(0, 0),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: accent.withAlpha(25),
-                  border: Border.all(color: accent.withAlpha(100)),
-                ),
-                child: Icon(icon, size: 18, color: accent),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  label,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: kMutedColor,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ],
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: accent.withAlpha(30),
+              border: Border.all(color: accent, width: 1.5),
+            ),
+            child: Icon(icon, size: 20, color: accent),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 14),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              color: accent.withAlpha(200),
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.3,
+            ),
+          ),
+          const SizedBox(height: 6),
           Text(
             value,
-            style: const TextStyle(
-              fontSize: 18,
+            style: TextStyle(
+              fontSize: 20,
               fontWeight: FontWeight.w900,
-              color: kFgColor,
+              color: accent,
               letterSpacing: 0.3,
             ),
           ),
@@ -1107,9 +1115,11 @@ class _SessionCard extends StatelessWidget {
                       kBrandColor.withAlpha(20),
                     ],
                   ),
-                  border: Border.all(color: kBrandColor.withAlpha(100), width: 1),
+                  border:
+                      Border.all(color: kBrandColor.withAlpha(100), width: 1),
                 ),
-                child: const Icon(Icons.track_changes, color: kBrandColor, size: 24),
+                child: const Icon(Icons.track_changes,
+                    color: kBrandColor, size: 24),
               ),
               const SizedBox(width: 14),
 
@@ -1141,7 +1151,8 @@ class _SessionCard extends StatelessWidget {
                     Row(
                       children: [
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(6),
                             color: session.isPublic
@@ -1157,9 +1168,13 @@ class _SessionCard extends StatelessWidget {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(
-                                session.isPublic ? Icons.public : Icons.lock_outline,
+                                session.isPublic
+                                    ? Icons.public
+                                    : Icons.lock_outline,
                                 size: 10,
-                                color: session.isPublic ? kPulseColor : kMutedColor,
+                                color: session.isPublic
+                                    ? kPulseColor
+                                    : kMutedColor,
                               ),
                               const SizedBox(width: 4),
                               Text(
@@ -1167,7 +1182,9 @@ class _SessionCard extends StatelessWidget {
                                 style: TextStyle(
                                   fontSize: 9,
                                   fontWeight: FontWeight.w800,
-                                  color: session.isPublic ? kPulseColor : kMutedColor,
+                                  color: session.isPublic
+                                      ? kPulseColor
+                                      : kMutedColor,
                                 ),
                               ),
                             ],
@@ -1190,7 +1207,8 @@ class _SessionCard extends StatelessWidget {
 
               // Velocità max
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(10),
                   gradient: LinearGradient(

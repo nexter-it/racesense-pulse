@@ -477,14 +477,14 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
                           onGenerate: _showCreateAffiliateDialog,
                         ),
                         const SizedBox(height: 18),
-                        _ConnectDevicesTile(onTap: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => const ConnectDevicesPage(),
-                            ),
-                          );
-                        }),
-                        const SizedBox(height: 24),
+                        // _ConnectDevicesTile(onTap: () {
+                        //   Navigator.of(context).push(
+                        //     MaterialPageRoute(
+                        //       builder: (_) => const ConnectDevicesPage(),
+                        //     ),
+                        //   );
+                        // }),
+                        // const SizedBox(height: 24),
                         Row(
                           children: [
                             Container(
@@ -623,8 +623,8 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
                             ),
                           ),
                         const SizedBox(height: 20),
-                        const _HelpCenterCard(),
-                        const SizedBox(height: 30),
+                        // const _HelpCenterCard(),
+                        // const SizedBox(height: 30),
                       ],
                     ),
                   ),
@@ -1307,7 +1307,7 @@ class _ProfileHighlights extends StatelessWidget {
                     const Text(
                       'Best lap assoluto',
                       style: TextStyle(
-                        color: kMutedColor,
+                        color: kPulseColor,
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
                       ),
@@ -1321,6 +1321,7 @@ class _ProfileHighlights extends StatelessWidget {
                     fontSize: 28,
                     fontWeight: FontWeight.w900,
                     letterSpacing: 0.3,
+                    color: kPulseColor,
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -1329,19 +1330,19 @@ class _ProfileHighlights extends StatelessWidget {
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(10),
-                    color: kBrandColor.withAlpha(25),
-                    border: Border.all(color: kBrandColor.withAlpha(80)),
+                    color: kPulseColor.withAlpha(25),
+                    border: Border.all(color: kPulseColor.withAlpha(80)),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       const Icon(Icons.track_changes,
-                          size: 14, color: kBrandColor),
+                          size: 14, color: kPulseColor),
                       const SizedBox(width: 4),
                       Text(
                         bestLapTrack,
                         style: const TextStyle(
-                          color: kBrandColor,
+                          color: kPulseColor,
                           fontSize: 11,
                           fontWeight: FontWeight.w800,
                         ),
@@ -1373,7 +1374,7 @@ class _ProfileHighlights extends StatelessWidget {
                     icon: Icons.timeline,
                     label: 'Distanza',
                     value: '$distanceTotal km',
-                    accent: kPulseColor,
+                    accent: const Color.fromARGB(255, 255, 133, 133),
                     width: tileWidth,
                   ),
                   _HighlightTile(
@@ -1427,9 +1428,9 @@ class _HighlightTile extends StatelessWidget {
         boxShadow: [
           BoxShadow(
             color: accent.withAlpha(40),
-            blurRadius: 12,
-            spreadRadius: -2,
-            offset: const Offset(0, 6),
+            blurRadius: 0,
+            spreadRadius: 0,
+            offset: const Offset(0, 0),
           ),
         ],
       ),
