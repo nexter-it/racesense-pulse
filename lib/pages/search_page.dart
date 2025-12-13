@@ -255,6 +255,7 @@ class _SearchPageState extends State<SearchPage>
       ),
       child: TabBar(
         controller: _tabController,
+        indicatorSize: TabBarIndicatorSize.tab,
         indicator: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
           gradient: LinearGradient(
@@ -671,7 +672,7 @@ class _SearchPageState extends State<SearchPage>
                     const BorderRadius.vertical(top: Radius.circular(24)),
                 gradient: LinearGradient(
                   colors: [
-                    kPulseColor.withAlpha(25),
+                    Colors.transparent,
                     Colors.transparent,
                   ],
                   begin: Alignment.topLeft,
@@ -684,17 +685,17 @@ class _SearchPageState extends State<SearchPage>
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(16),
-                      gradient: LinearGradient(
-                        colors: [
-                          kPulseColor.withAlpha(40),
-                          kPulseColor.withAlpha(20),
-                        ],
-                      ),
+                      // gradient: LinearGradient(
+                      //   colors: [
+                      //     const Color.fromARGB(67, 255, 0, 0).withAlpha(40),
+                      //     const Color.fromARGB(67, 255, 0, 0).withAlpha(40),
+                      //   ],
+                      // ),
                       border: Border.all(color: kPulseColor, width: 1.5),
                       boxShadow: [
                         BoxShadow(
                           color: kPulseColor.withAlpha(80),
-                          blurRadius: 12,
+                          blurRadius: 0,
                           spreadRadius: 0,
                         ),
                       ],
@@ -856,7 +857,7 @@ class _SearchPageState extends State<SearchPage>
           style: const TextStyle(
             fontSize: 17,
             fontWeight: FontWeight.w900,
-            color: kPulseColor,
+            color: Color.fromARGB(255, 255, 255, 255),
           ),
         ),
         const SizedBox(height: 4),
