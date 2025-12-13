@@ -90,7 +90,8 @@ class SessionRecapPage extends StatelessWidget {
 
   double _getAvgGpsAccuracy() {
     if (gpsAccuracyHistory.isEmpty) return 0;
-    return gpsAccuracyHistory.reduce((a, b) => a + b) / gpsAccuracyHistory.length;
+    return gpsAccuracyHistory.reduce((a, b) => a + b) /
+        gpsAccuracyHistory.length;
   }
 
   int _getGpsSampleRate() {
@@ -100,7 +101,8 @@ class SessionRecapPage extends StatelessWidget {
     int sumMs = 0;
 
     for (int i = 1; i < timeHistory.length; i++) {
-      final diff = timeHistory[i].inMilliseconds - timeHistory[i - 1].inMilliseconds;
+      final diff =
+          timeHistory[i].inMilliseconds - timeHistory[i - 1].inMilliseconds;
       if (diff > 0 && diff < 5000) {
         sumMs += diff;
         totalIntervals++;
@@ -155,8 +157,7 @@ class SessionRecapPage extends StatelessWidget {
           'user';
       await sessionService.saveSession(
         userId: user.uid,
-        driverFullName:
-            user.displayName ?? user.email ?? 'Pilota',
+        driverFullName: user.displayName ?? user.email ?? 'Pilota',
         driverUsername: username,
         trackName: metadata.trackName,
         location: metadata.location,
@@ -231,9 +232,8 @@ class SessionRecapPage extends StatelessWidget {
       final avgSpeedKmh = lapSpeedData.isNotEmpty
           ? lapSpeedData.reduce((a, b) => a + b) / lapSpeedData.length
           : 0.0;
-      final maxSpeedKmh = lapSpeedData.isNotEmpty
-          ? lapSpeedData.reduce(math.max)
-          : 0.0;
+      final maxSpeedKmh =
+          lapSpeedData.isNotEmpty ? lapSpeedData.reduce(math.max) : 0.0;
 
       return LapModel(
         lapIndex: index,
@@ -248,7 +248,7 @@ class SessionRecapPage extends StatelessWidget {
         withTopPadding: true,
         child: Column(
           children: [
-            // Header
+            const SizedBox(height: 8),
             _buildHeader(context),
 
             // Contenuto scrollabile
@@ -313,16 +313,49 @@ class SessionRecapPage extends StatelessWidget {
                     const SizedBox(height: 24),
 
                     // Action Button
-                    SizedBox(
+                    Container(
                       width: double.infinity,
-                      child: ElevatedButton.icon(
-                        onPressed: () => _handleSaveSession(context),
-                        icon: const Icon(Icons.save),
-                        label: const Text('SALVA SESSIONE'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: kBrandColor,
-                          foregroundColor: Colors.black,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16),
+                        gradient: LinearGradient(
+                          colors: [
+                            kBrandColor.withAlpha(255),
+                            kBrandColor.withAlpha(200),
+                          ],
+                        ),
+                        border: Border.all(color: kBrandColor, width: 2),
+                        boxShadow: [
+                          BoxShadow(
+                            color: kBrandColor.withAlpha(100),
+                            blurRadius: 16,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(16),
+                          onTap: () => _handleSaveSession(context),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 18),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: const [
+                                Icon(Icons.save, color: Colors.black, size: 22),
+                                SizedBox(width: 10),
+                                Text(
+                                  'SALVA SESSIONE',
+                                  style: TextStyle(
+                                    color: Colors.black,
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: 16,
+                                    letterSpacing: 0.8,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -339,42 +372,62 @@ class SessionRecapPage extends StatelessWidget {
 
   Widget _buildHeader(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16).copyWith(bottom: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 6),
       child: Row(
         children: [
-          IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new, size: 18),
-            onPressed: () => Navigator.of(context).pop(),
+          Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              gradient: LinearGradient(
+                colors: [
+                  kBrandColor.withAlpha(40),
+                  kBrandColor.withAlpha(25),
+                ],
+              ),
+              border: Border.all(color: kBrandColor, width: 1.5),
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: () => Navigator.of(context).pop(),
+                child: const Padding(
+                  padding: EdgeInsets.all(10),
+                  child: Icon(Icons.arrow_back, color: kBrandColor, size: 20),
+                ),
+              ),
+            ),
           ),
-          const SizedBox(width: 6),
-          const Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'RACESENSE PULSE',
-                style: TextStyle(
-                  fontSize: 11,
-                  letterSpacing: 1.2,
-                  color: kMutedColor,
-                  fontWeight: FontWeight.w700,
+          const SizedBox(width: 12),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Riepilogo Sessione',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0.8,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
-              Text(
-                'Riepilogo Sessione',
-                style: TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w900,
+                Text(
+                  'Sessione completata',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: kMutedColor,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 }
-
-// Copy all widgets from activity_detail_page.dart
 
 /* -------------------------------------------------------------
    HERO STATS GRID - Premium stats showcase
@@ -402,9 +455,8 @@ class _HeroStatsGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bestLapStr = bestLap != null
-        ? _formatDuration(bestLap!)
-        : '--:--';
+    final bestLapStr =
+        bestLap != null ? _formatDuration(bestLap!) : '--:--';
     final totalTimeStr = _formatDuration(totalDuration);
 
     return Column(
@@ -416,11 +468,17 @@ class _HeroStatsGrid extends StatelessWidget {
                 label: "BEST LAP",
                 value: bestLapStr,
                 icon: Icons.timer,
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF8E85FF), Color(0xFF6B5FFF)],
+                gradient: LinearGradient(
+                  colors: [
+                    kPulseColor.withAlpha(80),
+                    kPulseColor.withAlpha(40),
+                  ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
+                borderColor: kPulseColor,
+                iconColor: kPulseColor,
+                valueColor: kPulseColor,
                 highlight: true,
               ),
             ),
@@ -435,6 +493,9 @@ class _HeroStatsGrid extends StatelessWidget {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
+                borderColor: kLineColor,
+                iconColor: kBrandColor,
+                valueColor: kFgColor,
               ),
             ),
           ],
@@ -452,6 +513,9 @@ class _HeroStatsGrid extends StatelessWidget {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
+                borderColor: kLineColor,
+                iconColor: kCoachColor,
+                valueColor: kFgColor,
               ),
             ),
             const SizedBox(width: 12),
@@ -465,6 +529,9 @@ class _HeroStatsGrid extends StatelessWidget {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
+                borderColor: kLineColor,
+                iconColor: kBrandColor,
+                valueColor: kFgColor,
               ),
             ),
           ],
@@ -479,6 +546,9 @@ class _PremiumStatCard extends StatelessWidget {
   final String value;
   final IconData icon;
   final Gradient gradient;
+  final Color borderColor;
+  final Color iconColor;
+  final Color valueColor;
   final bool highlight;
 
   const _PremiumStatCard({
@@ -486,6 +556,9 @@ class _PremiumStatCard extends StatelessWidget {
     required this.value,
     required this.icon,
     required this.gradient,
+    required this.borderColor,
+    required this.iconColor,
+    required this.valueColor,
     this.highlight = false,
   });
 
@@ -497,18 +570,25 @@ class _PremiumStatCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         gradient: gradient,
         border: Border.all(
-          color: highlight ? kPulseColor : kLineColor,
-          width: highlight ? 1.5 : 1,
+          color: borderColor,
+          width: highlight ? 1.8 : 1,
         ),
         boxShadow: highlight
             ? [
                 BoxShadow(
-                  color: kPulseColor.withOpacity(0.15),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
+                  color: borderColor.withOpacity(0.2),
+                  blurRadius: 16,
+                  offset: const Offset(0, 6),
                 )
               ]
-            : null,
+            : [
+                BoxShadow(
+                  color: Colors.black.withAlpha(80),
+                  blurRadius: 10,
+                  spreadRadius: -2,
+                  offset: const Offset(0, 4),
+                ),
+              ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -517,28 +597,29 @@ class _PremiumStatCard extends StatelessWidget {
             children: [
               Icon(
                 icon,
-                size: 16,
-                color: highlight ? kPulseColor : kMutedColor,
+                size: 18,
+                color: iconColor,
               ),
               const SizedBox(width: 6),
               Text(
                 label,
                 style: TextStyle(
                   fontSize: 10,
-                  color: highlight ? kPulseColor : kMutedColor,
+                  color: iconColor,
                   fontWeight: FontWeight.w700,
-                  letterSpacing: 0.5,
+                  letterSpacing: 0.6,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           Text(
             value,
             style: TextStyle(
-              fontSize: 20,
+              fontSize: 22,
               fontWeight: FontWeight.w900,
-              color: highlight ? kPulseColor : kFgColor,
+              color: valueColor,
+              letterSpacing: -0.5,
             ),
           ),
         ],
@@ -559,46 +640,68 @@ class _SessionInfoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dateStr = '${dateTime.day}/${dateTime.month}/${dateTime.year}';
-    final timeStr = '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
+    final timeStr =
+        '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
 
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
-        color: const Color(0xFF0A0A0F),
+        gradient: const LinearGradient(
+          colors: [Color(0xFF1A1A20), Color(0xFF0F0F15)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         border: Border.all(color: kLineColor),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(80),
+            blurRadius: 10,
+            spreadRadius: -2,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(Icons.info_outline, size: 16, color: kBrandColor),
-              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: kBrandColor.withAlpha(20),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: kBrandColor.withAlpha(60)),
+                ),
+                child: const Icon(Icons.info_outline,
+                    size: 16, color: kBrandColor),
+              ),
+              const SizedBox(width: 10),
               const Text(
                 'INFORMAZIONI SESSIONE',
                 style: TextStyle(
                   fontSize: 12,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w900,
                   color: kBrandColor,
                   letterSpacing: 0.8,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 18),
           _InfoRow(
             icon: Icons.calendar_today_outlined,
             label: 'Data',
             value: dateStr,
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
           _InfoRow(
             icon: Icons.schedule_outlined,
             label: 'Ora',
             value: timeStr,
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
           const _InfoRow(
             icon: Icons.track_changes_outlined,
             label: 'Tipo',
@@ -625,13 +728,14 @@ class _InfoRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Icon(icon, size: 16, color: kMutedColor),
-        const SizedBox(width: 10),
+        Icon(icon, size: 16, color: kBrandColor.withAlpha(150)),
+        const SizedBox(width: 12),
         Text(
           label,
           style: const TextStyle(
             fontSize: 13,
             color: kMutedColor,
+            fontWeight: FontWeight.w600,
           ),
         ),
         const Spacer(),
@@ -639,7 +743,7 @@ class _InfoRow extends StatelessWidget {
           value,
           style: const TextStyle(
             fontSize: 13,
-            fontWeight: FontWeight.w700,
+            fontWeight: FontWeight.w800,
             color: kFgColor,
           ),
         ),
@@ -680,8 +784,20 @@ class _LapTimesList extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
-        color: const Color(0xFF0A0A0F),
+        gradient: const LinearGradient(
+          colors: [Color(0xFF1A1A20), Color(0xFF0F0F15)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         border: Border.all(color: kLineColor),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(80),
+            blurRadius: 10,
+            spreadRadius: -2,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -690,13 +806,22 @@ class _LapTimesList extends StatelessWidget {
             padding: const EdgeInsets.all(20),
             child: Row(
               children: [
-                const Icon(Icons.list_alt, size: 16, color: kBrandColor),
-                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: kBrandColor.withAlpha(20),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: kBrandColor.withAlpha(60)),
+                  ),
+                  child:
+                      const Icon(Icons.list_alt, size: 16, color: kBrandColor),
+                ),
+                const SizedBox(width: 10),
                 const Text(
                   'TEMPI SUL GIRO',
                   style: TextStyle(
                     fontSize: 12,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w900,
                     color: kBrandColor,
                     letterSpacing: 0.8,
                   ),
@@ -708,9 +833,9 @@ class _LapTimesList extends StatelessWidget {
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: sortedLaps.length,
-            separatorBuilder: (_, __) => const Divider(
-              color: kLineColor,
-              height: 0,
+            separatorBuilder: (_, __) => Divider(
+              color: kLineColor.withAlpha(100),
+              height: 1,
               indent: 20,
               endIndent: 20,
             ),
@@ -722,13 +847,13 @@ class _LapTimesList extends StatelessWidget {
               return Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 20,
-                  vertical: 14,
+                  vertical: 16,
                 ),
                 decoration: BoxDecoration(
                   gradient: isBest
                       ? LinearGradient(
                           colors: [
-                            kPulseColor.withOpacity(0.08),
+                            kPulseColor.withOpacity(0.12),
                             Colors.transparent,
                           ],
                         )
@@ -737,22 +862,29 @@ class _LapTimesList extends StatelessWidget {
                 child: Row(
                   children: [
                     Container(
-                      width: 32,
-                      height: 32,
+                      width: 40,
+                      height: 40,
                       decoration: BoxDecoration(
-                        color: isBest
-                            ? kPulseColor.withOpacity(0.2)
-                            : const Color(0xFF1A1A20),
-                        borderRadius: BorderRadius.circular(8),
+                        gradient: isBest
+                            ? LinearGradient(
+                                colors: [
+                                  kPulseColor.withAlpha(60),
+                                  kPulseColor.withAlpha(40),
+                                ],
+                              )
+                            : null,
+                        color: isBest ? null : const Color(0xFF1A1A20),
+                        borderRadius: BorderRadius.circular(12),
                         border: Border.all(
                           color: isBest ? kPulseColor : kLineColor,
+                          width: isBest ? 1.5 : 1,
                         ),
                       ),
                       alignment: Alignment.center,
                       child: Text(
                         '${lap.lapIndex + 1}',
                         style: TextStyle(
-                          fontSize: 13,
+                          fontSize: 15,
                           fontWeight: FontWeight.w900,
                           color: isBest ? kPulseColor : kMutedColor,
                         ),
@@ -766,17 +898,19 @@ class _LapTimesList extends StatelessWidget {
                           Text(
                             _formatDuration(lap.duration),
                             style: TextStyle(
-                              fontSize: 16,
+                              fontSize: 18,
                               fontWeight: FontWeight.w900,
                               color: isBest ? kPulseColor : kFgColor,
+                              letterSpacing: -0.5,
                             ),
                           ),
-                          const SizedBox(height: 2),
+                          const SizedBox(height: 4),
                           Text(
                             'Avg: ${lap.avgSpeedKmh.toStringAsFixed(1)} km/h  •  Max: ${lap.maxSpeedKmh.toStringAsFixed(1)} km/h',
                             style: const TextStyle(
                               fontSize: 11,
                               color: kMutedColor,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ],
@@ -785,13 +919,18 @@ class _LapTimesList extends StatelessWidget {
                     if (isBest)
                       Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
+                          horizontal: 10,
+                          vertical: 6,
                         ),
                         decoration: BoxDecoration(
-                          color: kPulseColor.withOpacity(0.15),
+                          gradient: LinearGradient(
+                            colors: [
+                              kPulseColor.withAlpha(40),
+                              kPulseColor.withAlpha(25),
+                            ],
+                          ),
                           borderRadius: BorderRadius.circular(999),
-                          border: Border.all(color: kPulseColor),
+                          border: Border.all(color: kPulseColor, width: 1.5),
                         ),
                         child: const Text(
                           'BEST',
@@ -799,15 +938,15 @@ class _LapTimesList extends StatelessWidget {
                             fontSize: 10,
                             fontWeight: FontWeight.w900,
                             color: kPulseColor,
-                            letterSpacing: 0.5,
+                            letterSpacing: 0.6,
                           ),
                         ),
                       ),
                     if (!isBest && isWorst)
                       Icon(
                         Icons.arrow_downward,
-                        size: 16,
-                        color: kMutedColor.withOpacity(0.5),
+                        size: 18,
+                        color: kMutedColor.withOpacity(0.4),
                       ),
                   ],
                 ),
@@ -858,8 +997,20 @@ class _MapSection extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
-        color: const Color(0xFF0A0A0F),
+        gradient: const LinearGradient(
+          colors: [Color(0xFF1A1A20), Color(0xFF0F0F15)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         border: Border.all(color: kLineColor),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(80),
+            blurRadius: 10,
+            spreadRadius: -2,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -868,13 +1019,22 @@ class _MapSection extends StatelessWidget {
             padding: const EdgeInsets.all(20),
             child: Row(
               children: [
-                const Icon(Icons.map_outlined, size: 16, color: kBrandColor),
-                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: kBrandColor.withAlpha(20),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: kBrandColor.withAlpha(60)),
+                  ),
+                  child: const Icon(Icons.map_outlined,
+                      size: 16, color: kBrandColor),
+                ),
+                const SizedBox(width: 10),
                 const Text(
                   'MAPPA TRACCIATO',
                   style: TextStyle(
                     fontSize: 12,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w900,
                     color: kBrandColor,
                     letterSpacing: 0.8,
                   ),
@@ -897,11 +1057,13 @@ class _MapSection extends StatelessWidget {
                 ),
                 children: [
                   TileLayer(
-                    urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    urlTemplate:
+                        'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                     userAgentPackageName: 'com.racesense.pulse',
                   ),
                   // Custom circuit path (dark professional color)
-                  if (trackDefinition?.trackPath != null && trackDefinition!.trackPath!.isNotEmpty)
+                  if (trackDefinition?.trackPath != null &&
+                      trackDefinition!.trackPath!.isNotEmpty)
                     PolylineLayer(
                       polylines: [
                         Polyline(
@@ -1002,28 +1164,49 @@ class _TechnicalDataSection extends StatelessWidget {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
-        color: const Color(0xFF0A0A0F),
+        gradient: const LinearGradient(
+          colors: [Color(0xFF1A1A20), Color(0xFF0F0F15)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         border: Border.all(color: kLineColor),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(80),
+            blurRadius: 10,
+            spreadRadius: -2,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(Icons.analytics_outlined, size: 16, color: kBrandColor),
-              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: kBrandColor.withAlpha(20),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: kBrandColor.withAlpha(60)),
+                ),
+                child: const Icon(Icons.analytics_outlined,
+                    size: 16, color: kBrandColor),
+              ),
+              const SizedBox(width: 10),
               const Text(
                 'DATI TECNICI',
                 style: TextStyle(
                   fontSize: 12,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w900,
                   color: kBrandColor,
                   letterSpacing: 0.8,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 18),
           Row(
             children: [
               Expanded(
@@ -1031,6 +1214,7 @@ class _TechnicalDataSection extends StatelessWidget {
                   icon: Icons.speed,
                   label: 'Velocità Max',
                   value: '${maxSpeedKmh.toStringAsFixed(0)} km/h',
+                  color: kPulseColor,
                 ),
               ),
               const SizedBox(width: 12),
@@ -1039,6 +1223,7 @@ class _TechnicalDataSection extends StatelessWidget {
                   icon: Icons.trending_up,
                   label: 'Velocità Media',
                   value: '${avgSpeedKmh.toStringAsFixed(0)} km/h',
+                  color: kBrandColor,
                 ),
               ),
             ],
@@ -1051,6 +1236,7 @@ class _TechnicalDataSection extends StatelessWidget {
                   icon: Icons.center_focus_strong,
                   label: 'G-Force Max',
                   value: '${maxGForce.toStringAsFixed(2)} g',
+                  color: kCoachColor,
                 ),
               ),
               const SizedBox(width: 12),
@@ -1059,6 +1245,7 @@ class _TechnicalDataSection extends StatelessWidget {
                   icon: Icons.gps_fixed,
                   label: 'GPS Accuracy',
                   value: '${avgGpsAccuracy.toStringAsFixed(1)} m',
+                  color: const Color(0xFF4CD964),
                 ),
               ),
             ],
@@ -1071,6 +1258,7 @@ class _TechnicalDataSection extends StatelessWidget {
                   icon: Icons.refresh,
                   label: 'Sample Rate',
                   value: '$gpsSampleRateHz Hz',
+                  color: const Color(0xFF5AC8FA),
                 ),
               ),
               const SizedBox(width: 12),
@@ -1079,6 +1267,7 @@ class _TechnicalDataSection extends StatelessWidget {
                   icon: Icons.data_usage,
                   label: 'Punti GPS',
                   value: gpsDataCount.toString(),
+                  color: const Color(0xFFFF9F0A),
                 ),
               ),
             ],
@@ -1093,41 +1282,53 @@ class _TechnicalMetric extends StatelessWidget {
   final IconData icon;
   final String label;
   final String value;
+  final Color color;
 
   const _TechnicalMetric({
     required this.icon,
     required this.label,
     required this.value,
+    required this.color,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF151520),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: kLineColor.withOpacity(0.3)),
+        color: const Color(0xFF0A0A0F),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: kLineColor.withOpacity(0.4)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 20, color: kBrandColor.withOpacity(0.7)),
-          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withAlpha(20),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: color.withAlpha(60)),
+            ),
+            child: Icon(icon, size: 20, color: color),
+          ),
+          const SizedBox(height: 12),
           Text(
             label,
             style: const TextStyle(
               fontSize: 11,
               color: kMutedColor,
+              fontWeight: FontWeight.w600,
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
           Text(
             value,
             style: const TextStyle(
-              fontSize: 15,
+              fontSize: 16,
               fontWeight: FontWeight.w900,
               color: kFgColor,
+              letterSpacing: -0.3,
             ),
           ),
         ],
@@ -1137,7 +1338,7 @@ class _TechnicalMetric extends StatelessWidget {
 }
 
 // ============================================================
-// OVERVIEW: CIRCUITO + GRAFICO COMBINATO (from activity_detail_page)
+// OVERVIEW: CIRCUITO + GRAFICO COMBINATO
 // ============================================================
 
 enum _MetricFocus { speed, gForce, accuracy }
@@ -1187,8 +1388,12 @@ class _SessionOverviewPanelState extends State<_SessionOverviewPanel> {
       return Container(
         height: 320,
         decoration: BoxDecoration(
-          color: const Color(0xFF1a1a1a),
-          borderRadius: BorderRadius.circular(16),
+          gradient: const LinearGradient(
+            colors: [Color(0xFF1A1A20), Color(0xFF0F0F15)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(20),
           border: Border.all(color: kLineColor),
         ),
         child: const Center(
@@ -1206,6 +1411,8 @@ class _SessionOverviewPanelState extends State<_SessionOverviewPanel> {
 
     final int lapCount = widget.laps.length;
     _currentLap = _currentLap.clamp(0, lapCount - 1);
+
+    final Duration lapDuration = widget.laps[_currentLap];
 
     Duration lapStartTime = Duration.zero;
     for (int i = 0; i < _currentLap; i++) {
@@ -1225,8 +1432,12 @@ class _SessionOverviewPanelState extends State<_SessionOverviewPanel> {
       return Container(
         height: 320,
         decoration: BoxDecoration(
-          color: const Color(0xFF1a1a1a),
-          borderRadius: BorderRadius.circular(16),
+          gradient: const LinearGradient(
+            colors: [Color(0xFF1A1A20), Color(0xFF0F0F15)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(20),
           border: Border.all(color: kLineColor),
         ),
         child: Center(
@@ -1307,71 +1518,112 @@ class _SessionOverviewPanelState extends State<_SessionOverviewPanel> {
     final double curT = xs[_selectedIndex];
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: const Color(0xFF050608),
-        borderRadius: BorderRadius.circular(16),
+        gradient: const LinearGradient(
+          colors: [Color(0xFF0A0A0F), Color(0xFF050608)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(color: kLineColor),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(100),
+            blurRadius: 12,
+            spreadRadius: -2,
+            offset: const Offset(0, 6),
+          ),
+        ],
       ),
       child: Column(
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              IconButton(
-                visualDensity: VisualDensity.compact,
-                icon: const Icon(Icons.chevron_left),
-                color: Colors.white70,
-                onPressed: _currentLap > 0
-                    ? () {
-                        setState(() {
-                          _currentLap--;
-                          _selectedIndex = 0;
-                        });
-                      }
-                    : null,
+              Container(
+                decoration: BoxDecoration(
+                  color: _currentLap > 0
+                      ? kBrandColor.withAlpha(20)
+                      : kMutedColor.withAlpha(10),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: _currentLap > 0
+                        ? kBrandColor.withAlpha(60)
+                        : kMutedColor.withAlpha(30),
+                  ),
+                ),
+                child: IconButton(
+                  visualDensity: VisualDensity.compact,
+                  icon: const Icon(Icons.chevron_left, size: 20),
+                  color: _currentLap > 0 ? kBrandColor : kMutedColor,
+                  onPressed: _currentLap > 0
+                      ? () {
+                          setState(() {
+                            _currentLap--;
+                            _selectedIndex = 0;
+                          });
+                        }
+                      : null,
+                ),
               ),
               Column(
                 children: [
                   Text(
                     'LAP ${(_currentLap + 1).toString().padLeft(2, '0')}',
                     style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w900,
+                      color: kFgColor,
+                      letterSpacing: 0.8,
                     ),
                   ),
+                  const SizedBox(height: 2),
                   Text(
-                    _formatLap(widget.laps[_currentLap]),
+                    _formatLap(lapDuration),
                     style: const TextStyle(
-                      fontSize: 12,
-                      color: kMutedColor,
+                      fontSize: 13,
+                      color: kBrandColor,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ],
               ),
-              IconButton(
-                visualDensity: VisualDensity.compact,
-                icon: const Icon(Icons.chevron_right),
-                color: Colors.white70,
-                onPressed: _currentLap < lapCount - 1
-                    ? () {
-                        setState(() {
-                          _currentLap++;
-                          _selectedIndex = 0;
-                        });
-                      }
-                    : null,
+              Container(
+                decoration: BoxDecoration(
+                  color: _currentLap < lapCount - 1
+                      ? kBrandColor.withAlpha(20)
+                      : kMutedColor.withAlpha(10),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: _currentLap < lapCount - 1
+                        ? kBrandColor.withAlpha(60)
+                        : kMutedColor.withAlpha(30),
+                  ),
+                ),
+                child: IconButton(
+                  visualDensity: VisualDensity.compact,
+                  icon: const Icon(Icons.chevron_right, size: 20),
+                  color: _currentLap < lapCount - 1 ? kBrandColor : kMutedColor,
+                  onPressed: _currentLap < lapCount - 1
+                      ? () {
+                          setState(() {
+                            _currentLap++;
+                            _selectedIndex = 0;
+                          });
+                        }
+                      : null,
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 16),
           _CircuitTrackView(
             path: lapPath,
             marker: marker,
             accelG: lapAccel,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 18),
           SizedBox(
             height: 220,
             child: LineChart(
@@ -1387,11 +1639,11 @@ class _SessionOverviewPanelState extends State<_SessionOverviewPanel> {
                   verticalInterval:
                       (xs.last - xs.first) > 0 ? (xs.last - xs.first) / 4 : 1,
                   getDrawingHorizontalLine: (value) => FlLine(
-                    color: kLineColor.withOpacity(0.35),
+                    color: kLineColor.withOpacity(0.2),
                     strokeWidth: 0.5,
                   ),
                   getDrawingVerticalLine: (value) => FlLine(
-                    color: kLineColor.withOpacity(0.25),
+                    color: kLineColor.withOpacity(0.15),
                     strokeWidth: 0.5,
                   ),
                 ),
@@ -1399,9 +1651,9 @@ class _SessionOverviewPanelState extends State<_SessionOverviewPanel> {
                   show: true,
                   border: Border(
                     left: BorderSide(
-                        color: kLineColor.withOpacity(0.7), width: 1),
+                        color: kLineColor.withOpacity(0.5), width: 1),
                     bottom: BorderSide(
-                        color: kLineColor.withOpacity(0.7), width: 1),
+                        color: kLineColor.withOpacity(0.5), width: 1),
                     right: const BorderSide(color: Colors.transparent),
                     top: const BorderSide(color: Colors.transparent),
                   ),
@@ -1418,8 +1670,10 @@ class _SessionOverviewPanelState extends State<_SessionOverviewPanel> {
                       reservedSize: 40,
                       getTitlesWidget: (value, meta) => Text(
                         value.toStringAsFixed(0),
-                        style:
-                            const TextStyle(color: kMutedColor, fontSize: 10),
+                        style: const TextStyle(
+                            color: kMutedColor,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600),
                       ),
                     ),
                   ),
@@ -1429,8 +1683,10 @@ class _SessionOverviewPanelState extends State<_SessionOverviewPanel> {
                       reservedSize: 22,
                       getTitlesWidget: (value, meta) => Text(
                         '${value.toStringAsFixed(0)}s',
-                        style:
-                            const TextStyle(color: kMutedColor, fontSize: 10),
+                        style: const TextStyle(
+                            color: kMutedColor,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600),
                       ),
                     ),
                   ),
@@ -1439,9 +1695,9 @@ class _SessionOverviewPanelState extends State<_SessionOverviewPanel> {
                   verticalLines: [
                     VerticalLine(
                       x: cursorX,
-                      color: Colors.white.withOpacity(0.7),
-                      strokeWidth: 1,
-                      dashArray: [4, 4],
+                      color: kBrandColor.withOpacity(0.8),
+                      strokeWidth: 1.5,
+                      dashArray: [6, 3],
                     ),
                   ],
                 ),
@@ -1461,57 +1717,91 @@ class _SessionOverviewPanelState extends State<_SessionOverviewPanel> {
                   },
                 ),
                 lineBarsData: [
-                  _buildLine(speedSpots, Colors.redAccent,
+                  _buildLine(speedSpots, const Color(0xFFFF4D4F),
                       _focus == _MetricFocus.speed),
-                  _buildLine(gSpots, Colors.greenAccent,
+                  _buildLine(gSpots, const Color(0xFF4CD964),
                       _focus == _MetricFocus.gForce),
-                  _buildLine(accSpots, Colors.blueAccent,
+                  _buildLine(accSpots, const Color(0xFF5AC8FA),
                       _focus == _MetricFocus.accuracy),
                 ],
               ),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
               _metricChip(
                 label: 'Speed',
-                color: Colors.redAccent,
+                color: const Color(0xFFFF4D4F),
                 selected: _focus == _MetricFocus.speed,
                 onTap: () => setState(() => _focus = _MetricFocus.speed),
               ),
               _metricChip(
                 label: 'G-Force',
-                color: Colors.greenAccent,
+                color: const Color(0xFF4CD964),
                 selected: _focus == _MetricFocus.gForce,
                 onTap: () => setState(() => _focus = _MetricFocus.gForce),
               ),
               _metricChip(
                 label: 'Accuracy',
-                color: Colors.blueAccent,
+                color: const Color(0xFF5AC8FA),
                 selected: _focus == _MetricFocus.accuracy,
                 onTap: () => setState(() => _focus = _MetricFocus.accuracy),
               ),
             ],
           ),
-          const SizedBox(height: 8),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              't=${curT.toStringAsFixed(2)}s   '
-              'v=${curSpeed.toStringAsFixed(1)} km/h   '
-              'g=${curG.toStringAsFixed(2)}   '
-              'acc=${curAcc.toStringAsFixed(2)} m',
-              style: const TextStyle(
-                fontSize: 11,
-                color: kMutedColor,
-                fontFeatures: [FontFeature.tabularFigures()],
-              ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFF0A0A0F),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: kLineColor.withAlpha(60)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _metricValue('t', '${curT.toStringAsFixed(2)}s', kBrandColor),
+                Container(width: 1, height: 30, color: kLineColor.withAlpha(80)),
+                _metricValue('v', '${curSpeed.toStringAsFixed(1)} km/h',
+                    const Color(0xFFFF4D4F)),
+                Container(width: 1, height: 30, color: kLineColor.withAlpha(80)),
+                _metricValue(
+                    'g', '${curG.toStringAsFixed(2)}', const Color(0xFF4CD964)),
+                Container(width: 1, height: 30, color: kLineColor.withAlpha(80)),
+                _metricValue('acc', '${curAcc.toStringAsFixed(1)} m',
+                    const Color(0xFF5AC8FA)),
+              ],
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _metricValue(String label, String value, Color color) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 10,
+            color: color,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 11,
+            color: kFgColor,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+      ],
     );
   }
 
@@ -1523,11 +1813,14 @@ class _SessionOverviewPanelState extends State<_SessionOverviewPanel> {
     return LineChartBarData(
       spots: spots,
       isCurved: false,
-      color: focused ? baseColor : baseColor.withOpacity(0.25),
-      barWidth: focused ? 2.5 : 1.5,
+      color: focused ? baseColor : baseColor.withOpacity(0.2),
+      barWidth: focused ? 3.0 : 1.5,
       isStrokeCapRound: false,
       dotData: const FlDotData(show: false),
-      belowBarData: BarAreaData(show: false),
+      belowBarData: BarAreaData(
+        show: focused,
+        color: baseColor.withOpacity(0.08),
+      ),
     );
   }
 
@@ -1540,14 +1833,22 @@ class _SessionOverviewPanelState extends State<_SessionOverviewPanel> {
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: selected ? color.withOpacity(0.15) : Colors.transparent,
+          gradient: selected
+              ? LinearGradient(
+                  colors: [
+                    color.withAlpha(40),
+                    color.withAlpha(25),
+                  ],
+                )
+              : null,
+          color: selected ? null : Colors.transparent,
           borderRadius: BorderRadius.circular(999),
           border: Border.all(
-            color: selected ? color : color.withOpacity(0.4),
-            width: 1,
+            color: selected ? color : color.withOpacity(0.3),
+            width: selected ? 1.5 : 1,
           ),
         ),
         child: Row(
@@ -1566,8 +1867,8 @@ class _SessionOverviewPanelState extends State<_SessionOverviewPanel> {
               label,
               style: TextStyle(
                 fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: Colors.white.withOpacity(0.9),
+                fontWeight: FontWeight.w800,
+                color: selected ? color : color.withOpacity(0.7),
               ),
             ),
           ],
@@ -1598,7 +1899,7 @@ class _CircuitTrackView extends StatelessWidget {
       return Container(
         height: 180,
         decoration: BoxDecoration(
-          color: const Color(0xFF101010),
+          color: const Color(0xFF0A0A0F),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: kLineColor),
         ),
@@ -1638,7 +1939,7 @@ class _CircuitPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final bgPaint = Paint()
-      ..color = const Color(0xFF101015)
+      ..color = const Color(0xFF0A0A0F)
       ..style = PaintingStyle.fill;
     canvas.drawRRect(
       RRect.fromRectAndRadius(
@@ -1649,9 +1950,9 @@ class _CircuitPainter extends CustomPainter {
     );
 
     final gridPaint = Paint()
-      ..color = Colors.white.withOpacity(0.04)
-      ..strokeWidth = 1;
-    const int gridLines = 8;
+      ..color = Colors.white.withOpacity(0.03)
+      ..strokeWidth = 0.5;
+    const int gridLines = 10;
     final dx = size.width / gridLines;
     final dy = size.height / gridLines;
     for (int i = 1; i < gridLines; i++) {
@@ -1677,13 +1978,13 @@ class _CircuitPainter extends CustomPainter {
     final dLat = (maxLat - minLat).abs();
     final dLon = (maxLon - minLon).abs();
 
-    final usableW = size.width * 0.8;
-    final usableH = size.height * 0.8;
+    final usableW = size.width * 0.85;
+    final usableH = size.height * 0.85;
     final scale = (dLat == 0 || dLon == 0)
         ? 1.0
         : math.min(usableW / dLon, usableH / dLat);
 
-    Offset _project(LatLng p) {
+    Offset project(LatLng p) {
       final x = (p.longitude - centerLon) * scale + size.width / 2;
       final y = (centerLat - p.latitude) * scale + size.height / 2;
       return Offset(x, y);
@@ -1692,7 +1993,7 @@ class _CircuitPainter extends CustomPainter {
     final ui.Path shadowPath = ui.Path();
     final List<Offset> projected = [];
     for (int i = 0; i < path.length; i++) {
-      final o = _project(path[i]);
+      final o = project(path[i]);
       projected.add(o);
       if (i == 0) {
         shadowPath.moveTo(o.dx, o.dy);
@@ -1701,9 +2002,9 @@ class _CircuitPainter extends CustomPainter {
       }
     }
     final shadowPaint = Paint()
-      ..color = Colors.black.withOpacity(0.4)
+      ..color = Colors.black.withOpacity(0.5)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 7
+      ..strokeWidth = 8
       ..strokeCap = StrokeCap.round;
     canvas.drawPath(shadowPath.shift(const Offset(2, 2)), shadowPaint);
 
@@ -1712,13 +2013,13 @@ class _CircuitPainter extends CustomPainter {
       final paint = Paint()
         ..color = _colorForG(g)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 4
+        ..strokeWidth = 5
         ..strokeCap = StrokeCap.round;
       canvas.drawLine(projected[i - 1], projected[i], paint);
     }
 
     if (marker != null) {
-      final o = _project(marker!);
+      final o = project(marker!);
       final markerPaint = Paint()
         ..color = Colors.white
         ..style = PaintingStyle.fill;
@@ -1726,8 +2027,12 @@ class _CircuitPainter extends CustomPainter {
         ..color = kPulseColor
         ..style = PaintingStyle.stroke
         ..strokeWidth = 3;
-      canvas.drawCircle(o, 7, markerPaint);
-      canvas.drawCircle(o, 7, markerBorder);
+      final markerGlow = Paint()
+        ..color = kPulseColor.withOpacity(0.3)
+        ..style = PaintingStyle.fill;
+      canvas.drawCircle(o, 12, markerGlow);
+      canvas.drawCircle(o, 8, markerPaint);
+      canvas.drawCircle(o, 8, markerBorder);
     }
   }
 
@@ -1739,16 +2044,16 @@ class _CircuitPainter extends CustomPainter {
   }
 
   Color _colorForG(double g) {
-    const pos = Color(0xFF4CD964); // accelerazione
-    const neg = Color(0xFFFF4D4D); // frenata
-    const neu = Color(0xFFF7D64E); // neutro
+    const pos = Color(0xFF4CD964); // verde accelerazione
+    const neg = Color(0xFFFF4D4F); // rosso frenata
+    const neu = kBrandColor; // neutro
     final double clamped = g.clamp(-1.5, 1.5).toDouble();
     if (clamped >= 0) {
       final double t = (clamped / 1.5).clamp(0.0, 1.0);
       return Color.lerp(neu, pos, t)!;
     } else {
       final double t = (-clamped / 1.5).clamp(0.0, 1.0);
-      return Color.lerp(neg, neu, t)!;
+      return Color.lerp(neu, neg, 1.0 - t)!;
     }
   }
 }

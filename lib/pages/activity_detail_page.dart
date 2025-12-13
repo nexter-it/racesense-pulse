@@ -113,20 +113,64 @@ class _ActivityDetailPageState extends State<ActivityDetailPage> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.error_outline, size: 64, color: kErrorColor),
-                const SizedBox(height: 16),
-                Text(
-                  _error!,
-                  style: const TextStyle(color: kMutedColor, fontSize: 16),
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      colors: [
+                        kErrorColor.withAlpha(40),
+                        kErrorColor.withAlpha(20),
+                      ],
+                    ),
+                    border: Border.all(color: kErrorColor, width: 2),
+                  ),
+                  child: const Icon(Icons.error_outline,
+                      size: 64, color: kErrorColor),
                 ),
                 const SizedBox(height: 24),
-                ElevatedButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: kBrandColor,
-                    foregroundColor: Colors.black,
+                Text(
+                  _error!,
+                  style: const TextStyle(
+                    color: kFgColor,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
                   ),
-                  child: const Text('Torna indietro'),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 32),
+                Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    gradient: LinearGradient(
+                      colors: [
+                        kBrandColor.withAlpha(40),
+                        kBrandColor.withAlpha(25),
+                      ],
+                    ),
+                    border: Border.all(color: kBrandColor, width: 1.5),
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(12),
+                      onTap: () => Navigator.of(context).pop(),
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 14,
+                        ),
+                        child: Text(
+                          'Torna indietro',
+                          style: TextStyle(
+                            color: kBrandColor,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -169,14 +213,13 @@ class _ActivityDetailPageState extends State<ActivityDetailPage> {
             ))
         .toList();
 
-    final deviceUsed = "Cellular GPS";
-
     return Scaffold(
       body: PulseBackground(
         withTopPadding: true,
         child: Column(
           children: [
-            _TopBar(session: _session, device: deviceUsed),
+            const SizedBox(height: 8),
+            _buildHeader(context),
             const SizedBox(height: 8),
             _PilotHeader(session: _session),
             Expanded(
@@ -278,6 +321,68 @@ class _ActivityDetailPageState extends State<ActivityDetailPage> {
       ),
     );
   }
+
+  Widget _buildHeader(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 6),
+      child: Row(
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              gradient: LinearGradient(
+                colors: [
+                  kBrandColor.withAlpha(40),
+                  kBrandColor.withAlpha(25),
+                ],
+              ),
+              border: Border.all(color: kBrandColor, width: 1.5),
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: () => Navigator.of(context).pop(),
+                child: const Padding(
+                  padding: EdgeInsets.all(10),
+                  child: Icon(Icons.arrow_back, color: kBrandColor, size: 20),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _session.trackName,
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0.8,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  _session.location,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: kMutedColor,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const PulseChip(
+            label: Text('Cellular GPS'),
+            icon: Icons.sensors,
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _PilotHeader extends StatelessWidget {
@@ -287,9 +392,15 @@ class _PilotHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final seed = session.userId.hashCode & 0x7fffffff;
-    final idx = (math.Random(seed).nextInt(5)) + 1;
-    final asset = 'assets/images/dr$idx.png';
+    final userInitials = session.driverFullName.isNotEmpty
+        ? session.driverFullName
+            .split(' ')
+            .map((e) => e[0])
+            .take(2)
+            .join()
+            .toUpperCase()
+        : '??';
+
     return InkWell(
       onTap: () {
         Navigator.of(context).push(
@@ -301,32 +412,57 @@ class _PilotHeader extends StatelessWidget {
           ),
         );
       },
+      borderRadius: BorderRadius.circular(20),
       child: Container(
         margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(15),
-          color: const Color.fromRGBO(255, 255, 255, 0.04),
-          border: Border.all(color: kLineColor),
+          borderRadius: BorderRadius.circular(20),
+          gradient: LinearGradient(
+            colors: [
+              const Color(0xFF1A1A20).withAlpha(255),
+              const Color(0xFF0F0F15).withAlpha(255),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          border: Border.all(color: kLineColor, width: 1),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withAlpha(100),
+              blurRadius: 12,
+              spreadRadius: -2,
+              offset: const Offset(0, 6),
+            ),
+          ],
         ),
         child: Row(
           children: [
             Container(
-              width: 50,
-              height: 50,
+              padding: const EdgeInsets.all(3),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                border: Border.all(color: kLineColor.withOpacity(0.6)),
+                gradient: LinearGradient(
+                  colors: [
+                    kBrandColor.withAlpha(60),
+                    kPulseColor.withAlpha(40),
+                  ],
+                ),
               ),
-              clipBehavior: Clip.antiAlias,
-              child: Image.asset(
-                asset,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) =>
-                    const Icon(Icons.person, color: kMutedColor),
+              child: CircleAvatar(
+                radius: 28,
+                backgroundColor: const Color(0xFF1A1A20),
+                child: Text(
+                  userInitials,
+                  style: const TextStyle(
+                    color: kBrandColor,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 16,
+                  ),
+                ),
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -336,188 +472,39 @@ class _PilotHeader extends StatelessWidget {
                     style: const TextStyle(
                       color: kFgColor,
                       fontWeight: FontWeight.w900,
-                      fontSize: 15,
+                      fontSize: 16,
                     ),
                   ),
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 4),
                   Text(
                     '@${session.driverUsername}',
                     style: const TextStyle(
                       color: kMutedColor,
-                      fontSize: 12,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right, color: kMutedColor),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/* -------------------------------------------------------------
-   TOPBAR
-------------------------------------------------------------- */
-
-class _TopBar extends StatelessWidget {
-  final SessionModel session;
-  final String device;
-
-  const _TopBar({required this.session, required this.device});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16).copyWith(bottom: 10),
-      child: Row(
-        children: [
-          IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new, size: 18),
-            onPressed: () => Navigator.of(context).pop(),
-          ),
-          const SizedBox(width: 6),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'RACESENSE PULSE',
-                style: TextStyle(
-                  fontSize: 11,
-                  letterSpacing: 1.2,
-                  color: kMutedColor,
-                  fontWeight: FontWeight.w700,
-                ),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: kBrandColor.withAlpha(20),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: kBrandColor.withAlpha(60)),
               ),
-              Text(
-                session.trackName,
-                style: const TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-            ],
-          ),
-          const Spacer(),
-          PulseChip(
-            label: Text(device),
-            icon: Icons.sensors,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/* -------------------------------------------------------------
-   HERO TRACK
-------------------------------------------------------------- */
-
-class _HeroTrack extends StatelessWidget {
-  final SessionModel session;
-
-  const _HeroTrack({required this.session});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 220,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: kLineColor),
-        gradient: const LinearGradient(
-          colors: [
-            Color.fromRGBO(255, 255, 255, 0.06),
-            Color.fromRGBO(0, 0, 0, 0.80),
-          ],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-        ),
-      ),
-      child: Stack(
-        children: [
-          Positioned.fill(
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(20),
-              child: CustomPaint(
-                painter: _DetailTrackPainter(),
+              child: const Icon(
+                Icons.chevron_right,
+                color: kBrandColor,
+                size: 20,
               ),
             ),
-          ),
-          // Se ti serve riattivare il testo, aggiorna qui da activity.* a session.*
-          // Positioned(
-          //   left: 16,
-          //   bottom: 16,
-          //   right: 16,
-          //   child: Row(
-          //     children: [
-          //       Column(
-          //         crossAxisAlignment: CrossAxisAlignment.start,
-          //         children: [
-          //           Text(
-          //             session.trackName,
-          //             style: const TextStyle(
-          //               fontWeight: FontWeight.w900,
-          //               fontSize: 16,
-          //             ),
-          //           ),
-          //           const SizedBox(height: 2),
-          //           Text(
-          //             '${session.locationCity}, ${session.locationCountry}',
-          //             style: const TextStyle(
-          //               color: kMutedColor,
-          //               fontSize: 12,
-          //             ),
-          //           ),
-          //         ],
-          //       ),
-          //       ...
-          //     ],
-          //   ),
-          // ),
-        ],
+          ],
+        ),
       ),
     );
   }
-}
-
-class _DetailTrackPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final bg = Paint()..color = const Color(0xFF0A0A0A);
-    canvas.drawRect(Offset.zero & size, bg);
-
-    final center = Offset(size.width / 2, size.height / 2);
-    final r = size.height * 0.34;
-
-    final border = Paint()
-      ..color = const Color.fromRGBO(255, 255, 255, 0.12)
-      ..strokeWidth = 15
-      ..style = PaintingStyle.stroke;
-
-    final track = Paint()
-      ..color = const Color.fromRGBO(90, 90, 97, 1)
-      ..strokeWidth = 9
-      ..style = PaintingStyle.stroke;
-
-    final path = Path()..addOval(Rect.fromCircle(center: center, radius: r));
-
-    canvas.drawPath(path, border);
-    canvas.drawPath(path, track);
-
-    canvas.drawLine(
-      Offset(center.dx + r, center.dy - 18),
-      Offset(center.dx + r, center.dy + 18),
-      Paint()
-        ..color = Colors.white
-        ..strokeWidth = 4,
-    );
-  }
-
-  @override
-  bool shouldRepaint(_) => false;
 }
 
 /* -------------------------------------------------------------
@@ -551,14 +538,17 @@ class _HeroStatsGrid extends StatelessWidget {
                 label: "BEST LAP",
                 value: bestLapStr,
                 icon: Icons.timer,
-                gradient: const LinearGradient(
+                gradient: LinearGradient(
                   colors: [
-                    Color.fromARGB(35, 141, 133, 255),
-                    Color.fromARGB(15, 108, 95, 255)
+                    kPulseColor.withAlpha(80),
+                    kPulseColor.withAlpha(40),
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
+                borderColor: kPulseColor,
+                iconColor: kPulseColor,
+                valueColor: kPulseColor,
                 highlight: true,
               ),
             ),
@@ -573,6 +563,9 @@ class _HeroStatsGrid extends StatelessWidget {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
+                borderColor: kLineColor,
+                iconColor: kBrandColor,
+                valueColor: kFgColor,
               ),
             ),
           ],
@@ -590,6 +583,9 @@ class _HeroStatsGrid extends StatelessWidget {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
+                borderColor: kLineColor,
+                iconColor: kCoachColor,
+                valueColor: kFgColor,
               ),
             ),
             const SizedBox(width: 12),
@@ -603,6 +599,9 @@ class _HeroStatsGrid extends StatelessWidget {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
+                borderColor: kLineColor,
+                iconColor: kBrandColor,
+                valueColor: kFgColor,
               ),
             ),
           ],
@@ -617,6 +616,9 @@ class _PremiumStatCard extends StatelessWidget {
   final String value;
   final IconData icon;
   final Gradient gradient;
+  final Color borderColor;
+  final Color iconColor;
+  final Color valueColor;
   final bool highlight;
 
   const _PremiumStatCard({
@@ -624,6 +626,9 @@ class _PremiumStatCard extends StatelessWidget {
     required this.value,
     required this.icon,
     required this.gradient,
+    required this.borderColor,
+    required this.iconColor,
+    required this.valueColor,
     this.highlight = false,
   });
 
@@ -635,18 +640,25 @@ class _PremiumStatCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         gradient: gradient,
         border: Border.all(
-          color: highlight ? kPulseColor : kLineColor,
-          width: highlight ? 1.5 : 1,
+          color: borderColor,
+          width: highlight ? 1.8 : 1,
         ),
         boxShadow: highlight
             ? [
                 BoxShadow(
-                  color: kPulseColor.withOpacity(0.15),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
+                  color: borderColor.withOpacity(0.2),
+                  blurRadius: 16,
+                  offset: const Offset(0, 6),
                 )
               ]
-            : null,
+            : [
+                BoxShadow(
+                  color: Colors.black.withAlpha(80),
+                  blurRadius: 10,
+                  spreadRadius: -2,
+                  offset: const Offset(0, 4),
+                ),
+              ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -655,28 +667,29 @@ class _PremiumStatCard extends StatelessWidget {
             children: [
               Icon(
                 icon,
-                size: 16,
-                color: highlight ? kPulseColor : kMutedColor,
+                size: 18,
+                color: iconColor,
               ),
               const SizedBox(width: 6),
               Text(
                 label,
                 style: TextStyle(
                   fontSize: 10,
-                  color: highlight ? kPulseColor : kMutedColor,
+                  color: iconColor,
                   fontWeight: FontWeight.w700,
-                  letterSpacing: 0.5,
+                  letterSpacing: 0.6,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           Text(
             value,
             style: TextStyle(
-              fontSize: 20,
+              fontSize: 22,
               fontWeight: FontWeight.w900,
-              color: highlight ? kPulseColor : kFgColor,
+              color: valueColor,
+              letterSpacing: -0.5,
             ),
           ),
         ],
@@ -705,52 +718,73 @@ class _SessionInfoCard extends StatelessWidget {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
-        color: const Color(0xFF0A0A0F),
+        gradient: const LinearGradient(
+          colors: [Color(0xFF1A1A20), Color(0xFF0F0F15)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         border: Border.all(color: kLineColor),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(80),
+            blurRadius: 10,
+            spreadRadius: -2,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(Icons.info_outline, size: 16, color: kBrandColor),
-              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: kBrandColor.withAlpha(20),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: kBrandColor.withAlpha(60)),
+                ),
+                child:
+                    const Icon(Icons.info_outline, size: 16, color: kBrandColor),
+              ),
+              const SizedBox(width: 10),
               const Text(
                 'INFORMAZIONI SESSIONE',
                 style: TextStyle(
                   fontSize: 12,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w900,
                   color: kBrandColor,
                   letterSpacing: 0.8,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 18),
           _InfoRow(
             icon: Icons.location_on_outlined,
             label: 'Circuito',
             value: session.trackName,
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
           _InfoRow(
             icon: Icons.place_outlined,
             label: 'Località',
             value: session.location,
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
           _InfoRow(
             icon: Icons.calendar_today_outlined,
             label: 'Data',
             value: dateStr,
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
           _InfoRow(
             icon: Icons.schedule_outlined,
             label: 'Ora',
             value: timeStr,
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
           _InfoRow(
             icon: Icons.public_outlined,
             label: 'Visibilità',
@@ -777,13 +811,14 @@ class _InfoRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Icon(icon, size: 16, color: kMutedColor),
-        const SizedBox(width: 10),
+        Icon(icon, size: 16, color: kBrandColor.withAlpha(150)),
+        const SizedBox(width: 12),
         Text(
           label,
           style: const TextStyle(
             fontSize: 13,
             color: kMutedColor,
+            fontWeight: FontWeight.w600,
           ),
         ),
         const Spacer(),
@@ -791,7 +826,7 @@ class _InfoRow extends StatelessWidget {
           value,
           style: const TextStyle(
             fontSize: 13,
-            fontWeight: FontWeight.w700,
+            fontWeight: FontWeight.w800,
             color: kFgColor,
           ),
         ),
@@ -832,8 +867,20 @@ class _LapTimesList extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
-        color: const Color(0xFF0A0A0F),
+        gradient: const LinearGradient(
+          colors: [Color(0xFF1A1A20), Color(0xFF0F0F15)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         border: Border.all(color: kLineColor),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(80),
+            blurRadius: 10,
+            spreadRadius: -2,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -842,13 +889,21 @@ class _LapTimesList extends StatelessWidget {
             padding: const EdgeInsets.all(20),
             child: Row(
               children: [
-                const Icon(Icons.list_alt, size: 16, color: kBrandColor),
-                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: kBrandColor.withAlpha(20),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: kBrandColor.withAlpha(60)),
+                  ),
+                  child: const Icon(Icons.list_alt, size: 16, color: kBrandColor),
+                ),
+                const SizedBox(width: 10),
                 const Text(
                   'TEMPI SUL GIRO',
                   style: TextStyle(
                     fontSize: 12,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w900,
                     color: kBrandColor,
                     letterSpacing: 0.8,
                   ),
@@ -860,9 +915,9 @@ class _LapTimesList extends StatelessWidget {
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: sortedLaps.length,
-            separatorBuilder: (_, __) => const Divider(
-              color: kLineColor,
-              height: 0,
+            separatorBuilder: (_, __) => Divider(
+              color: kLineColor.withAlpha(100),
+              height: 1,
               indent: 20,
               endIndent: 20,
             ),
@@ -874,13 +929,13 @@ class _LapTimesList extends StatelessWidget {
               return Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 20,
-                  vertical: 14,
+                  vertical: 16,
                 ),
                 decoration: BoxDecoration(
                   gradient: isBest
                       ? LinearGradient(
                           colors: [
-                            kPulseColor.withOpacity(0.08),
+                            kPulseColor.withOpacity(0.12),
                             Colors.transparent,
                           ],
                         )
@@ -889,22 +944,29 @@ class _LapTimesList extends StatelessWidget {
                 child: Row(
                   children: [
                     Container(
-                      width: 32,
-                      height: 32,
+                      width: 40,
+                      height: 40,
                       decoration: BoxDecoration(
-                        color: isBest
-                            ? kPulseColor.withOpacity(0.2)
-                            : const Color(0xFF1A1A20),
-                        borderRadius: BorderRadius.circular(8),
+                        gradient: isBest
+                            ? LinearGradient(
+                                colors: [
+                                  kPulseColor.withAlpha(60),
+                                  kPulseColor.withAlpha(40),
+                                ],
+                              )
+                            : null,
+                        color: isBest ? null : const Color(0xFF1A1A20),
+                        borderRadius: BorderRadius.circular(12),
                         border: Border.all(
                           color: isBest ? kPulseColor : kLineColor,
+                          width: isBest ? 1.5 : 1,
                         ),
                       ),
                       alignment: Alignment.center,
                       child: Text(
                         '${lap.lapIndex + 1}',
                         style: TextStyle(
-                          fontSize: 13,
+                          fontSize: 15,
                           fontWeight: FontWeight.w900,
                           color: isBest ? kPulseColor : kMutedColor,
                         ),
@@ -918,17 +980,19 @@ class _LapTimesList extends StatelessWidget {
                           Text(
                             _formatDuration(lap.duration),
                             style: TextStyle(
-                              fontSize: 16,
+                              fontSize: 18,
                               fontWeight: FontWeight.w900,
                               color: isBest ? kPulseColor : kFgColor,
+                              letterSpacing: -0.5,
                             ),
                           ),
-                          const SizedBox(height: 2),
+                          const SizedBox(height: 4),
                           Text(
                             'Avg: ${lap.avgSpeedKmh.toStringAsFixed(1)} km/h  •  Max: ${lap.maxSpeedKmh.toStringAsFixed(1)} km/h',
                             style: const TextStyle(
                               fontSize: 11,
                               color: kMutedColor,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ],
@@ -937,13 +1001,18 @@ class _LapTimesList extends StatelessWidget {
                     if (isBest)
                       Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
+                          horizontal: 10,
+                          vertical: 6,
                         ),
                         decoration: BoxDecoration(
-                          color: kPulseColor.withOpacity(0.15),
+                          gradient: LinearGradient(
+                            colors: [
+                              kPulseColor.withAlpha(40),
+                              kPulseColor.withAlpha(25),
+                            ],
+                          ),
                           borderRadius: BorderRadius.circular(999),
-                          border: Border.all(color: kPulseColor),
+                          border: Border.all(color: kPulseColor, width: 1.5),
                         ),
                         child: const Text(
                           'BEST',
@@ -951,15 +1020,15 @@ class _LapTimesList extends StatelessWidget {
                             fontSize: 10,
                             fontWeight: FontWeight.w900,
                             color: kPulseColor,
-                            letterSpacing: 0.5,
+                            letterSpacing: 0.6,
                           ),
                         ),
                       ),
                     if (!isBest && isWorst)
                       Icon(
                         Icons.arrow_downward,
-                        size: 16,
-                        color: kMutedColor.withOpacity(0.5),
+                        size: 18,
+                        color: kMutedColor.withOpacity(0.4),
                       ),
                   ],
                 ),
@@ -1008,8 +1077,20 @@ class _MapSection extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
-        color: const Color(0xFF0A0A0F),
+        gradient: const LinearGradient(
+          colors: [Color(0xFF1A1A20), Color(0xFF0F0F15)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         border: Border.all(color: kLineColor),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(80),
+            blurRadius: 10,
+            spreadRadius: -2,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1018,13 +1099,22 @@ class _MapSection extends StatelessWidget {
             padding: const EdgeInsets.all(20),
             child: Row(
               children: [
-                const Icon(Icons.map_outlined, size: 16, color: kBrandColor),
-                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: kBrandColor.withAlpha(20),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: kBrandColor.withAlpha(60)),
+                  ),
+                  child:
+                      const Icon(Icons.map_outlined, size: 16, color: kBrandColor),
+                ),
+                const SizedBox(width: 10),
                 const Text(
                   'MAPPA TRACCIATO',
                   style: TextStyle(
                     fontSize: 12,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w900,
                     color: kBrandColor,
                     letterSpacing: 0.8,
                   ),
@@ -1133,29 +1223,49 @@ class _TechnicalDataSection extends StatelessWidget {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
-        color: const Color(0xFF0A0A0F),
+        gradient: const LinearGradient(
+          colors: [Color(0xFF1A1A20), Color(0xFF0F0F15)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         border: Border.all(color: kLineColor),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(80),
+            blurRadius: 10,
+            spreadRadius: -2,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(Icons.analytics_outlined,
-                  size: 16, color: kBrandColor),
-              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: kBrandColor.withAlpha(20),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: kBrandColor.withAlpha(60)),
+                ),
+                child: const Icon(Icons.analytics_outlined,
+                    size: 16, color: kBrandColor),
+              ),
+              const SizedBox(width: 10),
               const Text(
                 'DATI TECNICI',
                 style: TextStyle(
                   fontSize: 12,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w900,
                   color: kBrandColor,
                   letterSpacing: 0.8,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 18),
           Row(
             children: [
               Expanded(
@@ -1163,6 +1273,7 @@ class _TechnicalDataSection extends StatelessWidget {
                   icon: Icons.speed,
                   label: 'Velocità Max',
                   value: '${session.maxSpeedKmh.toStringAsFixed(0)} km/h',
+                  color: kPulseColor,
                 ),
               ),
               const SizedBox(width: 12),
@@ -1171,6 +1282,7 @@ class _TechnicalDataSection extends StatelessWidget {
                   icon: Icons.trending_up,
                   label: 'Velocità Media',
                   value: '${session.avgSpeedKmh.toStringAsFixed(0)} km/h',
+                  color: kBrandColor,
                 ),
               ),
             ],
@@ -1183,6 +1295,7 @@ class _TechnicalDataSection extends StatelessWidget {
                   icon: Icons.center_focus_strong,
                   label: 'G-Force Max',
                   value: '${session.maxGForce.toStringAsFixed(2)} g',
+                  color: kCoachColor,
                 ),
               ),
               const SizedBox(width: 12),
@@ -1191,6 +1304,7 @@ class _TechnicalDataSection extends StatelessWidget {
                   icon: Icons.analytics,
                   label: 'G-Force Media',
                   value: '${avgGForce.toStringAsFixed(2)} g',
+                  color: const Color(0xFF4CD964),
                 ),
               ),
             ],
@@ -1205,41 +1319,53 @@ class _TechnicalMetric extends StatelessWidget {
   final IconData icon;
   final String label;
   final String value;
+  final Color color;
 
   const _TechnicalMetric({
     required this.icon,
     required this.label,
     required this.value,
+    required this.color,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF151520),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: kLineColor.withOpacity(0.3)),
+        color: const Color(0xFF0A0A0F),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: kLineColor.withOpacity(0.4)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 20, color: kBrandColor.withOpacity(0.7)),
-          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withAlpha(20),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: color.withAlpha(60)),
+            ),
+            child: Icon(icon, size: 20, color: color),
+          ),
+          const SizedBox(height: 12),
           Text(
             label,
             style: const TextStyle(
               fontSize: 11,
               color: kMutedColor,
+              fontWeight: FontWeight.w600,
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
           Text(
             value,
             style: const TextStyle(
-              fontSize: 15,
+              fontSize: 16,
               fontWeight: FontWeight.w900,
               color: kFgColor,
+              letterSpacing: -0.3,
             ),
           ),
         ],
@@ -1271,35 +1397,57 @@ class _GpsDeviceSection extends StatelessWidget {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
-        color: const Color(0xFF0A0A0F),
+        gradient: const LinearGradient(
+          colors: [Color(0xFF1A1A20), Color(0xFF0F0F15)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         border: Border.all(color: kLineColor),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(80),
+            blurRadius: 10,
+            spreadRadius: -2,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(Icons.gps_fixed, size: 16, color: kBrandColor),
-              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: kBrandColor.withAlpha(20),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: kBrandColor.withAlpha(60)),
+                ),
+                child:
+                    const Icon(Icons.gps_fixed, size: 16, color: kBrandColor),
+              ),
+              const SizedBox(width: 10),
               const Text(
                 'DISPOSITIVO GPS',
                 style: TextStyle(
                   fontSize: 12,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w900,
                   color: kBrandColor,
                   letterSpacing: 0.8,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 18),
           Row(
             children: [
               Expanded(
                 child: _TechnicalMetric(
-                  icon: Icons.memory,
-                  label: 'Nome dispositivo',
+                  icon: Icons.smartphone,
+                  label: 'Dispositivo',
                   value: deviceName,
+                  color: kBrandColor,
                 ),
               ),
               const SizedBox(width: 12),
@@ -1308,6 +1456,7 @@ class _GpsDeviceSection extends StatelessWidget {
                   icon: Icons.gps_not_fixed,
                   label: 'GPS Accuracy',
                   value: '${avgAccuracy.toStringAsFixed(1)} m',
+                  color: kPulseColor,
                 ),
               ),
             ],
@@ -1320,6 +1469,7 @@ class _GpsDeviceSection extends StatelessWidget {
                   icon: Icons.refresh,
                   label: 'Sample Rate',
                   value: '$sampleRateHz Hz',
+                  color: kCoachColor,
                 ),
               ),
               const SizedBox(width: 12),
@@ -1328,430 +1478,13 @@ class _GpsDeviceSection extends StatelessWidget {
                   icon: Icons.data_usage,
                   label: 'Punti GPS',
                   value: points.toString(),
+                  color: const Color(0xFF4CD964),
                 ),
               ),
             ],
           ),
         ],
       ),
-    );
-  }
-}
-
-/* -------------------------------------------------------------
-   DASHBOARD TECNICA (grafico + mappa + metriche)
-------------------------------------------------------------- */
-
-class _SessionTechDashboard extends StatefulWidget {
-  final List<double> speed;
-  final List<double> gForce;
-  final List<double> accuracy;
-  final List<Duration> time;
-  final List<ll.LatLng> path;
-
-  const _SessionTechDashboard({
-    required this.speed,
-    required this.gForce,
-    required this.accuracy,
-    required this.time,
-    required this.path,
-  });
-
-  @override
-  State<_SessionTechDashboard> createState() => _SessionTechDashboardState();
-}
-
-enum _MetricView { speed, g, accuracy }
-
-class _SessionTechDashboardState extends State<_SessionTechDashboard> {
-  _MetricView view = _MetricView.speed;
-  int selected = 0;
-
-  @override
-  Widget build(BuildContext context) {
-    final total = widget.time.length - 1;
-    selected = selected.clamp(0, total);
-
-    final xs = List<double>.generate(total, (i) {
-      return (widget.time[i].inMilliseconds -
-              widget.time.first.inMilliseconds) /
-          1000;
-    });
-
-    final spotsSpeed =
-        List<FlSpot>.generate(total, (i) => FlSpot(xs[i], widget.speed[i]));
-    final spotsG =
-        List<FlSpot>.generate(total, (i) => FlSpot(xs[i], widget.gForce[i]));
-    final spotsA =
-        List<FlSpot>.generate(total, (i) => FlSpot(xs[i], widget.accuracy[i]));
-
-    final curX = xs[selected];
-
-    // current metric values
-    final curV = widget.speed[selected];
-    final curG = widget.gForce[selected];
-    final curA = widget.accuracy[selected];
-
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        color: const Color(0xFF050608),
-        border: Border.all(color: kLineColor),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            "TELEMETRIA",
-            style: TextStyle(
-              fontSize: 15,
-              color: kMutedColor,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          // Circuit viewer
-          _TelemetryTrack(path: widget.path, selectedIndex: selected),
-
-          const SizedBox(height: 20),
-
-          SizedBox(
-            height: 220,
-            child: LineChart(
-              LineChartData(
-                minX: xs.first,
-                maxX: xs.last,
-                gridData: FlGridData(
-                  show: true,
-                  getDrawingHorizontalLine: (_) => FlLine(
-                      color: kLineColor.withOpacity(0.25), strokeWidth: 0.6),
-                  getDrawingVerticalLine: (_) => FlLine(
-                      color: kLineColor.withOpacity(0.2), strokeWidth: 0.6),
-                ),
-                titlesData: FlTitlesData(
-                  leftTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 36,
-                      getTitlesWidget: (v, _) => Text(
-                        v.toStringAsFixed(0),
-                        style:
-                            const TextStyle(color: kMutedColor, fontSize: 10),
-                      ),
-                    ),
-                  ),
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      reservedSize: 18,
-                      showTitles: true,
-                      getTitlesWidget: (v, _) => Text(
-                        "${v.toStringAsFixed(0)}s",
-                        style:
-                            const TextStyle(color: kMutedColor, fontSize: 10),
-                      ),
-                    ),
-                  ),
-                ),
-                lineTouchData: LineTouchData(
-                  handleBuiltInTouches: true,
-                  touchCallback: (e, r) {
-                    if (r?.lineBarSpots != null &&
-                        r!.lineBarSpots!.isNotEmpty) {
-                      setState(
-                          () => selected = r.lineBarSpots!.first.spotIndex);
-                    }
-                  },
-                ),
-                extraLinesData: ExtraLinesData(
-                  verticalLines: [
-                    VerticalLine(
-                      x: curX,
-                      color: Colors.white.withOpacity(0.7),
-                      strokeWidth: 1,
-                      dashArray: [4, 4],
-                    )
-                  ],
-                ),
-                lineBarsData: [
-                  _line(
-                      spotsSpeed, Colors.redAccent, view == _MetricView.speed),
-                  _line(spotsG, Colors.greenAccent, view == _MetricView.g),
-                  _line(
-                      spotsA, Colors.blueAccent, view == _MetricView.accuracy),
-                ],
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 14),
-
-          // Metric selectors
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _metricChip("Speed", Colors.redAccent, view == _MetricView.speed,
-                  () {
-                setState(() => view = _MetricView.speed);
-              }),
-              _metricChip("G-Force", Colors.greenAccent, view == _MetricView.g,
-                  () {
-                setState(() => view = _MetricView.g);
-              }),
-              _metricChip(
-                  "Accuracy", Colors.blueAccent, view == _MetricView.accuracy,
-                  () {
-                setState(() => view = _MetricView.accuracy);
-              }),
-            ],
-          ),
-
-          const SizedBox(height: 10),
-
-          Text(
-            "t=${curX.toStringAsFixed(2)}s   "
-            "v=${curV.toStringAsFixed(1)} km/h   "
-            "g=${curG.toStringAsFixed(2)}   "
-            "acc=${curA.toStringAsFixed(2)} m",
-            style: const TextStyle(
-              color: kMutedColor,
-              fontSize: 11,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  LineChartBarData _line(List<FlSpot> spots, Color c, bool active) {
-    return LineChartBarData(
-      spots: spots,
-      color: active ? c : c.withOpacity(0.25),
-      isCurved: false,
-      barWidth: active ? 2.3 : 1.4,
-      dotData: const FlDotData(show: false),
-    );
-  }
-
-  Widget _metricChip(String label, Color c, bool selected, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(999),
-          color: selected ? c.withOpacity(0.18) : Colors.transparent,
-          border: Border.all(
-            color: selected ? c : c.withOpacity(0.3),
-            width: 1.2,
-          ),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 8,
-              height: 8,
-              decoration: BoxDecoration(color: c, shape: BoxShape.circle),
-            ),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/* -------------------------------------------------------------
-   CIRCUITO GPS (mini viewer)
-------------------------------------------------------------- */
-
-class _TelemetryTrack extends StatelessWidget {
-  final List<ll.LatLng> path;
-  final int selectedIndex;
-
-  const _TelemetryTrack({required this.path, required this.selectedIndex});
-
-  @override
-  Widget build(BuildContext context) {
-    return AspectRatio(
-      aspectRatio: 1.7,
-      child: CustomPaint(
-        painter: _TelemetryTrackPainter(path, selectedIndex),
-      ),
-    );
-  }
-}
-
-class _TelemetryTrackPainter extends CustomPainter {
-  final List<ll.LatLng> path;
-  final int idx;
-
-  _TelemetryTrackPainter(this.path, this.idx);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (path.isEmpty) return;
-
-    final bg = Paint()..color = const Color(0xFF0F0F15);
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(Offset.zero & size, const Radius.circular(14)),
-      bg,
-    );
-
-    final grid = Paint()
-      ..color = Colors.white.withOpacity(0.05)
-      ..strokeWidth = 1;
-
-    const g = 8;
-    for (int i = 1; i < g; i++) {
-      canvas.drawLine(Offset(size.width / g * i, 0),
-          Offset(size.width / g * i, size.height), grid);
-      canvas.drawLine(Offset(0, size.height / g * i),
-          Offset(size.width, size.height / g * i), grid);
-    }
-
-    // bounds
-    double minLat = path.first.latitude;
-    double maxLat = path.first.latitude;
-    double minLon = path.first.longitude;
-    double maxLon = path.first.longitude;
-
-    for (final p in path) {
-      minLat = math.min(minLat, p.latitude);
-      maxLat = math.max(maxLat, p.latitude);
-      minLon = math.min(minLon, p.longitude);
-      maxLon = math.max(maxLon, p.longitude);
-    }
-
-    final centerLat = (minLat + maxLat) / 2;
-    final centerLon = (minLon + maxLon) / 2;
-
-    final dLat = maxLat - minLat;
-    final dLon = maxLon - minLon;
-
-    final scale = (dLat == 0 || dLon == 0)
-        ? 1.0
-        : math.min(size.width * 0.78 / dLon, size.height * 0.78 / dLat);
-
-    Offset proj(ll.LatLng p) {
-      return Offset(
-        (p.longitude - centerLon) * scale + size.width / 2,
-        (centerLat - p.latitude) * scale + size.height / 2,
-      );
-    }
-
-    final tp = Paint()
-      ..color = kBrandColor
-      ..strokeWidth = 4
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
-
-    final shadow = Paint()
-      ..color = Colors.black.withOpacity(0.4)
-      ..strokeWidth = 6
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
-
-    final pathShape = Path();
-    for (int i = 0; i < path.length; i++) {
-      final o = proj(path[i]);
-      if (i == 0) {
-        pathShape.moveTo(o.dx, o.dy);
-      } else {
-        pathShape.lineTo(o.dx, o.dy);
-      }
-    }
-
-    canvas.drawPath(pathShape.shift(const Offset(1.6, 1.6)), shadow);
-    canvas.drawPath(pathShape, tp);
-
-    // marker
-    if (idx >= 0 && idx < path.length) {
-      final o = proj(path[idx]);
-      final fill = Paint()..color = Colors.white;
-      final stroke = Paint()
-        ..color = kPulseColor
-        ..strokeWidth = 3
-        ..style = PaintingStyle.stroke;
-      canvas.drawCircle(o, 7, fill);
-      canvas.drawCircle(o, 7, stroke);
-    }
-  }
-
-  @override
-  bool shouldRepaint(_) => true;
-}
-
-/* -------------------------------------------------------------
-   SECTOR LIST
-------------------------------------------------------------- */
-
-class _SectorList extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final sectors = [
-      {"name": "S1", "time": "0:38.110"},
-      {"name": "S2", "time": "0:39.880"},
-      {"name": "S3", "time": "0:41.420"},
-    ];
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          "SETTORI",
-          style: TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-        const SizedBox(height: 10),
-        Container(
-          decoration: BoxDecoration(
-            color: const Color(0xFF0E0F12),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: kLineColor),
-          ),
-          child: Column(
-            children: sectors.map((s) {
-              return Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 12),
-                    child: Row(
-                      children: [
-                        Text(
-                          s["name"]!,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        const Spacer(),
-                        Text(
-                          s["time"]!,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (s != sectors.last)
-                    const Divider(color: kLineColor, height: 0),
-                ],
-              );
-            }).toList(),
-          ),
-        ),
-      ],
     );
   }
 }
@@ -1780,26 +1513,101 @@ class _ActionsRow extends StatelessWidget {
     return Row(
       children: [
         Expanded(
-          child: ElevatedButton.icon(
-            onPressed: onToggleLike,
-            icon: Icon(liked ? Icons.favorite : Icons.favorite_border),
-            label: Text('Mi piace (${session.likesCount})'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: liked ? kBrandColor : kBrandColor,
-              foregroundColor: Colors.black,
-              padding: const EdgeInsets.symmetric(vertical: 14),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              gradient: LinearGradient(
+                colors: [
+                  kBrandColor.withAlpha(liked ? 255 : 60),
+                  kBrandColor.withAlpha(liked ? 255 : 40),
+                ],
+              ),
+              border: Border.all(color: kBrandColor, width: 1.5),
+              boxShadow: [
+                BoxShadow(
+                  color: kBrandColor.withAlpha(liked ? 100 : 40),
+                  blurRadius: liked ? 16 : 8,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(16),
+                onTap: onToggleLike,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        liked ? Icons.favorite : Icons.favorite_border,
+                        color: liked ? Colors.black : kBrandColor,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Mi piace (${session.likesCount})',
+                        style: TextStyle(
+                          color: liked ? Colors.black : kBrandColor,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ),
           ),
         ),
         const SizedBox(width: 12),
         Expanded(
-          child: OutlinedButton.icon(
-            onPressed: onToggleChallenge,
-            icon: const Icon(Icons.sports_martial_arts),
-            label: Text('Ti sfido (${session.challengeCount})'),
-            style: OutlinedButton.styleFrom(
-              side: const BorderSide(color: kLineColor),
-              padding: const EdgeInsets.symmetric(vertical: 14),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              gradient: challenged
+                  ? LinearGradient(
+                      colors: [
+                        kPulseColor.withAlpha(60),
+                        kPulseColor.withAlpha(40),
+                      ],
+                    )
+                  : null,
+              border: Border.all(
+                color: challenged ? kPulseColor : kLineColor,
+                width: 1.5,
+              ),
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(16),
+                onTap: onToggleChallenge,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.sports_martial_arts,
+                        color: challenged ? kPulseColor : kMutedColor,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Ti sfido (${session.challengeCount})',
+                        style: TextStyle(
+                          color: challenged ? kPulseColor : kMutedColor,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ),
           ),
         ),
@@ -1859,8 +1667,12 @@ class _SessionOverviewPanelState extends State<_SessionOverviewPanel> {
       return Container(
         height: 320,
         decoration: BoxDecoration(
-          color: const Color(0xFF1a1a1a),
-          borderRadius: BorderRadius.circular(16),
+          gradient: const LinearGradient(
+            colors: [Color(0xFF1A1A20), Color(0xFF0F0F15)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(20),
           border: Border.all(color: kLineColor),
         ),
         child: const Center(
@@ -1901,8 +1713,12 @@ class _SessionOverviewPanelState extends State<_SessionOverviewPanel> {
       return Container(
         height: 320,
         decoration: BoxDecoration(
-          color: const Color(0xFF1a1a1a),
-          borderRadius: BorderRadius.circular(16),
+          gradient: const LinearGradient(
+            colors: [Color(0xFF1A1A20), Color(0xFF0F0F15)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(20),
           border: Border.all(color: kLineColor),
         ),
         child: Center(
@@ -1984,71 +1800,112 @@ class _SessionOverviewPanelState extends State<_SessionOverviewPanel> {
     final double curT = xs[_selectedIndex];
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: const Color(0xFF050608),
-        borderRadius: BorderRadius.circular(16),
+        gradient: const LinearGradient(
+          colors: [Color(0xFF0A0A0F), Color(0xFF050608)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(color: kLineColor),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(100),
+            blurRadius: 12,
+            spreadRadius: -2,
+            offset: const Offset(0, 6),
+          ),
+        ],
       ),
       child: Column(
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              IconButton(
-                visualDensity: VisualDensity.compact,
-                icon: const Icon(Icons.chevron_left),
-                color: Colors.white70,
-                onPressed: _currentLap > 0
-                    ? () {
-                        setState(() {
-                          _currentLap--;
-                          _selectedIndex = 0;
-                        });
-                      }
-                    : null,
+              Container(
+                decoration: BoxDecoration(
+                  color: _currentLap > 0
+                      ? kBrandColor.withAlpha(20)
+                      : kMutedColor.withAlpha(10),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: _currentLap > 0
+                        ? kBrandColor.withAlpha(60)
+                        : kMutedColor.withAlpha(30),
+                  ),
+                ),
+                child: IconButton(
+                  visualDensity: VisualDensity.compact,
+                  icon: const Icon(Icons.chevron_left, size: 20),
+                  color: _currentLap > 0 ? kBrandColor : kMutedColor,
+                  onPressed: _currentLap > 0
+                      ? () {
+                          setState(() {
+                            _currentLap--;
+                            _selectedIndex = 0;
+                          });
+                        }
+                      : null,
+                ),
               ),
               Column(
                 children: [
                   Text(
                     'LAP ${(_currentLap + 1).toString().padLeft(2, '0')}',
                     style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w900,
+                      color: kFgColor,
+                      letterSpacing: 0.8,
                     ),
                   ),
+                  const SizedBox(height: 2),
                   Text(
                     _formatLap(lapDuration),
                     style: const TextStyle(
-                      fontSize: 12,
-                      color: kMutedColor,
+                      fontSize: 13,
+                      color: kBrandColor,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ],
               ),
-              IconButton(
-                visualDensity: VisualDensity.compact,
-                icon: const Icon(Icons.chevron_right),
-                color: Colors.white70,
-                onPressed: _currentLap < lapCount - 1
-                    ? () {
-                        setState(() {
-                          _currentLap++;
-                          _selectedIndex = 0;
-                        });
-                      }
-                    : null,
+              Container(
+                decoration: BoxDecoration(
+                  color: _currentLap < lapCount - 1
+                      ? kBrandColor.withAlpha(20)
+                      : kMutedColor.withAlpha(10),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: _currentLap < lapCount - 1
+                        ? kBrandColor.withAlpha(60)
+                        : kMutedColor.withAlpha(30),
+                  ),
+                ),
+                child: IconButton(
+                  visualDensity: VisualDensity.compact,
+                  icon: const Icon(Icons.chevron_right, size: 20),
+                  color: _currentLap < lapCount - 1 ? kBrandColor : kMutedColor,
+                  onPressed: _currentLap < lapCount - 1
+                      ? () {
+                          setState(() {
+                            _currentLap++;
+                            _selectedIndex = 0;
+                          });
+                        }
+                      : null,
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 16),
           _CircuitTrackView(
             path: lapPath,
             marker: marker,
             accelG: lapAccel,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 18),
           SizedBox(
             height: 220,
             child: LineChart(
@@ -2064,11 +1921,11 @@ class _SessionOverviewPanelState extends State<_SessionOverviewPanel> {
                   verticalInterval:
                       (xs.last - xs.first) > 0 ? (xs.last - xs.first) / 4 : 1,
                   getDrawingHorizontalLine: (value) => FlLine(
-                    color: kLineColor.withOpacity(0.35),
+                    color: kLineColor.withOpacity(0.2),
                     strokeWidth: 0.5,
                   ),
                   getDrawingVerticalLine: (value) => FlLine(
-                    color: kLineColor.withOpacity(0.25),
+                    color: kLineColor.withOpacity(0.15),
                     strokeWidth: 0.5,
                   ),
                 ),
@@ -2076,9 +1933,9 @@ class _SessionOverviewPanelState extends State<_SessionOverviewPanel> {
                   show: true,
                   border: Border(
                     left: BorderSide(
-                        color: kLineColor.withOpacity(0.7), width: 1),
+                        color: kLineColor.withOpacity(0.5), width: 1),
                     bottom: BorderSide(
-                        color: kLineColor.withOpacity(0.7), width: 1),
+                        color: kLineColor.withOpacity(0.5), width: 1),
                     right: const BorderSide(color: Colors.transparent),
                     top: const BorderSide(color: Colors.transparent),
                   ),
@@ -2096,7 +1953,7 @@ class _SessionOverviewPanelState extends State<_SessionOverviewPanel> {
                       getTitlesWidget: (value, meta) => Text(
                         value.toStringAsFixed(0),
                         style:
-                            const TextStyle(color: kMutedColor, fontSize: 10),
+                            const TextStyle(color: kMutedColor, fontSize: 10, fontWeight: FontWeight.w600),
                       ),
                     ),
                   ),
@@ -2107,7 +1964,7 @@ class _SessionOverviewPanelState extends State<_SessionOverviewPanel> {
                       getTitlesWidget: (value, meta) => Text(
                         '${value.toStringAsFixed(0)}s',
                         style:
-                            const TextStyle(color: kMutedColor, fontSize: 10),
+                            const TextStyle(color: kMutedColor, fontSize: 10, fontWeight: FontWeight.w600),
                       ),
                     ),
                   ),
@@ -2116,9 +1973,9 @@ class _SessionOverviewPanelState extends State<_SessionOverviewPanel> {
                   verticalLines: [
                     VerticalLine(
                       x: cursorX,
-                      color: Colors.white.withOpacity(0.7),
-                      strokeWidth: 1,
-                      dashArray: [4, 4],
+                      color: kBrandColor.withOpacity(0.8),
+                      strokeWidth: 1.5,
+                      dashArray: [6, 3],
                     ),
                   ],
                 ),
@@ -2138,57 +1995,91 @@ class _SessionOverviewPanelState extends State<_SessionOverviewPanel> {
                   },
                 ),
                 lineBarsData: [
-                  _buildLine(speedSpots, Colors.redAccent,
+                  _buildLine(speedSpots, const Color(0xFFFF4D4F),
                       _focus == _MetricFocus.speed),
-                  _buildLine(gSpots, Colors.greenAccent,
+                  _buildLine(gSpots, const Color(0xFF4CD964),
                       _focus == _MetricFocus.gForce),
-                  _buildLine(accSpots, Colors.blueAccent,
+                  _buildLine(accSpots, const Color(0xFF5AC8FA),
                       _focus == _MetricFocus.accuracy),
                 ],
               ),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
               _metricChip(
                 label: 'Speed',
-                color: Colors.redAccent,
+                color: const Color(0xFFFF4D4F),
                 selected: _focus == _MetricFocus.speed,
                 onTap: () => setState(() => _focus = _MetricFocus.speed),
               ),
               _metricChip(
                 label: 'G-Force',
-                color: Colors.greenAccent,
+                color: const Color(0xFF4CD964),
                 selected: _focus == _MetricFocus.gForce,
                 onTap: () => setState(() => _focus = _MetricFocus.gForce),
               ),
               _metricChip(
                 label: 'Accuracy',
-                color: Colors.blueAccent,
+                color: const Color(0xFF5AC8FA),
                 selected: _focus == _MetricFocus.accuracy,
                 onTap: () => setState(() => _focus = _MetricFocus.accuracy),
               ),
             ],
           ),
-          const SizedBox(height: 8),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              't=${curT.toStringAsFixed(2)}s   '
-              'v=${curSpeed.toStringAsFixed(1)} km/h   '
-              'g=${curG.toStringAsFixed(2)}   '
-              'acc=${curAcc.toStringAsFixed(2)} m',
-              style: const TextStyle(
-                fontSize: 11,
-                color: kMutedColor,
-                fontFeatures: [FontFeature.tabularFigures()],
-              ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFF0A0A0F),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: kLineColor.withAlpha(60)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _metricValue('t', '${curT.toStringAsFixed(2)}s', kBrandColor),
+                Container(width: 1, height: 30, color: kLineColor.withAlpha(80)),
+                _metricValue('v', '${curSpeed.toStringAsFixed(1)} km/h',
+                    const Color(0xFFFF4D4F)),
+                Container(width: 1, height: 30, color: kLineColor.withAlpha(80)),
+                _metricValue(
+                    'g', '${curG.toStringAsFixed(2)}', const Color(0xFF4CD964)),
+                Container(width: 1, height: 30, color: kLineColor.withAlpha(80)),
+                _metricValue('acc', '${curAcc.toStringAsFixed(1)} m',
+                    const Color(0xFF5AC8FA)),
+              ],
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _metricValue(String label, String value, Color color) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 10,
+            color: color,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 11,
+            color: kFgColor,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+      ],
     );
   }
 
@@ -2200,11 +2091,14 @@ class _SessionOverviewPanelState extends State<_SessionOverviewPanel> {
     return LineChartBarData(
       spots: spots,
       isCurved: false,
-      color: focused ? baseColor : baseColor.withOpacity(0.25),
-      barWidth: focused ? 2.5 : 1.5,
+      color: focused ? baseColor : baseColor.withOpacity(0.2),
+      barWidth: focused ? 3.0 : 1.5,
       isStrokeCapRound: false,
       dotData: const FlDotData(show: false),
-      belowBarData: BarAreaData(show: false),
+      belowBarData: BarAreaData(
+        show: focused,
+        color: baseColor.withOpacity(0.08),
+      ),
     );
   }
 
@@ -2217,14 +2111,22 @@ class _SessionOverviewPanelState extends State<_SessionOverviewPanel> {
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: selected ? color.withOpacity(0.15) : Colors.transparent,
+          gradient: selected
+              ? LinearGradient(
+                  colors: [
+                    color.withAlpha(40),
+                    color.withAlpha(25),
+                  ],
+                )
+              : null,
+          color: selected ? null : Colors.transparent,
           borderRadius: BorderRadius.circular(999),
           border: Border.all(
-            color: selected ? color : color.withOpacity(0.4),
-            width: 1,
+            color: selected ? color : color.withOpacity(0.3),
+            width: selected ? 1.5 : 1,
           ),
         ),
         child: Row(
@@ -2243,8 +2145,8 @@ class _SessionOverviewPanelState extends State<_SessionOverviewPanel> {
               label,
               style: TextStyle(
                 fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: Colors.white.withOpacity(0.9),
+                fontWeight: FontWeight.w800,
+                color: selected ? color : color.withOpacity(0.7),
               ),
             ),
           ],
@@ -2275,7 +2177,7 @@ class _CircuitTrackView extends StatelessWidget {
       return Container(
         height: 180,
         decoration: BoxDecoration(
-          color: const Color(0xFF101010),
+          color: const Color(0xFF0A0A0F),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: kLineColor),
         ),
@@ -2315,7 +2217,7 @@ class _CircuitPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final bgPaint = Paint()
-      ..color = const Color(0xFF101015)
+      ..color = const Color(0xFF0A0A0F)
       ..style = PaintingStyle.fill;
     canvas.drawRRect(
       RRect.fromRectAndRadius(
@@ -2326,9 +2228,9 @@ class _CircuitPainter extends CustomPainter {
     );
 
     final gridPaint = Paint()
-      ..color = Colors.white.withOpacity(0.04)
-      ..strokeWidth = 1;
-    const int gridLines = 8;
+      ..color = Colors.white.withOpacity(0.03)
+      ..strokeWidth = 0.5;
+    const int gridLines = 10;
     final dx = size.width / gridLines;
     final dy = size.height / gridLines;
     for (int i = 1; i < gridLines; i++) {
@@ -2354,8 +2256,8 @@ class _CircuitPainter extends CustomPainter {
     final dLat = (maxLat - minLat).abs();
     final dLon = (maxLon - minLon).abs();
 
-    final usableW = size.width * 0.8;
-    final usableH = size.height * 0.8;
+    final usableW = size.width * 0.85;
+    final usableH = size.height * 0.85;
     final scale = (dLat == 0 || dLon == 0)
         ? 1.0
         : math.min(usableW / dLon, usableH / dLat);
@@ -2378,9 +2280,9 @@ class _CircuitPainter extends CustomPainter {
       }
     }
     final shadowPaint = Paint()
-      ..color = Colors.black.withOpacity(0.4)
+      ..color = Colors.black.withOpacity(0.5)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 7
+      ..strokeWidth = 8
       ..strokeCap = StrokeCap.round;
     canvas.drawPath(shadowPath.shift(const Offset(2, 2)), shadowPaint);
 
@@ -2390,7 +2292,7 @@ class _CircuitPainter extends CustomPainter {
       final paint = Paint()
         ..color = _colorForG(g)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 4
+        ..strokeWidth = 5
         ..strokeCap = StrokeCap.round;
       canvas.drawLine(projected[i - 1], projected[i], paint);
     }
@@ -2404,8 +2306,12 @@ class _CircuitPainter extends CustomPainter {
         ..color = kPulseColor
         ..style = PaintingStyle.stroke
         ..strokeWidth = 3;
-      canvas.drawCircle(o, 7, markerPaint);
-      canvas.drawCircle(o, 7, markerBorder);
+      final markerGlow = Paint()
+        ..color = kPulseColor.withOpacity(0.3)
+        ..style = PaintingStyle.fill;
+      canvas.drawCircle(o, 12, markerGlow);
+      canvas.drawCircle(o, 8, markerPaint);
+      canvas.drawCircle(o, 8, markerBorder);
     }
   }
 
@@ -2418,15 +2324,15 @@ class _CircuitPainter extends CustomPainter {
 
   Color _colorForG(double g) {
     const pos = Color(0xFF4CD964); // verde accelerazione
-    const neg = Color(0xFFFF4D4D); // rosso frenata
-    const neu = Color(0xFFF7D64E); // neutro
+    const neg = Color(0xFFFF4D4F); // rosso frenata
+    const neu = kBrandColor; // neutro
     final double clamped = g.clamp(-1.5, 1.5).toDouble();
     if (clamped >= 0) {
       final double t = (clamped / 1.5).clamp(0.0, 1.0);
       return Color.lerp(neu, pos, t)!;
     } else {
       final double t = (-clamped / 1.5).clamp(0.0, 1.0);
-      return Color.lerp(neg, neu, t)!;
+      return Color.lerp(neu, neg, 1.0 - t)!;
     }
   }
 }
