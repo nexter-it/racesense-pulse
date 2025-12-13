@@ -428,43 +428,64 @@ class _ProfileHeader extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(22),
-        color: const Color.fromRGBO(255, 255, 255, 0.10),
-        border: Border.all(color: kLineColor, width: 1.3),
+        borderRadius: BorderRadius.circular(24),
+        gradient: LinearGradient(
+          colors: [
+            const Color(0xFF1A1A20).withAlpha(255),
+            const Color(0xFF0F0F15).withAlpha(255),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        border: Border.all(color: kLineColor, width: 1),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.45),
+            color: Colors.black.withAlpha(140),
             blurRadius: 16,
-            spreadRadius: -2,
-            offset: const Offset(0, 4),
+            spreadRadius: -3,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
       child: Row(
         children: [
-          // Avatar tag
+          // Avatar tag with gradient ring
           Container(
-            width: 82,
-            height: 82,
+            padding: const EdgeInsets.all(3),
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: Colors.black.withOpacity(0.35),
-              border: Border.all(color: kBrandColor, width: 2),
-              boxShadow: [
-                BoxShadow(
-                  color: kBrandColor.withOpacity(0.35),
-                  blurRadius: 12,
-                  spreadRadius: 2,
-                ),
-              ],
+              gradient: LinearGradient(
+                colors: [
+                  kBrandColor.withAlpha(80),
+                  kPulseColor.withAlpha(60),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
             ),
-            child: Center(
-              child: Text(
-                tag,
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 1.5,
+            child: Container(
+              width: 82,
+              height: 82,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0xFF0A0A0F),
+                boxShadow: [
+                  BoxShadow(
+                    color: kBrandColor.withAlpha(60),
+                    blurRadius: 12,
+                    spreadRadius: 0,
+                  ),
+                ],
+              ),
+              child: Center(
+                child: Text(
+                  tag,
+                  style: const TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1.5,
+                    color: kBrandColor,
+                  ),
                 ),
               ),
             ),
@@ -480,16 +501,18 @@ class _ProfileHeader extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    fontSize: 22,
+                    fontSize: 20,
                     fontWeight: FontWeight.w900,
+                    letterSpacing: 0.5,
                   ),
                 ),
-                const SizedBox(height: 3),
+                const SizedBox(height: 4),
                 Text(
                   '@$username',
                   style: const TextStyle(
                     color: kMutedColor,
                     fontSize: 13,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -498,32 +521,52 @@ class _ProfileHeader extends StatelessWidget {
                   icon: Icons.bolt,
                 ),
                 if (showFollowButton) ...[
-                  const SizedBox(height: 10),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: OutlinedButton.icon(
-                      onPressed: onToggleFollow,
-                      icon: Icon(
-                        isFollowing ? Icons.check : Icons.person_add_alt,
-                        color: isFollowing ? kMutedColor : kBrandColor,
-                        size: 18,
-                      ),
-                      label: Text(
-                        isFollowing ? 'Segui già' : 'Segui',
-                        style: TextStyle(
-                          color: isFollowing ? kMutedColor : kBrandColor,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 12,
+                  const SizedBox(height: 12),
+                  Material(
+                    color: Colors.transparent,
+                    borderRadius: BorderRadius.circular(12),
+                    child: InkWell(
+                      onTap: onToggleFollow,
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          gradient: isFollowing
+                              ? null
+                              : LinearGradient(
+                                  colors: [
+                                    kBrandColor.withAlpha(40),
+                                    kBrandColor.withAlpha(25),
+                                  ],
+                                ),
+                          border: Border.all(
+                            color: isFollowing ? kMutedColor : kBrandColor,
+                            width: 1.5,
+                          ),
+                          color: isFollowing
+                              ? kMutedColor.withAlpha(20)
+                              : null,
                         ),
-                      ),
-                      style: OutlinedButton.styleFrom(
-                        side: BorderSide(
-                            color: isFollowing ? kMutedColor : kBrandColor),
-                        backgroundColor:
-                            isFollowing ? kMutedColor.withOpacity(0.1) : null,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 8),
-                        minimumSize: const Size(0, 36),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              isFollowing ? Icons.check : Icons.person_add_alt,
+                              color: isFollowing ? kMutedColor : kBrandColor,
+                              size: 18,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              isFollowing ? 'Segui già' : 'Segui',
+                              style: TextStyle(
+                                color: isFollowing ? kMutedColor : kBrandColor,
+                                fontWeight: FontWeight.w900,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -563,47 +606,82 @@ class _ProfileHighlights extends StatelessWidget {
     final pbCount = '${stats.personalBests} circuiti';
 
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        color: const Color.fromRGBO(255, 255, 255, 0.07),
-        border: Border.all(color: kLineColor),
+        borderRadius: BorderRadius.circular(24),
+        gradient: LinearGradient(
+          colors: [
+            const Color(0xFF1A1A20).withAlpha(255),
+            const Color(0xFF0F0F15).withAlpha(255),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        border: Border.all(color: kLineColor, width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(140),
+            blurRadius: 16,
+            spreadRadius: -3,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Highlights',
-            style: TextStyle(
-              fontSize: 17,
-              fontWeight: FontWeight.w900,
-            ),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  gradient: LinearGradient(
+                    colors: [
+                      kPulseColor.withAlpha(30),
+                      kPulseColor.withAlpha(20),
+                    ],
+                  ),
+                  border: Border.all(color: kPulseColor.withAlpha(100), width: 1),
+                ),
+                child: const Icon(Icons.auto_graph, color: kPulseColor, size: 20),
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                'Highlights',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0.3,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 18),
           _HighlightRow(
             icon: Icons.emoji_events_outlined,
             label: 'Best lap assoluto',
             value: bestLapText,
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           _HighlightRow(
             icon: Icons.flag_circle_outlined,
             label: 'Sessioni totali',
             value: sessionsTotal,
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           _HighlightRow(
             icon: Icons.timeline,
             label: 'Distanza totale',
             value: distanceTotal,
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           _HighlightRow(
             icon: Icons.emoji_events_outlined,
             label: 'PB circuiti',
             value: pbCount,
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           _HighlightRow(
             icon: Icons.flag_outlined,
             label: 'Giri totali',
@@ -628,24 +706,37 @@ class _HighlightRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Icon(icon, size: 20, color: kBrandColor),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Text(
-            label,
-            style: const TextStyle(fontSize: 14, color: kMutedColor),
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        color: const Color.fromRGBO(255, 255, 255, 0.03),
+        border: Border.all(color: kLineColor.withAlpha(60)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: kBrandColor),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontSize: 13,
+                color: kMutedColor,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
-        ),
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w700,
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w900,
+              color: kFgColor,
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -685,98 +776,170 @@ class _SessionCard extends StatelessWidget {
         ? 'Best ${_formatDuration(session.bestLap!)}'
         : '';
 
-    return GestureDetector(
-      onTap: () {
-        Navigator.of(context).pushNamed(
-          '/activity',
-          arguments: session,
-        );
-      },
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          color: const Color.fromRGBO(255, 255, 255, 0.06),
-          border: Border.all(color: kLineColor),
-        ),
-        child: Row(
-          children: [
-            // Icona attività
-            Container(
-              width: 42,
-              height: 42,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: kBrandColor.withOpacity(0.18),
-              ),
-              child:
-                  const Icon(Icons.track_changes, color: kBrandColor, size: 22),
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        onTap: () {
+          Navigator.of(context).pushNamed(
+            '/activity',
+            arguments: session,
+          );
+        },
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 14),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            gradient: LinearGradient(
+              colors: [
+                const Color(0xFF1A1A20).withAlpha(255),
+                const Color(0xFF0F0F15).withAlpha(255),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
-            const SizedBox(width: 12),
-
-            // Info sessione
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    session.trackName,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w800,
-                      fontSize: 15,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '${session.lapCount} giri · ${session.distanceKm.toStringAsFixed(1)} km${bestLapText.isNotEmpty ? ' · $bestLapText' : ''}',
-                    style: const TextStyle(fontSize: 12, color: kMutedColor),
-                  ),
-                  const SizedBox(height: 2),
-                  Row(
-                    children: [
-                      Icon(
-                        session.isPublic ? Icons.public : Icons.lock_outline,
-                        size: 12,
-                        color: kMutedColor,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        _formatDate(session.dateTime),
-                        style: TextStyle(
-                            fontSize: 11, color: kMutedColor.withOpacity(0.7)),
-                      ),
+            border: Border.all(color: kLineColor, width: 1),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withAlpha(120),
+                blurRadius: 12,
+                spreadRadius: -2,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              // Icona attività
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(14),
+                  gradient: LinearGradient(
+                    colors: [
+                      kBrandColor.withAlpha(30),
+                      kBrandColor.withAlpha(20),
                     ],
                   ),
-                ],
+                  border: Border.all(color: kBrandColor.withAlpha(100), width: 1),
+                ),
+                child: const Icon(Icons.track_changes, color: kBrandColor, size: 24),
               ),
-            ),
+              const SizedBox(width: 14),
 
-            // Velocità max
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  '${session.maxSpeedKmh.toStringAsFixed(0)}',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w900,
-                    color: kBrandColor,
-                  ),
+              // Info sessione
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      session.trackName,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 16,
+                        letterSpacing: 0.3,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      '${session.lapCount} giri · ${session.distanceKm.toStringAsFixed(1)} km${bestLapText.isNotEmpty ? ' · $bestLapText' : ''}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: kMutedColor,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(6),
+                            color: session.isPublic
+                                ? kPulseColor.withAlpha(25)
+                                : kMutedColor.withAlpha(25),
+                            border: Border.all(
+                              color: session.isPublic
+                                  ? kPulseColor.withAlpha(80)
+                                  : kMutedColor.withAlpha(80),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                session.isPublic ? Icons.public : Icons.lock_outline,
+                                size: 10,
+                                color: session.isPublic ? kPulseColor : kMutedColor,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                session.isPublic ? 'Pubblico' : 'Privato',
+                                style: TextStyle(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w800,
+                                  color: session.isPublic ? kPulseColor : kMutedColor,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          _formatDate(session.dateTime),
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: kMutedColor.withAlpha(180),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-                const Text(
-                  'km/h',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                    color: kMutedColor,
+              ),
+
+              // Velocità max
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(10),
+                  gradient: LinearGradient(
+                    colors: [
+                      kBrandColor.withAlpha(30),
+                      kBrandColor.withAlpha(20),
+                    ],
                   ),
+                  border: Border.all(color: kBrandColor.withAlpha(80)),
                 ),
-              ],
-            ),
-          ],
+                child: Column(
+                  children: [
+                    Text(
+                      session.maxSpeedKmh.toStringAsFixed(0),
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                        color: kBrandColor,
+                      ),
+                    ),
+                    const Text(
+                      'km/h',
+                      style: TextStyle(
+                        fontSize: 9,
+                        fontWeight: FontWeight.w700,
+                        color: kBrandColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

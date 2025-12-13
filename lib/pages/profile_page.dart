@@ -612,43 +612,64 @@ class _ProfileHeader extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(22),
-        color: const Color.fromRGBO(255, 255, 255, 0.10),
-        border: Border.all(color: kLineColor, width: 1.3),
+        borderRadius: BorderRadius.circular(24),
+        gradient: LinearGradient(
+          colors: [
+            const Color(0xFF1A1A20).withAlpha(255),
+            const Color(0xFF0F0F15).withAlpha(255),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        border: Border.all(color: kLineColor, width: 1),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.45),
+            color: Colors.black.withAlpha(140),
             blurRadius: 16,
-            spreadRadius: -2,
-            offset: const Offset(0, 4),
+            spreadRadius: -3,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
       child: Row(
         children: [
-          // Avatar tag
+          // Avatar tag with gradient ring
           Container(
-            width: 82,
-            height: 82,
+            padding: const EdgeInsets.all(3),
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: Colors.black.withOpacity(0.35),
-              border: Border.all(color: kBrandColor, width: 2),
-              boxShadow: [
-                BoxShadow(
-                  color: kBrandColor.withOpacity(0.35),
-                  blurRadius: 12,
-                  spreadRadius: 2,
-                ),
-              ],
+              gradient: LinearGradient(
+                colors: [
+                  kBrandColor.withAlpha(80),
+                  kPulseColor.withAlpha(60),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
             ),
-            child: Center(
-              child: Text(
-                tag,
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 1.5,
+            child: Container(
+              width: 82,
+              height: 82,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0xFF0A0A0F),
+                boxShadow: [
+                  BoxShadow(
+                    color: kBrandColor.withAlpha(60),
+                    blurRadius: 12,
+                    spreadRadius: 0,
+                  ),
+                ],
+              ),
+              child: Center(
+                child: Text(
+                  tag,
+                  style: const TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1.5,
+                    color: kBrandColor,
+                  ),
                 ),
               ),
             ),
@@ -664,29 +685,27 @@ class _ProfileHeader extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    fontSize: 22,
+                    fontSize: 20,
                     fontWeight: FontWeight.w900,
+                    letterSpacing: 0.5,
                   ),
                 ),
-                const SizedBox(height: 3),
+                const SizedBox(height: 4),
                 Text(
                   '@$username',
                   style: const TextStyle(
                     color: kMutedColor,
                     fontSize: 13,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 10),
 
                 // Chips
                 Wrap(
                   spacing: 8,
                   runSpacing: 6,
                   children: const [
-                    // PulseChip(
-                    //   label: Text('RACESENSE LIVE'),
-                    //   icon: Icons.bluetooth_connected,
-                    // ),
                     PulseChip(
                       label: Text('Accesso PULSE+'),
                       icon: Icons.bolt,
@@ -710,23 +729,44 @@ class _HelpCenterCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        color: const Color.fromRGBO(255, 255, 255, 0.06),
-        border: Border.all(color: kLineColor),
+        borderRadius: BorderRadius.circular(20),
+        gradient: LinearGradient(
+          colors: [
+            const Color(0xFF1A1A20).withAlpha(255),
+            const Color(0xFF0F0F15).withAlpha(255),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        border: Border.all(color: kLineColor, width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(120),
+            blurRadius: 12,
+            spreadRadius: -2,
+            offset: const Offset(0, 6),
+          ),
+        ],
       ),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: kBrandColor.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(14),
+              gradient: LinearGradient(
+                colors: [
+                  kBrandColor.withAlpha(30),
+                  kBrandColor.withAlpha(20),
+                ],
+              ),
+              border: Border.all(color: kBrandColor.withAlpha(100), width: 1),
             ),
-            child: const Icon(Icons.help_outline, color: kBrandColor),
+            child: const Icon(Icons.help_outline, color: kBrandColor, size: 24),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -735,17 +775,19 @@ class _HelpCenterCard extends StatelessWidget {
                   'Help Center',
                   style: TextStyle(
                     fontWeight: FontWeight.w900,
-                    fontSize: 15,
+                    fontSize: 16,
+                    letterSpacing: 0.3,
                   ),
                 ),
-                SizedBox(height: 4),
+                SizedBox(height: 6),
                 Text(
                   'Per assistenza o comunicazioni invia una mail a $_email '
                   'con oggetto: "TICKET APP RACESENSE".',
                   style: TextStyle(
                     color: kMutedColor,
                     fontSize: 12,
-                    height: 1.3,
+                    height: 1.4,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ],
@@ -772,11 +814,26 @@ class _AffiliateCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final hasCode = code != null && code!.isNotEmpty;
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        color: const Color.fromRGBO(255, 255, 255, 0.06),
-        border: Border.all(color: kLineColor),
+        borderRadius: BorderRadius.circular(20),
+        gradient: LinearGradient(
+          colors: [
+            const Color(0xFF1A1A20).withAlpha(255),
+            const Color(0xFF0F0F15).withAlpha(255),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        border: Border.all(color: kLineColor, width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(120),
+            blurRadius: 12,
+            spreadRadius: -2,
+            offset: const Offset(0, 6),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -784,88 +841,157 @@ class _AffiliateCard extends StatelessWidget {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(10),
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: kBrandColor.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(14),
+                  gradient: LinearGradient(
+                    colors: [
+                      kPulseColor.withAlpha(30),
+                      kPulseColor.withAlpha(20),
+                    ],
+                  ),
+                  border: Border.all(color: kPulseColor.withAlpha(100), width: 1),
                 ),
-                child: const Icon(Icons.card_membership, color: kBrandColor),
+                child: const Icon(Icons.card_membership, color: kPulseColor, size: 24),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 12),
               const Text(
                 'Codice affiliato',
                 style: TextStyle(
                   fontWeight: FontWeight.w900,
-                  fontSize: 15,
+                  fontSize: 16,
+                  letterSpacing: 0.3,
                 ),
               ),
               const Spacer(),
               if (hasCode)
-                IconButton(
-                  icon: const Icon(Icons.copy, color: kMutedColor),
-                  onPressed: () {
-                    final value = code ?? '';
-                    Clipboard.setData(ClipboardData(text: value));
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Codice copiato'),
-                        backgroundColor: kBrandColor,
-                      ),
-                    );
-                  },
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(10),
+                    onTap: () {
+                      final value = code ?? '';
+                      Clipboard.setData(ClipboardData(text: value));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Codice copiato'),
+                          backgroundColor: kBrandColor,
+                        ),
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      child: const Icon(Icons.copy, color: kBrandColor, size: 20),
+                    ),
+                  ),
                 ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 14),
           if (hasCode) ...[
-            Text(
-              code!,
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 1.5,
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                color: const Color.fromRGBO(255, 255, 255, 0.05),
+                border: Border.all(color: kLineColor.withAlpha(80)),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    code!,
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 2.0,
+                      color: kBrandColor,
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      color: kBrandColor.withAlpha(25),
+                      border: Border.all(color: kBrandColor.withAlpha(80)),
+                    ),
+                    child: const Text(
+                      'ATTIVO',
+                      style: TextStyle(
+                        color: kBrandColor,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 10),
             const Text(
               'Condividi il tuo codice per attribuire le affiliazioni.',
-              style: TextStyle(color: kMutedColor, fontSize: 12),
+              style: TextStyle(
+                color: kMutedColor,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ] else ...[
             const Text(
               'Crea il tuo codice affiliato e condividilo con i tuoi contatti.',
-              style: TextStyle(color: kMutedColor, fontSize: 12),
-            ),
-            const SizedBox(height: 10),
-            ElevatedButton(
-              onPressed: onGenerate,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: kBrandColor,
-                foregroundColor: Colors.black,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
+              style: TextStyle(
+                color: kMutedColor,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
               ),
-              child: const Text(
-                'Crea codice',
-                style: TextStyle(fontWeight: FontWeight.w900),
+            ),
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: onGenerate,
+                icon: const Icon(Icons.add_circle_outline, size: 20),
+                label: const Text(
+                  'Crea codice',
+                  style: TextStyle(fontWeight: FontWeight.w900, fontSize: 14),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: kBrandColor,
+                  foregroundColor: Colors.black,
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
               ),
             ),
           ],
           if (referredByCode != null && referredByCode!.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                const Icon(Icons.link, color: kPulseColor, size: 18),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    'Sei stato invitato con il codice $referredByCode',
-                    style: const TextStyle(color: kMutedColor, fontSize: 12),
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                color: kPulseColor.withAlpha(15),
+                border: Border.all(color: kPulseColor.withAlpha(60)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.link, color: kPulseColor, size: 18),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Sei stato invitato con il codice $referredByCode',
+                      style: const TextStyle(
+                        color: kPulseColor,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ],
         ],
@@ -881,52 +1007,79 @@ class _ConnectDevicesTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          color: const Color.fromRGBO(255, 255, 255, 0.06),
-          border: Border.all(color: kLineColor),
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: kBrandColor.withOpacity(0.12),
-              ),
-              child: const Icon(Icons.bluetooth, color: kBrandColor),
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            gradient: LinearGradient(
+              colors: [
+                const Color(0xFF1A1A20).withAlpha(255),
+                const Color(0xFF0F0F15).withAlpha(255),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
-            const SizedBox(width: 12),
-            const Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Collega dispositivi tracking',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w900,
-                      fontSize: 15,
-                    ),
-                  ),
-                  SizedBox(height: 4),
-                  Text(
-                    'Gestisci e collega i tracker GPS-Tracker-F10N al tuo profilo.',
-                    style: TextStyle(
-                      color: kMutedColor,
-                      fontSize: 12,
-                      height: 1.3,
-                    ),
-                  ),
-                ],
+            border: Border.all(color: kLineColor, width: 1),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withAlpha(120),
+                blurRadius: 12,
+                spreadRadius: -2,
+                offset: const Offset(0, 6),
               ),
-            ),
-            const Icon(Icons.chevron_right, color: kMutedColor),
-          ],
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(14),
+                  gradient: LinearGradient(
+                    colors: [
+                      kBrandColor.withAlpha(30),
+                      kBrandColor.withAlpha(20),
+                    ],
+                  ),
+                  border: Border.all(color: kBrandColor.withAlpha(100), width: 1),
+                ),
+                child: const Icon(Icons.bluetooth, color: kBrandColor, size: 24),
+              ),
+              const SizedBox(width: 14),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Collega dispositivi tracking',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 16,
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                    SizedBox(height: 6),
+                    Text(
+                      'Gestisci e collega i tracker GPS-Tracker-F10N al tuo profilo.',
+                      style: TextStyle(
+                        color: kMutedColor,
+                        fontSize: 12,
+                        height: 1.4,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right, color: kBrandColor, size: 24),
+            ],
+          ),
         ),
       ),
     );
@@ -1079,47 +1232,82 @@ class _ProfileHighlights extends StatelessWidget {
     final pbCount = '${stats.personalBests} circuiti';
 
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        color: const Color.fromRGBO(255, 255, 255, 0.07),
-        border: Border.all(color: kLineColor),
+        borderRadius: BorderRadius.circular(24),
+        gradient: LinearGradient(
+          colors: [
+            const Color(0xFF1A1A20).withAlpha(255),
+            const Color(0xFF0F0F15).withAlpha(255),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        border: Border.all(color: kLineColor, width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(140),
+            blurRadius: 16,
+            spreadRadius: -3,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Highlights',
-            style: TextStyle(
-              fontSize: 17,
-              fontWeight: FontWeight.w900,
-            ),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  gradient: LinearGradient(
+                    colors: [
+                      kPulseColor.withAlpha(30),
+                      kPulseColor.withAlpha(20),
+                    ],
+                  ),
+                  border: Border.all(color: kPulseColor.withAlpha(100), width: 1),
+                ),
+                child: const Icon(Icons.auto_graph, color: kPulseColor, size: 20),
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                'Highlights',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0.3,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 18),
           _HighlightRow(
             icon: Icons.emoji_events_outlined,
             label: 'Best lap assoluto',
             value: bestLapText,
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           _HighlightRow(
             icon: Icons.flag_circle_outlined,
             label: 'Sessioni totali',
             value: sessionsTotal,
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           _HighlightRow(
             icon: Icons.timeline,
             label: 'Distanza totale',
             value: distanceTotal,
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           _HighlightRow(
             icon: Icons.emoji_events_outlined,
             label: 'PB circuiti',
             value: pbCount,
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           _HighlightRow(
             icon: Icons.flag_outlined,
             label: 'Giri totali',
@@ -1144,24 +1332,37 @@ class _HighlightRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Icon(icon, size: 20, color: kBrandColor),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Text(
-            label,
-            style: const TextStyle(fontSize: 14, color: kMutedColor),
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        color: const Color.fromRGBO(255, 255, 255, 0.03),
+        border: Border.all(color: kLineColor.withAlpha(60)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: kBrandColor),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontSize: 13,
+                color: kMutedColor,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
-        ),
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w700,
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w900,
+              color: kFgColor,
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -1207,132 +1408,210 @@ class _SessionCard extends StatelessWidget {
         ? 'Best ${_formatDuration(session.bestLap!)}'
         : '';
 
-    return GestureDetector(
-      onTap: () {
-        Navigator.of(context).pushNamed(
-          '/activity',
-          arguments: session,
-        );
-      },
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          color: const Color.fromRGBO(255, 255, 255, 0.06),
-          border: Border.all(color: kLineColor),
-        ),
-        child: Row(
-          children: [
-            // Icona attività
-            Container(
-              width: 42,
-              height: 42,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: kBrandColor.withOpacity(0.18),
-              ),
-              child:
-                  const Icon(Icons.track_changes, color: kBrandColor, size: 22),
-            ),
-            const SizedBox(width: 12),
-
-            // Info sessione
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    session.trackName,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w800,
-                      fontSize: 15,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '${session.lapCount} giri · ${session.distanceKm.toStringAsFixed(1)} km${bestLapText.isNotEmpty ? ' · $bestLapText' : ''}',
-                    style: const TextStyle(fontSize: 12, color: kMutedColor),
-                  ),
-                  const SizedBox(height: 2),
-                  Row(
-                    children: [
-                      Icon(
-                        session.isPublic ? Icons.public : Icons.lock_outline,
-                        size: 12,
-                        color: kMutedColor,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        _formatDate(session.dateTime),
-                        style: TextStyle(
-                            fontSize: 11, color: kMutedColor.withOpacity(0.7)),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-
-            // Velocità max
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  '${session.maxSpeedKmh.toStringAsFixed(0)}',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w900,
-                    color: kBrandColor,
-                  ),
-                ),
-                const Text(
-                  'km/h',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                    color: kMutedColor,
-                  ),
-                ),
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        onTap: () {
+          Navigator.of(context).pushNamed(
+            '/activity',
+            arguments: session,
+          );
+        },
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 14),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            gradient: LinearGradient(
+              colors: [
+                const Color(0xFF1A1A20).withAlpha(255),
+                const Color(0xFF0F0F15).withAlpha(255),
               ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
-            if (onShare != null || onEdit != null || onDelete != null) ...[
-              const SizedBox(width: 6),
-              PopupMenuButton<String>(
-                onSelected: (value) {
-                  if (value == 'share') {
-                    onShare?.call();
-                  } else if (value == 'edit') {
-                    onEdit?.call();
-                  } else if (value == 'delete') {
-                    onDelete?.call();
-                  }
-                },
-                itemBuilder: (context) => [
-                  if (onShare != null)
-                    const PopupMenuItem(
-                      value: 'share',
-                      child: Text('Condividi'),
-                    ),
-                  if (onEdit != null)
-                    const PopupMenuItem(
-                      value: 'edit',
-                      child: Text('Modifica'),
-                    ),
-                  if (onDelete != null)
-                    const PopupMenuItem(
-                      value: 'delete',
-                      child: Text(
-                        'Elimina',
-                        style: TextStyle(color: kErrorColor),
-                      ),
-                    ),
-                ],
+            border: Border.all(color: kLineColor, width: 1),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withAlpha(120),
+                blurRadius: 12,
+                spreadRadius: -2,
+                offset: const Offset(0, 6),
               ),
             ],
-          ],
+          ),
+          child: Row(
+            children: [
+              // Icona attività
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(14),
+                  gradient: LinearGradient(
+                    colors: [
+                      kBrandColor.withAlpha(30),
+                      kBrandColor.withAlpha(20),
+                    ],
+                  ),
+                  border: Border.all(color: kBrandColor.withAlpha(100), width: 1),
+                ),
+                child: const Icon(Icons.track_changes, color: kBrandColor, size: 24),
+              ),
+              const SizedBox(width: 14),
+
+              // Info sessione
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      session.trackName,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 16,
+                        letterSpacing: 0.3,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      '${session.lapCount} giri · ${session.distanceKm.toStringAsFixed(1)} km${bestLapText.isNotEmpty ? ' · $bestLapText' : ''}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: kMutedColor,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(6),
+                            color: session.isPublic
+                                ? kPulseColor.withAlpha(25)
+                                : kMutedColor.withAlpha(25),
+                            border: Border.all(
+                              color: session.isPublic
+                                  ? kPulseColor.withAlpha(80)
+                                  : kMutedColor.withAlpha(80),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                session.isPublic ? Icons.public : Icons.lock_outline,
+                                size: 10,
+                                color: session.isPublic ? kPulseColor : kMutedColor,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                session.isPublic ? 'Pubblico' : 'Privato',
+                                style: TextStyle(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w800,
+                                  color: session.isPublic ? kPulseColor : kMutedColor,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          _formatDate(session.dateTime),
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: kMutedColor.withAlpha(180),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              // Velocità max
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(10),
+                      gradient: LinearGradient(
+                        colors: [
+                          kBrandColor.withAlpha(30),
+                          kBrandColor.withAlpha(20),
+                        ],
+                      ),
+                      border: Border.all(color: kBrandColor.withAlpha(80)),
+                    ),
+                    child: Column(
+                      children: [
+                        Text(
+                          '${session.maxSpeedKmh.toStringAsFixed(0)}',
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w900,
+                            color: kBrandColor,
+                          ),
+                        ),
+                        const Text(
+                          'km/h',
+                          style: TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w700,
+                            color: kBrandColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              if (onShare != null || onEdit != null || onDelete != null) ...[
+                const SizedBox(width: 8),
+                PopupMenuButton<String>(
+                  icon: const Icon(Icons.more_vert, color: kMutedColor, size: 20),
+                  onSelected: (value) {
+                    if (value == 'share') {
+                      onShare?.call();
+                    } else if (value == 'edit') {
+                      onEdit?.call();
+                    } else if (value == 'delete') {
+                      onDelete?.call();
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    if (onShare != null)
+                      const PopupMenuItem(
+                        value: 'share',
+                        child: Text('Condividi'),
+                      ),
+                    if (onEdit != null)
+                      const PopupMenuItem(
+                        value: 'edit',
+                        child: Text('Modifica'),
+                      ),
+                    if (onDelete != null)
+                      const PopupMenuItem(
+                        value: 'delete',
+                        child: Text(
+                          'Elimina',
+                          style: TextStyle(color: kErrorColor),
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+            ],
+          ),
         ),
       ),
     );
