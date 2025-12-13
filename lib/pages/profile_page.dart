@@ -1,21 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../theme.dart';
-import '../widgets/pulse_background.dart';
-import '../widgets/pulse_chip.dart';
+import 'package:flutter/services.dart';
+import '../models/session_model.dart';
 import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
-import '../services/follow_service.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/session_service.dart';
-import '../models/session_model.dart';
+import '../theme.dart';
 import '../widgets/follow_counts.dart';
+import '../widgets/pulse_background.dart';
+import '../widgets/pulse_chip.dart';
 import '../widgets/session_metadata_dialog.dart';
+import 'connect_devices_page.dart';
 import 'story_composer_page.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'connect_devices_page.dart';
-import 'package:flutter/services.dart';
-import 'connect_devices_page.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -27,7 +23,6 @@ class ProfilePage extends StatefulWidget {
 class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
   final FirestoreService _firestoreService = FirestoreService();
   final SessionService _sessionService = SessionService();
-  final FollowService _followService = FollowService();
 
   String _userName = '';
   String _userTag = '';
@@ -42,9 +37,7 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
 
   UserStats _userStats = UserStats.empty();
   List<SessionModel> _recentSessions = [];
-  List<Map<String, dynamic>> _followNotifs = [];
   List<SessionModel> _allSessions = [];
-  bool _showNotifPanel = false;
   String? _affiliateCode;
   String? _referredByCode;
 
@@ -168,7 +161,6 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      // Ricarica dati quando l'app torna in primo piano
       _loadUserData();
     }
   }
@@ -183,21 +175,16 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
     print('🔄 ProfilePage: Caricamento dati per ${user.uid}');
 
     try {
-      // Inizializza stats se non esistono (ora senza read extra)
       await _firestoreService.initializeStatsIfNeeded(user.uid);
 
-      // 1) dati utente (fresh) + 2) ultime sessioni + 3) notifiche follow
       final results = await Future.wait([
         _firestoreService.getUserData(user.uid),
         _sessionService.getUserSessions(user.uid, limit: 5),
-        _followService.fetchFollowNotifications(user.uid, limit: 20),
       ]);
 
       final userData = results[0] as Map<String, dynamic>?;
       final sessions = results[1] as List<SessionModel>;
-      final notifs = results[2] as List<Map<String, dynamic>>;
 
-      // Stats direttamente dal doc utente
       final stats = (userData != null && userData['stats'] != null)
           ? UserStats.fromMap(userData['stats'] as Map<String, dynamic>)
           : UserStats.empty();
@@ -208,14 +195,12 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
       if (mounted) {
         final fullName = userData?['fullName'] ?? user.displayName ?? 'Utente';
         if (userData == null || userData['searchTokens'] == null) {
-          // Backfill token ricerca per utenti già esistenti
           _firestoreService.ensureSearchTokens(user.uid, fullName);
         }
         if (userData == null || userData['username'] == null) {
           _firestoreService.ensureUsernameForUser(user.uid, fullName);
         }
 
-        // Crea tag dalle iniziali del nome
         String tag;
         final nameParts = fullName.split(' ');
         if (nameParts.length >= 2) {
@@ -233,7 +218,6 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
               fullName.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
           _userStats = stats;
           _recentSessions = sessions;
-          _followNotifs = notifs;
           _followerCount = stats.followerCount;
           _followingCount = stats.followingCount;
           _affiliateCode = userData?['affiliateCode'] as String?;
@@ -245,7 +229,6 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
       }
     } catch (e) {
       print('❌ ProfilePage: Errore caricamento dati - $e');
-      // In caso di errore, usa i dati di Firebase Auth
       if (mounted) {
         final user = FirebaseAuth.instance.currentUser;
         setState(() {
@@ -257,12 +240,6 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
         });
       }
     }
-  }
-
-  String _formatDuration(Duration d) {
-    final minutes = d.inMinutes;
-    final seconds = d.inSeconds % 60;
-    return '$minutes:${seconds.toString().padLeft(2, '0')}';
   }
 
   Future<void> _showCreateAffiliateDialog() async {
@@ -390,82 +367,84 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
                   ),
                 ),
                 const Spacer(),
-                IconButton(
-                  icon: Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      const Icon(Icons.notifications_none, size: 24),
-                      if (_followNotifs.isNotEmpty)
-                        Positioned(
-                          right: -2,
-                          top: -2,
-                          child: Container(
-                            width: 10,
-                            height: 10,
-                            decoration: const BoxDecoration(
-                              color: Colors.red,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                        ),
-                    ],
+                Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    gradient: LinearGradient(
+                      colors: [
+                        kErrorColor.withAlpha(40),
+                        kErrorColor.withAlpha(25),
+                      ],
+                    ),
+                    border: Border.all(color: kErrorColor, width: 1.5),
                   ),
-                  onPressed: () {
-                    setState(() {
-                      _showNotifPanel = !_showNotifPanel;
-                      if (_showNotifPanel) {
-                        // mark as seen
-                        _followNotifs = [];
-                      }
-                    });
-                  },
-                ),
-                IconButton(
-                  icon: const Icon(Icons.logout, size: 26),
-                  onPressed: () async {
-                    final shouldLogout = await showDialog<bool>(
-                      context: context,
-                      builder: (context) => AlertDialog(
-                        backgroundColor: const Color(0xFF1a1a1a),
-                        title: const Text('Logout',
-                            style: TextStyle(color: kFgColor)),
-                        content: const Text(
-                          'Sei sicuro di voler uscire?',
-                          style: TextStyle(color: kMutedColor),
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.of(context).pop(false),
-                            child: const Text('Annulla',
-                                style: TextStyle(color: kMutedColor)),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(12),
+                      onTap: () async {
+                        final shouldLogout = await showDialog<bool>(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            backgroundColor: const Color(0xFF1a1a1a),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            title: const Text('Logout',
+                                style: TextStyle(
+                                    color: kFgColor,
+                                    fontWeight: FontWeight.w900)),
+                            content: const Text(
+                              'Sei sicuro di voler uscire?',
+                              style: TextStyle(color: kMutedColor),
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () =>
+                                    Navigator.of(context).pop(false),
+                                child: const Text('Annulla',
+                                    style: TextStyle(color: kMutedColor)),
+                              ),
+                              TextButton(
+                                onPressed: () =>
+                                    Navigator.of(context).pop(true),
+                                child: const Text('Logout',
+                                    style: TextStyle(color: kErrorColor)),
+                              ),
+                            ],
                           ),
-                          TextButton(
-                            onPressed: () => Navigator.of(context).pop(true),
-                            child: const Text('Logout',
-                                style: TextStyle(color: kErrorColor)),
-                          ),
-                        ],
-                      ),
-                    );
+                        );
 
-                    if (shouldLogout == true) {
-                      final authService = AuthService();
-                      await authService.signOut();
-                    }
-                  },
+                        if (shouldLogout == true) {
+                          final authService = AuthService();
+                          await authService.signOut();
+                        }
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 10),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: const [
+                            Icon(Icons.logout, color: kErrorColor, size: 18),
+                            SizedBox(width: 6),
+                            Text(
+                              'Esci',
+                              style: TextStyle(
+                                color: kErrorColor,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
                 )
               ],
             ),
           ),
-          if (_showNotifPanel)
-            Align(
-              alignment: Alignment.topRight,
-              child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16.0, vertical: 6),
-                child: _FollowNotifications(notifs: _followNotifs),
-              ),
-            ),
 
           // ---------- BODY ----------
           Expanded(
@@ -483,11 +462,9 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
                           horizontal: 16, vertical: 8),
                       children: [
                         _ProfileHeader(
-                            name: _userName,
-                            tag: _userTag,
-                            username: _username),
-                        const SizedBox(height: 10),
-                        FollowCounts(
+                          name: _userName,
+                          tag: _userTag,
+                          username: _username,
                           followerCount: _followerCount,
                           followingCount: _followingCount,
                         ),
@@ -507,14 +484,36 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
                             ),
                           );
                         }),
-                        const SizedBox(height: 18),
-                        const Text(
-                          'Ultime attività',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w900,
-                            fontSize: 18,
-                            letterSpacing: 0.4,
-                          ),
+                        const SizedBox(height: 24),
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(10),
+                                gradient: LinearGradient(
+                                  colors: [
+                                    kBrandColor.withAlpha(30),
+                                    kBrandColor.withAlpha(20),
+                                  ],
+                                ),
+                                border: Border.all(
+                                    color: kBrandColor.withAlpha(100),
+                                    width: 1),
+                              ),
+                              child: const Icon(Icons.history,
+                                  color: kBrandColor, size: 18),
+                            ),
+                            const SizedBox(width: 10),
+                            const Text(
+                              'Ultime attività',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w900,
+                                fontSize: 18,
+                                letterSpacing: 0.4,
+                              ),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 12),
                         if ((_showAllSessions ? _allSessions : _recentSessions)
@@ -522,9 +521,18 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
                           Center(
                             child: Padding(
                               padding: const EdgeInsets.all(32),
-                              child: Text(
-                                'Nessuna sessione registrata',
-                                style: TextStyle(color: kMutedColor),
+                              child: Column(
+                                children: const [
+                                  Icon(Icons.directions_run,
+                                      color: kMutedColor, size: 48),
+                                  SizedBox(height: 12),
+                                  Text(
+                                    'Nessuna sessione registrata',
+                                    style: TextStyle(
+                                        color: kMutedColor,
+                                        fontWeight: FontWeight.w600),
+                                  ),
+                                ],
                               ),
                             ),
                           )
@@ -540,43 +548,78 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
                         if (_allSessions.isNotEmpty || !_hasAllSessions)
                           Align(
                             alignment: Alignment.centerLeft,
-                            child: OutlinedButton.icon(
-                              onPressed: _sessionsLoadingAll
-                                  ? null
-                                  : () {
-                                      if (_showAllSessions &&
-                                          _allSessions.isNotEmpty) {
-                                        setState(() {
-                                          _showAllSessions = false;
-                                        });
-                                      } else if (_allSessions.isNotEmpty) {
-                                        setState(() {
-                                          _showAllSessions = true;
-                                        });
-                                      } else {
-                                        _loadAllSessions();
-                                      }
-                                    },
-                              icon: _sessionsLoadingAll
-                                  ? const SizedBox(
-                                      width: 14,
-                                      height: 14,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        valueColor:
-                                            AlwaysStoppedAnimation(kBrandColor),
-                                      ),
-                                    )
-                                  : Icon(_showAllSessions
-                                      ? Icons.expand_less
-                                      : Icons.expand_more),
-                              label: Text(_showAllSessions
-                                  ? 'Mostra meno'
-                                  : 'Mostra tutte'),
-                              style: OutlinedButton.styleFrom(
-                                side: const BorderSide(color: kBrandColor),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(12),
+                                gradient: LinearGradient(
+                                  colors: [
+                                    kBrandColor.withAlpha(40),
+                                    kBrandColor.withAlpha(25),
+                                  ],
+                                ),
+                                border:
+                                    Border.all(color: kBrandColor, width: 1.5),
                               ),
-                              onLongPress: null,
+                              child: Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  borderRadius: BorderRadius.circular(12),
+                                  onTap: _sessionsLoadingAll
+                                      ? null
+                                      : () {
+                                          if (_showAllSessions &&
+                                              _allSessions.isNotEmpty) {
+                                            setState(() {
+                                              _showAllSessions = false;
+                                            });
+                                          } else if (_allSessions.isNotEmpty) {
+                                            setState(() {
+                                              _showAllSessions = true;
+                                            });
+                                          } else {
+                                            _loadAllSessions();
+                                          }
+                                        },
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 16, vertical: 12),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        if (_sessionsLoadingAll)
+                                          const SizedBox(
+                                            width: 16,
+                                            height: 16,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              valueColor:
+                                                  AlwaysStoppedAnimation(
+                                                      kBrandColor),
+                                            ),
+                                          )
+                                        else
+                                          Icon(
+                                              _showAllSessions
+                                                  ? Icons.expand_less
+                                                  : Icons.expand_more,
+                                              color: kBrandColor,
+                                              size: 18),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          _showAllSessions
+                                              ? 'Mostra meno'
+                                              : 'Mostra tutte',
+                                          style: const TextStyle(
+                                            color: kBrandColor,
+                                            fontWeight: FontWeight.w900,
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
                             ),
                           ),
                         const SizedBox(height: 20),
@@ -600,11 +643,15 @@ class _ProfileHeader extends StatelessWidget {
   final String name;
   final String tag;
   final String username;
+  final int followerCount;
+  final int followingCount;
 
   const _ProfileHeader({
     required this.name,
     required this.tag,
     required this.username,
+    required this.followerCount,
+    required this.followingCount,
   });
 
   @override
@@ -631,90 +678,92 @@ class _ProfileHeader extends StatelessWidget {
           ),
         ],
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Avatar tag with gradient ring
-          Container(
-            padding: const EdgeInsets.all(3),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                colors: [
-                  kBrandColor.withAlpha(80),
-                  kPulseColor.withAlpha(60),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-            ),
-            child: Container(
-              width: 82,
-              height: 82,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: const Color(0xFF0A0A0F),
-                boxShadow: [
-                  BoxShadow(
-                    color: kBrandColor.withAlpha(60),
-                    blurRadius: 12,
-                    spreadRadius: 0,
+          Row(
+            children: [
+              // Avatar tag with gradient ring
+              Container(
+                padding: const EdgeInsets.all(3),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    colors: [
+                      kBrandColor.withAlpha(80),
+                      kPulseColor.withAlpha(60),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
-                ],
-              ),
-              child: Center(
-                child: Text(
-                  tag,
-                  style: const TextStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 1.5,
-                    color: kBrandColor,
+                ),
+                child: Container(
+                  width: 82,
+                  height: 82,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: const Color(0xFF0A0A0F),
+                    boxShadow: [
+                      BoxShadow(
+                        color: kBrandColor.withAlpha(60),
+                        blurRadius: 12,
+                        spreadRadius: 0,
+                      ),
+                    ],
+                  ),
+                  child: Center(
+                    child: Text(
+                      tag,
+                      style: const TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1.5,
+                        color: kBrandColor,
+                      ),
+                    ),
                   ),
                 ),
               ),
-            ),
-          ),
-          const SizedBox(width: 18),
+              const SizedBox(width: 18),
 
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '@$username',
-                  style: const TextStyle(
-                    color: kMutedColor,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 10),
-
-                // Chips
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 6,
-                  children: const [
-                    PulseChip(
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '@$username',
+                      style: const TextStyle(
+                        color: kMutedColor,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    const PulseChip(
                       label: Text('Accesso PULSE+'),
                       icon: Icons.bolt,
                     ),
                   ],
-                )
-              ],
-            ),
-          )
+                ),
+              )
+            ],
+          ),
+          const SizedBox(height: 16),
+          FollowCounts(
+            followerCount: followerCount,
+            followingCount: followingCount,
+          ),
         ],
       ),
     );
@@ -758,13 +807,13 @@ class _HelpCenterCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(14),
               gradient: LinearGradient(
                 colors: [
-                  kBrandColor.withAlpha(30),
-                  kBrandColor.withAlpha(20),
+                  kPulseColor.withAlpha(30),
+                  kPulseColor.withAlpha(20),
                 ],
               ),
-              border: Border.all(color: kBrandColor.withAlpha(100), width: 1),
+              border: Border.all(color: kPulseColor.withAlpha(100), width: 1),
             ),
-            child: const Icon(Icons.help_outline, color: kBrandColor, size: 24),
+            child: const Icon(Icons.help_outline, color: kPulseColor, size: 24),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -850,9 +899,11 @@ class _AffiliateCard extends StatelessWidget {
                       kPulseColor.withAlpha(20),
                     ],
                   ),
-                  border: Border.all(color: kPulseColor.withAlpha(100), width: 1),
+                  border:
+                      Border.all(color: kPulseColor.withAlpha(100), width: 1),
                 ),
-                child: const Icon(Icons.card_membership, color: kPulseColor, size: 24),
+                child: const Icon(Icons.card_membership,
+                    color: kPulseColor, size: 24),
               ),
               const SizedBox(width: 12),
               const Text(
@@ -881,7 +932,8 @@ class _AffiliateCard extends StatelessWidget {
                     },
                     child: Container(
                       padding: const EdgeInsets.all(8),
-                      child: const Icon(Icons.copy, color: kBrandColor, size: 20),
+                      child:
+                          const Icon(Icons.copy, color: kBrandColor, size: 20),
                     ),
                   ),
                 ),
@@ -909,7 +961,8 @@ class _AffiliateCard extends StatelessWidget {
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(8),
                       color: kBrandColor.withAlpha(25),
@@ -949,19 +1002,41 @@ class _AffiliateCard extends StatelessWidget {
             const SizedBox(height: 14),
             SizedBox(
               width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: onGenerate,
-                icon: const Icon(Icons.add_circle_outline, size: 20),
-                label: const Text(
-                  'Crea codice',
-                  style: TextStyle(fontWeight: FontWeight.w900, fontSize: 14),
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(14),
+                  gradient: LinearGradient(
+                    colors: [
+                      kBrandColor.withAlpha(40),
+                      kBrandColor.withAlpha(25),
+                    ],
+                  ),
+                  border: Border.all(color: kBrandColor, width: 1.5),
                 ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: kBrandColor,
-                  foregroundColor: Colors.black,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                  shape: RoundedRectangleBorder(
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
                     borderRadius: BorderRadius.circular(14),
+                    onTap: onGenerate,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 14),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: const [
+                          Icon(Icons.add_circle_outline,
+                              size: 20, color: kBrandColor),
+                          SizedBox(width: 8),
+                          Text(
+                            'Crea codice',
+                            style: TextStyle(
+                                fontWeight: FontWeight.w900,
+                                fontSize: 14,
+                                color: kBrandColor),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -1047,9 +1122,11 @@ class _ConnectDevicesTile extends StatelessWidget {
                       kBrandColor.withAlpha(20),
                     ],
                   ),
-                  border: Border.all(color: kBrandColor.withAlpha(100), width: 1),
+                  border:
+                      Border.all(color: kBrandColor.withAlpha(100), width: 1),
                 ),
-                child: const Icon(Icons.bluetooth, color: kBrandColor, size: 24),
+                child:
+                    const Icon(Icons.bluetooth, color: kBrandColor, size: 24),
               ),
               const SizedBox(width: 14),
               const Expanded(
@@ -1087,126 +1164,6 @@ class _ConnectDevicesTile extends StatelessWidget {
 }
 
 /* ============================================================
-    STATISTICHE PROFILO
-============================================================ */
-
-class _FollowNotifications extends StatelessWidget {
-  final List<Map<String, dynamic>> notifs;
-
-  const _FollowNotifications({required this.notifs});
-
-  String _timeAgo(DateTime t) {
-    final diff = DateTime.now().difference(t);
-    if (diff.inMinutes < 60) return '${diff.inMinutes}m fa';
-    if (diff.inHours < 24) return '${diff.inHours}h fa';
-    return '${diff.inDays}g fa';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final hasNew = notifs.isNotEmpty;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
-        color: const Color.fromRGBO(255, 255, 255, 0.04),
-        border: Border.all(color: kLineColor.withOpacity(0.6)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  const Icon(Icons.notifications_none,
-                      color: kFgColor, size: 22),
-                  if (hasNew)
-                    Positioned(
-                      right: -2,
-                      top: -2,
-                      child: Container(
-                        width: 10,
-                        height: 10,
-                        decoration: const BoxDecoration(
-                          color: Colors.red,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-              const SizedBox(width: 8),
-              const Text(
-                'Nuovi follower',
-                style: TextStyle(
-                  fontWeight: FontWeight.w900,
-                  fontSize: 14,
-                ),
-              ),
-              const Spacer(),
-              Text(
-                hasNew ? '${notifs.length} nuovi' : 'Nessuna notifica',
-                style: const TextStyle(color: kMutedColor, fontSize: 12),
-              ),
-            ],
-          ),
-          if (hasNew) ...[
-            const SizedBox(height: 10),
-            ...notifs.take(5).map((n) {
-              final followerName = n['followerName'] ?? 'Follower';
-              final followerUsername = n['followerUsername'] ?? '';
-              final ts = n['createdAt'];
-              DateTime? t;
-              if (ts is Timestamp) t = ts.toDate();
-              final subtitle =
-                  followerUsername.isNotEmpty ? '@$followerUsername' : '';
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 6),
-                child: Row(
-                  children: [
-                    const Icon(Icons.person_add_alt,
-                        color: kBrandColor, size: 18),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            followerName,
-                            style: const TextStyle(
-                              color: kFgColor,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                          if (subtitle.isNotEmpty)
-                            Text(
-                              subtitle,
-                              style: const TextStyle(
-                                  color: kMutedColor, fontSize: 12),
-                            ),
-                        ],
-                      ),
-                    ),
-                    if (t != null)
-                      Text(
-                        _timeAgo(t),
-                        style:
-                            const TextStyle(color: kMutedColor, fontSize: 11),
-                      ),
-                  ],
-                ),
-              );
-            }).toList(),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-/* ============================================================
     HIGHLIGHTS
 ============================================================ */
 
@@ -1224,12 +1181,13 @@ class _ProfileHighlights extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bestLapText = stats.bestLapEver != null
-        ? '${_formatDuration(stats.bestLapEver!)}${stats.bestLapTrack != null ? ' · ${stats.bestLapTrack}' : ''}'
-        : 'Nessun record';
-    final distanceTotal = '${stats.totalDistanceKm.toStringAsFixed(0)} km';
-    final sessionsTotal = '${stats.totalSessions} sessioni';
-    final pbCount = '${stats.personalBests} circuiti';
+    final bestLapText =
+        stats.bestLapEver != null ? _formatDuration(stats.bestLapEver!) : '—';
+    final bestLapTrack = stats.bestLapTrack ?? 'N/A';
+    final distanceTotal = stats.totalDistanceKm.toStringAsFixed(0);
+    final sessionsTotal = stats.totalSessions.toString();
+    final pbCount = stats.personalBests.toString();
+    final totalLaps = stats.totalLaps.toString();
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -1268,9 +1226,11 @@ class _ProfileHighlights extends StatelessWidget {
                       kPulseColor.withAlpha(20),
                     ],
                   ),
-                  border: Border.all(color: kPulseColor.withAlpha(100), width: 1),
+                  border:
+                      Border.all(color: kPulseColor.withAlpha(100), width: 1),
                 ),
-                child: const Icon(Icons.auto_graph, color: kPulseColor, size: 20),
+                child:
+                    const Icon(Icons.auto_graph, color: kPulseColor, size: 20),
               ),
               const SizedBox(width: 12),
               const Text(
@@ -1281,37 +1241,158 @@ class _ProfileHighlights extends StatelessWidget {
                   letterSpacing: 0.3,
                 ),
               ),
+              const Spacer(),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(10),
+                  color: kPulseColor.withAlpha(25),
+                  border: Border.all(color: kPulseColor.withAlpha(80)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: const [
+                    Icon(Icons.bolt, size: 14, color: kPulseColor),
+                    SizedBox(width: 6),
+                    Text(
+                      'Performance',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                  ],
+                ),
+              )
             ],
           ),
-          const SizedBox(height: 18),
-          _HighlightRow(
-            icon: Icons.emoji_events_outlined,
-            label: 'Best lap assoluto',
-            value: bestLapText,
+          const SizedBox(height: 16),
+
+          // Best lap card
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              gradient: LinearGradient(
+                colors: [
+                  kPulseColor.withAlpha(40),
+                  kPulseColor.withAlpha(40),
+                  // const Color(0xFF0F0F15),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              border: Border.all(color: kPulseColor.withAlpha(90)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: kPulseColor.withAlpha(30),
+                        border: Border.all(
+                            color: kPulseColor.withAlpha(120), width: 1),
+                      ),
+                      child:
+                          const Icon(Icons.speed, color: kPulseColor, size: 20),
+                    ),
+                    const SizedBox(width: 12),
+                    const Text(
+                      'Best lap assoluto',
+                      style: TextStyle(
+                        color: kMutedColor,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  bestLapText,
+                  style: const TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0.3,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(10),
+                    color: kBrandColor.withAlpha(25),
+                    border: Border.all(color: kBrandColor.withAlpha(80)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.track_changes,
+                          size: 14, color: kBrandColor),
+                      const SizedBox(width: 4),
+                      Text(
+                        bestLapTrack,
+                        style: const TextStyle(
+                          color: kBrandColor,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 12),
-          _HighlightRow(
-            icon: Icons.flag_circle_outlined,
-            label: 'Sessioni totali',
-            value: sessionsTotal,
-          ),
-          const SizedBox(height: 12),
-          _HighlightRow(
-            icon: Icons.timeline,
-            label: 'Distanza totale',
-            value: distanceTotal,
-          ),
-          const SizedBox(height: 12),
-          _HighlightRow(
-            icon: Icons.emoji_events_outlined,
-            label: 'PB circuiti',
-            value: pbCount,
-          ),
-          const SizedBox(height: 12),
-          _HighlightRow(
-            icon: Icons.flag_outlined,
-            label: 'Giri totali',
-            value: '${stats.totalLaps} giri',
+          const SizedBox(height: 16),
+
+          // Stats grid
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final tileWidth = (constraints.maxWidth - 12) / 2;
+              return Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: [
+                  _HighlightTile(
+                    icon: Icons.flag_circle_outlined,
+                    label: 'Sessioni',
+                    value: sessionsTotal,
+                    accent: kBrandColor,
+                    width: tileWidth,
+                  ),
+                  _HighlightTile(
+                    icon: Icons.timeline,
+                    label: 'Distanza',
+                    value: '$distanceTotal km',
+                    accent: kPulseColor,
+                    width: tileWidth,
+                  ),
+                  _HighlightTile(
+                    icon: Icons.emoji_events_outlined,
+                    label: 'PB',
+                    value: '$pbCount circuiti',
+                    accent: const Color(0xFFFFD166),
+                    width: tileWidth,
+                  ),
+                  _HighlightTile(
+                    icon: Icons.flag_outlined,
+                    label: 'Giri',
+                    value: totalLaps,
+                    accent: Colors.lightBlueAccent,
+                    width: tileWidth,
+                  ),
+                ],
+              );
+            },
           ),
         ],
       ),
@@ -1319,46 +1400,69 @@ class _ProfileHighlights extends StatelessWidget {
   }
 }
 
-class _HighlightRow extends StatelessWidget {
+class _HighlightTile extends StatelessWidget {
   final IconData icon;
   final String label;
   final String value;
+  final Color accent;
+  final double width;
 
-  const _HighlightRow({
+  const _HighlightTile({
     required this.icon,
     required this.label,
     required this.value,
+    required this.accent,
+    required this.width,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      width: width,
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        color: const Color.fromRGBO(255, 255, 255, 0.03),
-        border: Border.all(color: kLineColor.withAlpha(60)),
+        borderRadius: BorderRadius.circular(16),
+        color: accent.withAlpha(15),
+        border: Border.all(color: accent.withAlpha(120), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: accent.withAlpha(40),
+            blurRadius: 12,
+            spreadRadius: -2,
+            offset: const Offset(0, 6),
+          ),
+        ],
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 20, color: kBrandColor),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              label,
-              style: const TextStyle(
-                fontSize: 13,
-                color: kMutedColor,
-                fontWeight: FontWeight.w600,
-              ),
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: accent.withAlpha(30),
+              border: Border.all(color: accent, width: 1.5),
+            ),
+            child: Icon(icon, size: 20, color: accent),
+          ),
+          const SizedBox(height: 14),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              color: accent.withAlpha(200),
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.3,
             ),
           ),
+          const SizedBox(height: 6),
           Text(
             value,
-            style: const TextStyle(
-              fontSize: 14,
+            style: TextStyle(
+              fontSize: 20,
               fontWeight: FontWeight.w900,
-              color: kFgColor,
+              color: accent,
+              letterSpacing: 0.3,
             ),
           ),
         ],
@@ -1455,9 +1559,11 @@ class _SessionCard extends StatelessWidget {
                       kBrandColor.withAlpha(20),
                     ],
                   ),
-                  border: Border.all(color: kBrandColor.withAlpha(100), width: 1),
+                  border:
+                      Border.all(color: kBrandColor.withAlpha(100), width: 1),
                 ),
-                child: const Icon(Icons.track_changes, color: kBrandColor, size: 24),
+                child: const Icon(Icons.track_changes,
+                    color: kBrandColor, size: 24),
               ),
               const SizedBox(width: 14),
 
@@ -1489,7 +1595,8 @@ class _SessionCard extends StatelessWidget {
                     Row(
                       children: [
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(6),
                             color: session.isPublic
@@ -1505,9 +1612,13 @@ class _SessionCard extends StatelessWidget {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(
-                                session.isPublic ? Icons.public : Icons.lock_outline,
+                                session.isPublic
+                                    ? Icons.public
+                                    : Icons.lock_outline,
                                 size: 10,
-                                color: session.isPublic ? kPulseColor : kMutedColor,
+                                color: session.isPublic
+                                    ? kPulseColor
+                                    : kMutedColor,
                               ),
                               const SizedBox(width: 4),
                               Text(
@@ -1515,7 +1626,9 @@ class _SessionCard extends StatelessWidget {
                                 style: TextStyle(
                                   fontSize: 9,
                                   fontWeight: FontWeight.w800,
-                                  color: session.isPublic ? kPulseColor : kMutedColor,
+                                  color: session.isPublic
+                                      ? kPulseColor
+                                      : kMutedColor,
                                 ),
                               ),
                             ],
@@ -1541,7 +1654,8 @@ class _SessionCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(10),
                       gradient: LinearGradient(
@@ -1578,7 +1692,8 @@ class _SessionCard extends StatelessWidget {
               if (onShare != null || onEdit != null || onDelete != null) ...[
                 const SizedBox(width: 8),
                 PopupMenuButton<String>(
-                  icon: const Icon(Icons.more_vert, color: kMutedColor, size: 20),
+                  icon:
+                      const Icon(Icons.more_vert, color: kMutedColor, size: 20),
                   onSelected: (value) {
                     if (value == 'share') {
                       onShare?.call();

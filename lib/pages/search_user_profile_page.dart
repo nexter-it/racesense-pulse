@@ -60,7 +60,6 @@ class _SearchUserProfilePageState extends State<SearchUserProfilePage> {
     });
 
     try {
-      // Carica dati utente e sessioni pubbliche
       final results = await Future.wait([
         _firestoreService.getUserData(widget.userId),
         _sessionService.getUserSessions(
@@ -73,7 +72,6 @@ class _SearchUserProfilePageState extends State<SearchUserProfilePage> {
       final userData = results[0] as Map<String, dynamic>?;
       final sessions = results[1] as List<SessionModel>;
 
-      // Stats direttamente dal doc utente
       final stats = (userData != null && userData['stats'] != null)
           ? UserStats.fromMap(userData['stats'] as Map<String, dynamic>)
           : UserStats.empty();
@@ -87,7 +85,6 @@ class _SearchUserProfilePageState extends State<SearchUserProfilePage> {
           _firestoreService.ensureUsernameForUser(widget.userId, fullName);
         }
 
-        // Crea tag dalle iniziali del nome
         String tag;
         final nameParts = fullName.split(' ');
         if (nameParts.length >= 2 &&
@@ -156,7 +153,6 @@ class _SearchUserProfilePageState extends State<SearchUserProfilePage> {
         });
       }
     } catch (_) {
-      // errore silenzioso, già gestito nel refresh completo
     } finally {
       if (mounted) {
         setState(() {
@@ -184,11 +180,30 @@ class _SearchUserProfilePageState extends State<SearchUserProfilePage> {
                   const EdgeInsets.symmetric(horizontal: 16.0, vertical: 6),
               child: Row(
                 children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back),
-                    onPressed: () => Navigator.of(context).pop(),
+                  Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      gradient: LinearGradient(
+                        colors: [
+                          kBrandColor.withAlpha(40),
+                          kBrandColor.withAlpha(25),
+                        ],
+                      ),
+                      border: Border.all(color: kBrandColor, width: 1.5),
+                    ),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(12),
+                        onTap: () => Navigator.of(context).pop(),
+                        child: const Padding(
+                          padding: EdgeInsets.all(10),
+                          child: Icon(Icons.arrow_back, color: kBrandColor, size: 20),
+                        ),
+                      ),
+                    ),
                   ),
-                  const SizedBox(width: 6),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Text(
                       isMe ? 'Profilo' : _userName,
@@ -207,7 +222,7 @@ class _SearchUserProfilePageState extends State<SearchUserProfilePage> {
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(color: kBrandColor),
-                        color: kBrandColor.withOpacity(0.1),
+                        color: kBrandColor.withAlpha(25),
                       ),
                       child: const Text(
                         'Tu',
@@ -237,19 +252,55 @@ class _SearchUserProfilePageState extends State<SearchUserProfilePage> {
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Icon(Icons.error_outline,
-                                    color: kErrorColor, size: 36),
-                                const SizedBox(height: 8),
+                                Container(
+                                  padding: const EdgeInsets.all(20),
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: kErrorColor.withAlpha(20),
+                                    border: Border.all(color: kErrorColor, width: 2),
+                                  ),
+                                  child: const Icon(Icons.error_outline,
+                                      color: kErrorColor, size: 48),
+                                ),
+                                const SizedBox(height: 16),
                                 const Text(
                                   'Errore nel caricamento profilo.',
                                   style: TextStyle(
                                       color: kErrorColor,
-                                      fontWeight: FontWeight.w700),
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 16),
                                 ),
-                                const SizedBox(height: 8),
-                                TextButton(
-                                  onPressed: _loadUserData,
-                                  child: const Text('Riprova'),
+                                const SizedBox(height: 12),
+                                Container(
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(12),
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        kBrandColor.withAlpha(40),
+                                        kBrandColor.withAlpha(25),
+                                      ],
+                                    ),
+                                    border: Border.all(color: kBrandColor, width: 1.5),
+                                  ),
+                                  child: Material(
+                                    color: Colors.transparent,
+                                    child: InkWell(
+                                      borderRadius: BorderRadius.circular(12),
+                                      onTap: _loadUserData,
+                                      child: const Padding(
+                                        padding: EdgeInsets.symmetric(
+                                            horizontal: 20, vertical: 12),
+                                        child: Text(
+                                          'Riprova',
+                                          style: TextStyle(
+                                            color: kBrandColor,
+                                            fontWeight: FontWeight.w900,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
                                 ),
                               ],
                             ),
@@ -263,62 +314,80 @@ class _SearchUserProfilePageState extends State<SearchUserProfilePage> {
                                 horizontal: 16, vertical: 8),
                             children: [
                               _ProfileHeader(
-                                  name: _userName,
-                                  tag: _userTag,
-                                  username: _username,
-                                  showFollowButton:
-                                      FirebaseAuth.instance.currentUser?.uid !=
-                                          widget.userId,
-                                  isFollowing: _isFollowing,
-                                  onToggleFollow: () async {
-                                    if (FirebaseAuth.instance.currentUser ==
-                                        null) {
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
-                                        const SnackBar(
-                                          content: Text(
-                                              'Devi essere loggato per seguire.'),
-                                        ),
-                                      );
-                                      return;
-                                    }
-                                    try {
-                                      if (_isFollowing) {
-                                        await _followService
-                                            .unfollow(widget.userId);
-                                      } else {
-                                        await _followService
-                                            .follow(widget.userId);
-                                      }
-                                      setState(() {
-                                        _isFollowing = !_isFollowing;
-                                        _followerCount += _isFollowing ? 1 : -1;
-                                      });
-                                    } catch (e) {
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
-                                        SnackBar(
-                                          content: Text('Errore: $e'),
-                                          backgroundColor: kErrorColor,
-                                        ),
-                                      );
-                                    }
-                                  }),
-                              const SizedBox(height: 10),
-                              FollowCounts(
+                                name: _userName,
+                                tag: _userTag,
+                                username: _username,
                                 followerCount: _followerCount,
                                 followingCount: _followingCount,
+                                showFollowButton:
+                                    FirebaseAuth.instance.currentUser?.uid !=
+                                        widget.userId,
+                                isFollowing: _isFollowing,
+                                onToggleFollow: () async {
+                                  if (FirebaseAuth.instance.currentUser ==
+                                      null) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                            'Devi essere loggato per seguire.'),
+                                      ),
+                                    );
+                                    return;
+                                  }
+                                  try {
+                                    if (_isFollowing) {
+                                      await _followService
+                                          .unfollow(widget.userId);
+                                    } else {
+                                      await _followService
+                                          .follow(widget.userId);
+                                    }
+                                    setState(() {
+                                      _isFollowing = !_isFollowing;
+                                      _followerCount += _isFollowing ? 1 : -1;
+                                    });
+                                  } catch (e) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text('Errore: $e'),
+                                        backgroundColor: kErrorColor,
+                                      ),
+                                    );
+                                  }
+                                },
                               ),
                               const SizedBox(height: 14),
                               _ProfileHighlights(stats: _userStats),
-                              const SizedBox(height: 26),
-                              Text(
-                                isMe ? 'Ultime attività' : 'Attività pubbliche',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w900,
-                                  fontSize: 18,
-                                  letterSpacing: 0.4,
-                                ),
+                              const SizedBox(height: 24),
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(10),
+                                      gradient: LinearGradient(
+                                        colors: [
+                                          kBrandColor.withAlpha(30),
+                                          kBrandColor.withAlpha(20),
+                                        ],
+                                      ),
+                                      border: Border.all(
+                                          color: kBrandColor.withAlpha(100),
+                                          width: 1),
+                                    ),
+                                    child: const Icon(Icons.public,
+                                        color: kBrandColor, size: 18),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Text(
+                                    isMe ? 'Ultime attività' : 'Attività pubbliche',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w900,
+                                      fontSize: 18,
+                                      letterSpacing: 0.4,
+                                    ),
+                                  ),
+                                ],
                               ),
                               const SizedBox(height: 12),
                               if ((_showAllSessions
@@ -328,12 +397,29 @@ class _SearchUserProfilePageState extends State<SearchUserProfilePage> {
                                 Center(
                                   child: Padding(
                                     padding: const EdgeInsets.all(32),
-                                    child: Text(
-                                      isMe
-                                          ? 'Nessuna sessione registrata'
-                                          : 'Nessuna sessione pubblica disponibile',
-                                      style:
-                                          const TextStyle(color: kMutedColor),
+                                    child: Column(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.all(20),
+                                          decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            color: kMutedColor.withAlpha(20),
+                                            border: Border.all(
+                                                color: kMutedColor, width: 2),
+                                          ),
+                                          child: const Icon(Icons.directions_run,
+                                              color: kMutedColor, size: 48),
+                                        ),
+                                        const SizedBox(height: 16),
+                                        Text(
+                                          isMe
+                                              ? 'Nessuna sessione registrata'
+                                              : 'Nessuna sessione pubblica disponibile',
+                                          style: const TextStyle(
+                                              color: kMutedColor,
+                                              fontWeight: FontWeight.w600),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 )
@@ -347,50 +433,81 @@ class _SearchUserProfilePageState extends State<SearchUserProfilePage> {
                                   !_hasAllSessions)
                                 Align(
                                   alignment: Alignment.centerLeft,
-                                  child: OutlinedButton.icon(
-                                    onPressed: _sessionsLoadingAll
-                                        ? null
-                                        : () {
-                                            if (_showAllSessions &&
-                                                _allPublicSessions.isNotEmpty) {
-                                              setState(() {
-                                                _showAllSessions = false;
-                                              });
-                                            } else if (_allPublicSessions
-                                                .isNotEmpty) {
-                                              setState(() {
-                                                _showAllSessions = true;
-                                              });
-                                            } else {
-                                              _loadAllPublicSessions();
-                                            }
-                                          },
-                                    icon: _sessionsLoadingAll
-                                        ? const SizedBox(
-                                            width: 14,
-                                            height: 14,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                              valueColor:
-                                                  AlwaysStoppedAnimation(
-                                                      kBrandColor),
-                                            ),
-                                          )
-                                        : Icon(_showAllSessions
-                                            ? Icons.expand_less
-                                            : Icons.expand_more),
-                                    label: Text(_showAllSessions
-                                        ? 'Mostra meno'
-                                        : 'Mostra tutte'),
-                                    style: OutlinedButton.styleFrom(
-                                      side:
-                                          const BorderSide(color: kBrandColor),
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(12),
+                                      gradient: LinearGradient(
+                                        colors: [
+                                          kBrandColor.withAlpha(40),
+                                          kBrandColor.withAlpha(25),
+                                        ],
+                                      ),
+                                      border: Border.all(color: kBrandColor, width: 1.5),
+                                    ),
+                                    child: Material(
+                                      color: Colors.transparent,
+                                      child: InkWell(
+                                        borderRadius: BorderRadius.circular(12),
+                                        onTap: _sessionsLoadingAll
+                                            ? null
+                                            : () {
+                                                if (_showAllSessions &&
+                                                    _allPublicSessions.isNotEmpty) {
+                                                  setState(() {
+                                                    _showAllSessions = false;
+                                                  });
+                                                } else if (_allPublicSessions
+                                                    .isNotEmpty) {
+                                                  setState(() {
+                                                    _showAllSessions = true;
+                                                  });
+                                                } else {
+                                                  _loadAllPublicSessions();
+                                                }
+                                              },
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 16, vertical: 12),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              if (_sessionsLoadingAll)
+                                                const SizedBox(
+                                                  width: 16,
+                                                  height: 16,
+                                                  child: CircularProgressIndicator(
+                                                    strokeWidth: 2,
+                                                    valueColor:
+                                                        AlwaysStoppedAnimation(
+                                                            kBrandColor),
+                                                  ),
+                                                )
+                                              else
+                                                Icon(
+                                                    _showAllSessions
+                                                        ? Icons.expand_less
+                                                        : Icons.expand_more,
+                                                    color: kBrandColor,
+                                                    size: 18),
+                                              const SizedBox(width: 8),
+                                              Text(
+                                                _showAllSessions
+                                                    ? 'Mostra meno'
+                                                    : 'Mostra tutte',
+                                                style: const TextStyle(
+                                                  color: kBrandColor,
+                                                  fontWeight: FontWeight.w900,
+                                                  fontSize: 13,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
                                     ),
                                   ),
                                 ),
-                              const SizedBox(height: 20),
-                              // const _HelpCenterCard(),
-                              // const SizedBox(height: 30),
+                              const SizedBox(height: 30),
                             ],
                           ),
                         ),
@@ -410,6 +527,8 @@ class _ProfileHeader extends StatelessWidget {
   final String name;
   final String tag;
   final String username;
+  final int followerCount;
+  final int followingCount;
   final bool showFollowButton;
   final bool isFollowing;
   final VoidCallback? onToggleFollow;
@@ -418,6 +537,8 @@ class _ProfileHeader extends StatelessWidget {
     required this.name,
     required this.tag,
     required this.username,
+    required this.followerCount,
+    required this.followingCount,
     this.showFollowButton = false,
     this.isFollowing = false,
     this.onToggleFollow,
@@ -447,133 +568,146 @@ class _ProfileHeader extends StatelessWidget {
           ),
         ],
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Avatar tag with gradient ring
-          Container(
-            padding: const EdgeInsets.all(3),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                colors: [
-                  kBrandColor.withAlpha(80),
-                  kPulseColor.withAlpha(60),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-            ),
-            child: Container(
-              width: 82,
-              height: 82,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: const Color(0xFF0A0A0F),
-                boxShadow: [
-                  BoxShadow(
-                    color: kBrandColor.withAlpha(60),
-                    blurRadius: 12,
-                    spreadRadius: 0,
-                  ),
-                ],
-              ),
-              child: Center(
-                child: Text(
-                  tag,
-                  style: const TextStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 1.5,
-                    color: kBrandColor,
+          Row(
+            children: [
+              // Avatar tag with gradient ring
+              Container(
+                padding: const EdgeInsets.all(3),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    colors: [
+                      kBrandColor.withAlpha(80),
+                      kPulseColor.withAlpha(60),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
                 ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 18),
-
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 0.5,
+                child: Container(
+                  width: 82,
+                  height: 82,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: const Color(0xFF0A0A0F),
+                    boxShadow: [
+                      BoxShadow(
+                        color: kBrandColor.withAlpha(60),
+                        blurRadius: 12,
+                        spreadRadius: 0,
+                      ),
+                    ],
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '@$username',
-                  style: const TextStyle(
-                    color: kMutedColor,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                const PulseChip(
-                  label: Text('Accesso PULSE+'),
-                  icon: Icons.bolt,
-                ),
-                if (showFollowButton) ...[
-                  const SizedBox(height: 12),
-                  Material(
-                    color: Colors.transparent,
-                    borderRadius: BorderRadius.circular(12),
-                    child: InkWell(
-                      onTap: onToggleFollow,
-                      borderRadius: BorderRadius.circular(12),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(12),
-                          gradient: isFollowing
-                              ? null
-                              : LinearGradient(
-                                  colors: [
-                                    kBrandColor.withAlpha(40),
-                                    kBrandColor.withAlpha(25),
-                                  ],
-                                ),
-                          border: Border.all(
-                            color: isFollowing ? kMutedColor : kBrandColor,
-                            width: 1.5,
-                          ),
-                          color: isFollowing
-                              ? kMutedColor.withAlpha(20)
-                              : null,
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              isFollowing ? Icons.check : Icons.person_add_alt,
-                              color: isFollowing ? kMutedColor : kBrandColor,
-                              size: 18,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              isFollowing ? 'Segui già' : 'Segui',
-                              style: TextStyle(
-                                color: isFollowing ? kMutedColor : kBrandColor,
-                                fontWeight: FontWeight.w900,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ],
-                        ),
+                  child: Center(
+                    child: Text(
+                      tag,
+                      style: const TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1.5,
+                        color: kBrandColor,
                       ),
                     ),
                   ),
-                ]
-              ],
+                ),
+              ),
+              const SizedBox(width: 18),
+
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '@$username',
+                      style: const TextStyle(
+                        color: kMutedColor,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    const PulseChip(
+                      label: Text('Accesso PULSE+'),
+                      icon: Icons.bolt,
+                    ),
+                  ],
+                ),
+              )
+            ],
+          ),
+          const SizedBox(height: 16),
+          FollowCounts(
+            followerCount: followerCount,
+            followingCount: followingCount,
+          ),
+          if (showFollowButton) ...[
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(14),
+                  gradient: isFollowing
+                      ? null
+                      : LinearGradient(
+                          colors: [
+                            kBrandColor.withAlpha(40),
+                            kBrandColor.withAlpha(25),
+                          ],
+                        ),
+                  border: Border.all(
+                    color: isFollowing ? kMutedColor : kBrandColor,
+                    width: 1.5,
+                  ),
+                  color: isFollowing ? kMutedColor.withAlpha(20) : null,
+                ),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(14),
+                    onTap: onToggleFollow,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 14),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            isFollowing ? Icons.check : Icons.person_add_alt,
+                            color: isFollowing ? kMutedColor : kBrandColor,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 10),
+                          Text(
+                            isFollowing ? 'Segui già' : 'Segui',
+                            style: TextStyle(
+                              color: isFollowing ? kMutedColor : kBrandColor,
+                              fontWeight: FontWeight.w900,
+                              fontSize: 15,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             ),
-          )
+          ]
         ],
       ),
     );
@@ -599,11 +733,13 @@ class _ProfileHighlights extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bestLapText = stats.bestLapEver != null
-        ? '${_formatDuration(stats.bestLapEver!)}${stats.bestLapTrack != null ? ' · ${stats.bestLapTrack}' : ''}'
-        : 'Nessun record';
-    final distanceTotal = '${stats.totalDistanceKm.toStringAsFixed(0)} km';
-    final sessionsTotal = '${stats.totalSessions} sessioni';
-    final pbCount = '${stats.personalBests} circuiti';
+        ? _formatDuration(stats.bestLapEver!)
+        : '—';
+    final bestLapTrack = stats.bestLapTrack ?? 'N/A';
+    final distanceTotal = stats.totalDistanceKm.toStringAsFixed(0);
+    final sessionsTotal = stats.totalSessions.toString();
+    final pbCount = stats.personalBests.toString();
+    final totalLaps = stats.totalLaps.toString();
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -655,37 +791,157 @@ class _ProfileHighlights extends StatelessWidget {
                   letterSpacing: 0.3,
                 ),
               ),
+              const Spacer(),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(10),
+                  color: kPulseColor.withAlpha(25),
+                  border: Border.all(color: kPulseColor.withAlpha(80)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: const [
+                    Icon(Icons.bolt, size: 14, color: kPulseColor),
+                    SizedBox(width: 6),
+                    Text(
+                      'Performance',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                  ],
+                ),
+              )
             ],
           ),
-          const SizedBox(height: 18),
-          _HighlightRow(
-            icon: Icons.emoji_events_outlined,
-            label: 'Best lap assoluto',
-            value: bestLapText,
+          const SizedBox(height: 16),
+
+          // Best lap card
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              gradient: LinearGradient(
+                colors: [
+                  kPulseColor.withAlpha(40),
+                  kBrandColor.withAlpha(40),
+                  const Color(0xFF0F0F15),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              border: Border.all(color: kPulseColor.withAlpha(90)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: kPulseColor.withAlpha(30),
+                        border: Border.all(
+                            color: kPulseColor.withAlpha(120), width: 1),
+                      ),
+                      child: const Icon(Icons.speed, color: kPulseColor, size: 20),
+                    ),
+                    const SizedBox(width: 12),
+                    const Text(
+                      'Best lap assoluto',
+                      style: TextStyle(
+                        color: kMutedColor,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  bestLapText,
+                  style: const TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0.3,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(10),
+                    color: kBrandColor.withAlpha(25),
+                    border: Border.all(color: kBrandColor.withAlpha(80)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.track_changes,
+                          size: 14, color: kBrandColor),
+                      const SizedBox(width: 4),
+                      Text(
+                        bestLapTrack,
+                        style: const TextStyle(
+                          color: kBrandColor,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 12),
-          _HighlightRow(
-            icon: Icons.flag_circle_outlined,
-            label: 'Sessioni totali',
-            value: sessionsTotal,
-          ),
-          const SizedBox(height: 12),
-          _HighlightRow(
-            icon: Icons.timeline,
-            label: 'Distanza totale',
-            value: distanceTotal,
-          ),
-          const SizedBox(height: 12),
-          _HighlightRow(
-            icon: Icons.emoji_events_outlined,
-            label: 'PB circuiti',
-            value: pbCount,
-          ),
-          const SizedBox(height: 12),
-          _HighlightRow(
-            icon: Icons.flag_outlined,
-            label: 'Giri totali',
-            value: '${stats.totalLaps} giri',
+          const SizedBox(height: 16),
+
+          // Stats grid
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final tileWidth = (constraints.maxWidth - 12) / 2;
+              return Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: [
+                  _HighlightTile(
+                    icon: Icons.flag_circle_outlined,
+                    label: 'Sessioni',
+                    value: sessionsTotal,
+                    accent: kBrandColor,
+                    width: tileWidth,
+                  ),
+                  _HighlightTile(
+                    icon: Icons.timeline,
+                    label: 'Distanza',
+                    value: '$distanceTotal km',
+                    accent: kPulseColor,
+                    width: tileWidth,
+                  ),
+                  _HighlightTile(
+                    icon: Icons.emoji_events_outlined,
+                    label: 'PB',
+                    value: '$pbCount circuiti',
+                    accent: const Color(0xFFFFD166),
+                    width: tileWidth,
+                  ),
+                  _HighlightTile(
+                    icon: Icons.flag_outlined,
+                    label: 'Giri',
+                    value: totalLaps,
+                    accent: Colors.lightBlueAccent,
+                    width: tileWidth,
+                  ),
+                ],
+              );
+            },
           ),
         ],
       ),
@@ -693,46 +949,74 @@ class _ProfileHighlights extends StatelessWidget {
   }
 }
 
-class _HighlightRow extends StatelessWidget {
+class _HighlightTile extends StatelessWidget {
   final IconData icon;
   final String label;
   final String value;
+  final Color accent;
+  final double width;
 
-  const _HighlightRow({
+  const _HighlightTile({
     required this.icon,
     required this.label,
     required this.value,
+    required this.accent,
+    required this.width,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      width: width,
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
         color: const Color.fromRGBO(255, 255, 255, 0.03),
-        border: Border.all(color: kLineColor.withAlpha(60)),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, size: 20, color: kBrandColor),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              label,
-              style: const TextStyle(
-                fontSize: 13,
-                color: kMutedColor,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+        border: Border.all(color: kLineColor.withAlpha(70)),
+        boxShadow: [
+          BoxShadow(
+            color: accent.withAlpha(60),
+            blurRadius: 10,
+            spreadRadius: -4,
+            offset: const Offset(0, 8),
           ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: accent.withAlpha(25),
+                  border: Border.all(color: accent.withAlpha(100)),
+                ),
+                child: Icon(icon, size: 18, color: accent),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: kMutedColor,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
           Text(
             value,
             style: const TextStyle(
-              fontSize: 14,
+              fontSize: 18,
               fontWeight: FontWeight.w900,
               color: kFgColor,
+              letterSpacing: 0.3,
             ),
           ),
         ],
