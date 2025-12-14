@@ -135,10 +135,25 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
 
   // Delta stile "+0.3" / "-0.1"
   String _formatDeltaBig() {
-    if (_previousLap == null || _bestLap == null) return '---';
+    if (_previousLap == null) return '---';
+
+    // Se non c'è best lap o abbiamo fatto solo 1 giro, non c'è delta
+    if (_bestLap == null || _laps.length <= 1) return '---';
+
+    // Se previousLap È il best lap (appena migliorato), confronta con il secondo miglior tempo
+    Duration referenceTime;
+    if (_previousLap == _bestLap) {
+      // Trova il secondo miglior tempo (escludendo l'ultimo giro che è il best)
+      final otherLaps = _laps.sublist(0, _laps.length - 1);
+      if (otherLaps.isEmpty) return '---';
+      referenceTime = otherLaps.reduce((a, b) => a < b ? a : b);
+    } else {
+      // Usa il best lap come riferimento
+      referenceTime = _bestLap!;
+    }
 
     final diffSeconds =
-        (_previousLap!.inMilliseconds - _bestLap!.inMilliseconds) / 1000.0;
+        (_previousLap!.inMilliseconds - referenceTime.inMilliseconds) / 1000.0;
     final sign = diffSeconds > 0 ? '+' : '';
     return '$sign${diffSeconds.toStringAsFixed(1)}';
   }
@@ -287,6 +302,11 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
   }
 
   Position _bleGpsDataToPosition(GpsData gpsData) {
+    // IMPORTANTE: Il BLE GPS fornisce già la velocità in km/h
+    // Convertiamo in m/s per compatibilità con Position (che usa m/s)
+    final speedKmh = gpsData.speed ?? 0.0;
+    final speedMs = speedKmh / 3.6; // km/h -> m/s
+
     return Position(
       longitude: gpsData.position.longitude,
       latitude: gpsData.position.latitude,
@@ -296,7 +316,7 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
       altitudeAccuracy: 3.0,
       heading: 0.0,
       headingAccuracy: 1.0,
-      speed: gpsData.speed ?? 0.0,
+      speed: speedMs, // Ora in m/s come da standard Position
       speedAccuracy: 0.5,
       floor: null,
       isMocked: false,
@@ -916,7 +936,8 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
       _previousLap = lapTime;
       _lastLapMark = crossingTime;
 
-      // Aggiorna best lap
+      // Aggiorna best lap DOPO aver impostato previousLap
+      // In questo modo _formatDeltaBig() può confrontare _previousLap con il best lap corrente
       if (_bestLap == null || lapTime < _bestLap!) {
         _bestLap = lapTime;
       }
@@ -1033,6 +1054,7 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
           gpsAccuracyHistory: _gpsAccuracyHistory,
           timeHistory: _timeHistory,
           trackDefinition: widget.trackDefinition,
+          usedBleDevice: _isUsingBleGps,
         ),
       ),
     );
@@ -1063,9 +1085,20 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
   }
 
   String _formatDelta() {
-    if (_previousLap == null || _bestLap == null) return '---';
+    if (_previousLap == null) return '---';
+    if (_bestLap == null || _laps.length <= 1) return '---';
 
-    final deltaMs = _previousLap!.inMilliseconds - _bestLap!.inMilliseconds;
+    // Se previousLap È il best lap (appena migliorato), confronta con il secondo miglior tempo
+    Duration referenceTime;
+    if (_previousLap == _bestLap) {
+      final otherLaps = _laps.sublist(0, _laps.length - 1);
+      if (otherLaps.isEmpty) return '---';
+      referenceTime = otherLaps.reduce((a, b) => a < b ? a : b);
+    } else {
+      referenceTime = _bestLap!;
+    }
+
+    final deltaMs = _previousLap!.inMilliseconds - referenceTime.inMilliseconds;
     final sign = deltaMs >= 0 ? '+' : '';
     return '$sign${(deltaMs / 1000).toStringAsFixed(2)}';
   }

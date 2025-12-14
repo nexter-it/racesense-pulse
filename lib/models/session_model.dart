@@ -1,6 +1,8 @@
 import 'package:geolocator/geolocator.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:latlong2/latlong.dart';
 import 'dart:math' as math;
+import 'track_definition.dart';
 
 /// Modello per una sessione di tracciamento
 ///
@@ -64,6 +66,12 @@ class SessionModel {
 
   final List<Map<String, double>>? displayPath;
 
+  // Definizione circuito tracciato (se usato)
+  final TrackDefinition? trackDefinition;
+
+  // Indica se è stato usato un dispositivo BLE GPS
+  final bool usedBleDevice;
+
   SessionModel({
     required this.sessionId,
     required this.userId,
@@ -86,6 +94,8 @@ class SessionModel {
     required this.avgGpsAccuracy,
     required this.gpsSampleRateHz,
     this.displayPath,
+    this.trackDefinition,
+    this.usedBleDevice = false,
   });
 
   // Converti in Map per Firestore
@@ -111,11 +121,17 @@ class SessionModel {
       'maxGForce': maxGForce,
       'avgGpsAccuracy': avgGpsAccuracy,
       'gpsSampleRateHz': gpsSampleRateHz,
+      'usedBleDevice': usedBleDevice,
     };
 
     // 👇 AGGIUNTO
     if (displayPath != null) {
       data['displayPath'] = displayPath;
+    }
+
+    // Salva trackDefinition se presente
+    if (trackDefinition != null) {
+      data['trackDefinition'] = trackDefinition!.toMap();
     }
 
     return data;
@@ -147,6 +163,8 @@ class SessionModel {
       avgGpsAccuracy: avgGpsAccuracy,
       gpsSampleRateHz: gpsSampleRateHz,
       displayPath: displayPath,
+      trackDefinition: trackDefinition,
+      usedBleDevice: usedBleDevice,
     );
   }
 
@@ -165,6 +183,13 @@ class SessionModel {
                 'lon': (m['lon'] as num).toDouble(),
               })
           .toList();
+    }
+
+    // 👇 Parsing opzionale di trackDefinition
+    TrackDefinition? trackDefinition;
+    final rawTrackDef = data['trackDefinition'] as Map<String, dynamic>?;
+    if (rawTrackDef != null) {
+      trackDefinition = TrackDefinition.fromMap(rawTrackDef);
     }
 
     return SessionModel(
@@ -197,7 +222,9 @@ class SessionModel {
       maxGForce: (data['maxGForce'] as num).toDouble(),
       avgGpsAccuracy: (data['avgGpsAccuracy'] as num).toDouble(),
       gpsSampleRateHz: data['gpsSampleRateHz'] as int,
-      displayPath: displayPath, // 👈 AGGIUNTO
+      displayPath: displayPath,
+      trackDefinition: trackDefinition, // 👈 AGGIUNTO
+      usedBleDevice: data['usedBleDevice'] as bool? ?? false,
     );
   }
 }

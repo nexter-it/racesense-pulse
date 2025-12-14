@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:geolocator/geolocator.dart';
 import 'dart:math' as math;
 import '../models/session_model.dart';
+import '../models/track_definition.dart';
 
 double _roundDouble(double value, int decimals) {
   // 👈 AGGIUNTO
@@ -29,8 +30,13 @@ class SessionService {
     required List<double> gForceHistory, // fused accel/decel in g
     required List<double> gpsAccuracyHistory,
     required List<Duration> timeHistory,
+    TrackDefinition? trackDefinition, // Optional: circuito tracciato usato
+    bool usedBleDevice = false, // Indica se è stato usato un dispositivo BLE GPS
+    Function(double)? onProgress, // Callback per progresso (0.0 - 1.0)
   }) async {
     try {
+      onProgress?.call(0.1); // 10% - Inizio calcolo statistiche
+
       // Calcola statistiche
       final rawDistance = _calculateDistance(gpsTrack);
       final distance = _roundDouble(rawDistance, 1); // es. 5.3 km
@@ -60,8 +66,12 @@ class SessionService {
 
       final sampleRate = _calculateGpsSampleRate(timeHistory);
 
+      onProgress?.call(0.2); // 20% - Statistiche calcolate
+
       // 👇 AGGIUNGI QUESTO
       final displayPath = _buildDisplayPath(gpsTrack, maxPoints: 200);
+
+      onProgress?.call(0.3); // 30% - Display path creato
 
       // Crea il modello della sessione
       final sessionModel = SessionModel(
@@ -86,7 +96,11 @@ class SessionService {
         avgGpsAccuracy: avgAccuracy,
         gpsSampleRateHz: sampleRate,
         displayPath: displayPath,
+        trackDefinition: trackDefinition,
+        usedBleDevice: usedBleDevice, // 👈 AGGIUNTO
       );
+
+      onProgress?.call(0.4); // 40% - Modello creato
 
       // 1. Salva documento sessione principale
       final sessionRef = await _firestore.collection('sessions').add(
@@ -94,13 +108,19 @@ class SessionService {
           );
       final sessionId = sessionRef.id;
 
+      onProgress?.call(0.5); // 50% - Sessione principale salvata
+
       // 👇 AGGIUNGI: path semplificato per feed/profilo
       await sessionRef.update({
         'displayPath': displayPath,
       });
 
+      onProgress?.call(0.6); // 60% - Display path aggiornato
+
       // 2. Salva giri in sub-collection
       await _saveLaps(sessionId, laps, speedHistory, timeHistory);
+
+      onProgress?.call(0.75); // 75% - Giri salvati
 
       // 3. Salva dati GPS in chunks (opzionale, caricato solo in dettaglio)
       await _saveGpsData(
@@ -110,8 +130,12 @@ class SessionService {
         gForceHistory,
       );
 
+      onProgress?.call(0.9); // 90% - Dati GPS salvati
+
       // 4. Aggiorna statistiche utente
       await _updateUserStats(userId, distance, laps.length, bestLap, trackName);
+
+      onProgress?.call(1.0); // 100% - Completato
 
       return sessionId;
     } catch (e) {

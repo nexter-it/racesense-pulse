@@ -27,6 +27,7 @@ class SessionRecapPage extends StatelessWidget {
   final List<double> gpsAccuracyHistory;
   final List<Duration> timeHistory;
   final TrackDefinition? trackDefinition;
+  final bool usedBleDevice;
 
   const SessionRecapPage({
     super.key,
@@ -40,6 +41,7 @@ class SessionRecapPage extends StatelessWidget {
     required this.gpsAccuracyHistory,
     required this.timeHistory,
     this.trackDefinition,
+    this.usedBleDevice = false,
   });
 
   String _formatDuration(Duration d) {
@@ -134,14 +136,64 @@ class SessionRecapPage extends StatelessWidget {
 
     if (metadata == null) return; // Utente ha annullato
 
-    // Mostra loading
+    // Mostra loading con progress
     if (!context.mounted) return;
+    final progressNotifier = ValueNotifier<double>(0.0);
+
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const Center(
-        child: CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(kBrandColor),
+      builder: (context) => ValueListenableBuilder<double>(
+        valueListenable: progressNotifier,
+        builder: (context, progress, _) => Center(
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 40),
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF1A1A20), Color(0xFF0F0F15)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: kLineColor),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.cloud_upload, color: kBrandColor, size: 48),
+                const SizedBox(height: 16),
+                const Text(
+                  'Caricamento sessione',
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: Colors.white,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: LinearProgressIndicator(
+                    value: progress,
+                    minHeight: 8,
+                    backgroundColor: kLineColor,
+                    valueColor:
+                        const AlwaysStoppedAnimation<Color>(kBrandColor),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  '${(progress * 100).toInt()}%',
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w900,
+                    color: kBrandColor,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -170,6 +222,11 @@ class SessionRecapPage extends StatelessWidget {
         gForceHistory: gForceHistory,
         gpsAccuracyHistory: gpsAccuracyHistory,
         timeHistory: timeHistory,
+        trackDefinition: trackDefinition,
+        usedBleDevice: usedBleDevice,
+        onProgress: (progress) {
+          progressNotifier.value = progress;
+        },
       );
 
       if (!context.mounted) return;
@@ -455,8 +512,7 @@ class _HeroStatsGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bestLapStr =
-        bestLap != null ? _formatDuration(bestLap!) : '--:--';
+    final bestLapStr = bestLap != null ? _formatDuration(bestLap!) : '--:--';
     final totalTimeStr = _formatDuration(totalDuration);
 
     return Column(
@@ -1061,21 +1117,11 @@ class _MapSection extends StatelessWidget {
                         'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                     userAgentPackageName: 'com.racesense.pulse',
                   ),
-                  // Custom circuit path (dark professional color)
+                  // Circuit track with width (premium rendering)
                   if (trackDefinition?.trackPath != null &&
                       trackDefinition!.trackPath!.isNotEmpty)
-                    PolylineLayer(
-                      polylines: [
-                        Polyline(
-                          points: trackDefinition!.trackPath!,
-                          strokeWidth: 3.0,
-                          color: const Color(0xFF3A3A3A),
-                          borderStrokeWidth: 1.5,
-                          borderColor: Colors.black.withOpacity(0.3),
-                        ),
-                      ],
-                    ),
-                  // User session path (fluo brand color)
+                    ..._buildCircuitLayers(trackDefinition!),
+                  // User session path (fluo brand color on top)
                   PolylineLayer(
                     polylines: [
                       Polyline(
@@ -1134,6 +1180,127 @@ class _MapSection extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  /// Calcola i bordi del circuito (interno ed esterno) basandosi sulla linea centrale
+  List<Widget> _buildCircuitLayers(TrackDefinition track) {
+    if (track.trackPath == null || track.trackPath!.isEmpty) {
+      return [];
+    }
+
+    final centerLine = track.trackPath!;
+    final width = track.widthMeters ?? 10.0; // Default 10m se non specificato
+    final halfWidth = width / 2;
+
+    // Calcola i bordi usando normali perpendicolari
+    final List<LatLng> innerBorder = [];
+    final List<LatLng> outerBorder = [];
+
+    for (int i = 0; i < centerLine.length; i++) {
+      final current = centerLine[i];
+
+      // Calcola la direzione della tangente
+      LatLng tangent;
+      if (i == 0) {
+        // Primo punto: usa direzione verso il prossimo
+        tangent = _subtractLatLng(centerLine[i + 1], current);
+      } else if (i == centerLine.length - 1) {
+        // Ultimo punto: usa direzione dal precedente
+        tangent = _subtractLatLng(current, centerLine[i - 1]);
+      } else {
+        // Punto intermedio: media delle direzioni
+        final prev = _subtractLatLng(current, centerLine[i - 1]);
+        final next = _subtractLatLng(centerLine[i + 1], current);
+        tangent = LatLng(
+          (prev.latitude + next.latitude) / 2,
+          (prev.longitude + next.longitude) / 2,
+        );
+      }
+
+      // Normalizza la tangente
+      final tangentLen = math.sqrt(
+        tangent.latitude * tangent.latitude +
+            tangent.longitude * tangent.longitude,
+      );
+      if (tangentLen < 1e-10) continue;
+
+      final tangentNorm = LatLng(
+        tangent.latitude / tangentLen,
+        tangent.longitude / tangentLen,
+      );
+
+      // Calcola la normale (perpendicolare, ruotata di 90°)
+      final normal = LatLng(-tangentNorm.longitude, tangentNorm.latitude);
+
+      // Converti halfWidth da metri a gradi (approssimazione)
+      // 1 grado di latitudine ≈ 111km
+      final halfWidthDegrees = halfWidth / 111000.0;
+
+      // Calcola i punti dei bordi
+      innerBorder.add(LatLng(
+        current.latitude - normal.latitude * halfWidthDegrees,
+        current.longitude - normal.longitude * halfWidthDegrees,
+      ));
+      outerBorder.add(LatLng(
+        current.latitude + normal.latitude * halfWidthDegrees,
+        current.longitude + normal.longitude * halfWidthDegrees,
+      ));
+    }
+
+    return [
+      // Poligono del circuito (area tra bordo interno ed esterno)
+      PolygonLayer(
+        polygons: [
+          Polygon(
+            points: [
+              ...innerBorder,
+              ...outerBorder.reversed,
+            ],
+            color: const Color(0xFF2A2A35).withAlpha(180),
+            borderStrokeWidth: 0,
+          ),
+        ],
+      ),
+      // Bordo interno (più scuro)
+      PolylineLayer(
+        polylines: [
+          Polyline(
+            points: innerBorder,
+            strokeWidth: 2.5,
+            color: const Color(0xFF1A1A25),
+            borderStrokeWidth: 1.0,
+            borderColor: Colors.black.withAlpha(128),
+          ),
+        ],
+      ),
+      // Bordo esterno (più scuro)
+      PolylineLayer(
+        polylines: [
+          Polyline(
+            points: outerBorder,
+            strokeWidth: 2.5,
+            color: const Color(0xFF1A1A25),
+            borderStrokeWidth: 1.0,
+            borderColor: Colors.black.withAlpha(128),
+          ),
+        ],
+      ),
+      // Linea centrale (opzionale, sottile e tratteggiata visivamente)
+      PolylineLayer(
+        polylines: [
+          Polyline(
+            points: centerLine,
+            strokeWidth: 1.0,
+            color: const Color(0xFF3A3A45).withAlpha(128),
+          ),
+        ],
+      ),
+    ];
+  }
+
+  /// Helper per sottrarre coordinate LatLng
+  LatLng _subtractLatLng(LatLng a, LatLng b) {
+    return LatLng(a.latitude - b.latitude, a.longitude - b.longitude);
   }
 }
 
@@ -1763,13 +1930,16 @@ class _SessionOverviewPanelState extends State<_SessionOverviewPanel> {
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 _metricValue('t', '${curT.toStringAsFixed(2)}s', kBrandColor),
-                Container(width: 1, height: 30, color: kLineColor.withAlpha(80)),
+                Container(
+                    width: 1, height: 30, color: kLineColor.withAlpha(80)),
                 _metricValue('v', '${curSpeed.toStringAsFixed(1)} km/h',
                     const Color(0xFFFF4D4F)),
-                Container(width: 1, height: 30, color: kLineColor.withAlpha(80)),
+                Container(
+                    width: 1, height: 30, color: kLineColor.withAlpha(80)),
                 _metricValue(
                     'g', '${curG.toStringAsFixed(2)}', const Color(0xFF4CD964)),
-                Container(width: 1, height: 30, color: kLineColor.withAlpha(80)),
+                Container(
+                    width: 1, height: 30, color: kLineColor.withAlpha(80)),
                 _metricValue('acc', '${curAcc.toStringAsFixed(1)} m',
                     const Color(0xFF5AC8FA)),
               ],

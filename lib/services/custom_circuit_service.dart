@@ -1,9 +1,10 @@
-import 'dart:convert';
-import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:latlong2/latlong.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
+import '../models/track_definition.dart';
+import 'track_service.dart';
 
 class CustomCircuitInfo {
   final String name;
@@ -137,6 +138,50 @@ class CustomCircuitInfo {
 
     return sectors;
   }
+
+  /// Converti CustomCircuitInfo in TrackDefinition per Firebase
+  TrackDefinition toTrackDefinition() {
+    // La linea del via è definita dal primo micro settore
+    final finishLine = microSectors.isNotEmpty
+        ? microSectors.first
+        : MicroSector(start: points.first, end: points.first);
+
+    return TrackDefinition(
+      id: name.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '_'),
+      name: name,
+      location: '$city, $country',
+      finishLineStart: finishLine.start,
+      finishLineEnd: finishLine.end,
+      estimatedLengthMeters: lengthMeters,
+      trackPath: points,
+      widthMeters: widthMeters,
+      microSectors: microSectors
+          .map((s) => TrackMicroSector(start: s.start, end: s.end))
+          .toList(),
+    );
+  }
+
+  /// Crea CustomCircuitInfo da TrackWithMetadata (Firebase)
+  factory CustomCircuitInfo.fromTrackWithMetadata(TrackWithMetadata track) {
+    final trackDef = track.trackDefinition;
+
+    return CustomCircuitInfo(
+      name: trackDef.name,
+      widthMeters: trackDef.widthMeters ?? 8.0,
+      city: trackDef.location.split(',').first.trim(),
+      country: trackDef.location.contains(',')
+          ? trackDef.location.split(',').last.trim()
+          : '',
+      lengthMeters: trackDef.estimatedLengthMeters ?? 0.0,
+      createdAt: track.createdAt,
+      points: trackDef.trackPath ?? [],
+      microSectors: trackDef.microSectors
+              ?.map((s) => MicroSector(start: s.start, end: s.end))
+              .toList() ??
+          [],
+      usedBleDevice: false, // Info non salvata in TrackDefinition
+    );
+  }
 }
 
 class MicroSector {
@@ -169,48 +214,65 @@ class MicroSector {
 }
 
 class CustomCircuitService {
-  static const _folderName = 'custom_circuits';
+  final TrackService _trackService = TrackService();
 
-  Future<Directory> _getDir() async {
-    final base = await getApplicationDocumentsDirectory();
-    final dir = Directory('${base.path}/$_folderName');
-    if (!await dir.exists()) {
-      await dir.create(recursive: true);
+  /// Salva un circuito su Firebase
+  /// Usa TrackService per scalabilità e condivisione
+  Future<String> saveCircuit(CustomCircuitInfo circuit) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      throw Exception('User not authenticated');
     }
-    return dir;
+
+    // Converti CustomCircuitInfo in TrackDefinition
+    final trackDefinition = circuit.toTrackDefinition();
+
+    // Salva su Firebase (di default privato, l'utente può renderlo pubblico dopo)
+    final trackId = await _trackService.saveTrack(
+      userId: user.uid,
+      trackDefinition: trackDefinition,
+      isPublic: false,
+    );
+
+    return trackId;
   }
 
+  /// Ottieni tutti i circuiti dell'utente corrente da Firebase
   Future<List<CustomCircuitInfo>> listCircuits() async {
-    try {
-      final dir = await _getDir();
-      final files = dir
-          .listSync()
-          .whereType<File>()
-          .where((f) => f.path.endsWith('.json'))
-          .toList();
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      return [];
+    }
 
-      final List<CustomCircuitInfo> circuits = [];
-      for (final file in files) {
-        final raw = await file.readAsString();
-        final data = jsonDecode(raw) as Map<String, dynamic>;
-        circuits.add(CustomCircuitInfo.fromJson(data));
-      }
-      circuits.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-      return circuits;
-    } catch (_) {
+    try {
+      final tracksWithMetadata = await _trackService.getUserTracks(user.uid);
+
+      // Converti TrackWithMetadata in CustomCircuitInfo
+      return tracksWithMetadata
+          .map((track) => CustomCircuitInfo.fromTrackWithMetadata(track))
+          .toList();
+    } catch (e) {
+      print('❌ Errore caricamento circuiti: $e');
       return [];
     }
   }
 
-  Future<void> saveCircuit(CustomCircuitInfo circuit) async {
-    final dir = await _getDir();
-    final safeName = circuit.name
-        .toLowerCase()
-        .replaceAll(RegExp(r'[^a-z0-9]+'), '_')
-        .replaceAll(RegExp(r'_+'), '_')
-        .replaceAll(RegExp(r'^_|_$'), '');
-    final file = File('${dir.path}/${safeName.isEmpty ? 'circuit' : safeName}_${DateTime.now().millisecondsSinceEpoch}.json');
-    final raw = jsonEncode(circuit.toJson());
-    await file.writeAsString(raw);
+  /// Elimina un circuito
+  Future<void> deleteCircuit(String trackId) async {
+    await _trackService.deleteTrack(trackId);
+  }
+
+  /// Aggiorna un circuito esistente
+  Future<void> updateCircuit({
+    required String trackId,
+    required CustomCircuitInfo circuit,
+    bool? isPublic,
+  }) async {
+    final trackDefinition = circuit.toTrackDefinition();
+    await _trackService.updateTrack(
+      trackId: trackId,
+      trackDefinition: trackDefinition,
+      isPublic: isPublic,
+    );
   }
 }

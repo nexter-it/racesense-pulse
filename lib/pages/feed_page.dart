@@ -1006,6 +1006,42 @@ class _ActivityCard extends StatelessWidget {
                                 ),
                               ),
                             ),
+                          if (session.usedBleDevice)
+                            Padding(
+                              padding: EdgeInsets.only(
+                                  top: (isFollowed || isNearby) ? 6.0 : 0),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(8),
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      const Color(0xFFFF9500).withAlpha(40),
+                                      const Color(0xFFFF6B00).withAlpha(40),
+                                    ],
+                                  ),
+                                  border: Border.all(
+                                      color: const Color(0xFFFF9500), width: 1),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: const [
+                                    Icon(Icons.bluetooth_connected,
+                                        color: Color(0xFFFF9500), size: 12),
+                                    SizedBox(width: 4),
+                                    Text(
+                                      'BLE',
+                                      style: TextStyle(
+                                        color: Color(0xFFFF9500),
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
                         ],
                       ),
                     ],

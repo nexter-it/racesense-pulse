@@ -9,6 +9,7 @@ import '../theme.dart';
 import '../widgets/pulse_background.dart';
 import '../widgets/pulse_chip.dart';
 import '../models/session_model.dart';
+import '../models/track_definition.dart';
 import '../services/session_service.dart';
 import '../services/engagement_service.dart';
 import 'search_user_profile_page.dart';
@@ -43,6 +44,40 @@ class _ActivityDetailPageState extends State<ActivityDetailPage> {
     if (_isLoading) {
       _loadSessionData();
     }
+  }
+
+  /// Ottiene la definizione del circuito se disponibile
+  TrackDefinition? _getTrackDefinition() {
+    // 1. Check if session already has trackDefinition (from Firebase)
+    if (_session.trackDefinition != null) {
+      return _session.trackDefinition;
+    }
+
+    // 2. Try to find predefined track by name
+    final predefined = PredefinedTracks.findById(_session.trackName.toLowerCase());
+    if (predefined != null) {
+      return predefined;
+    }
+
+    // 3. If session has displayPath, create a custom TrackDefinition
+    // This is a fallback for old sessions that don't have trackDefinition stored
+    if (_session.displayPath != null && _session.displayPath!.isNotEmpty) {
+      final path = _session.displayPath!
+          .map((p) => ll.LatLng(p['lat']!, p['lon']!))
+          .toList();
+
+      return TrackDefinition(
+        id: 'custom_${_session.sessionId}',
+        name: _session.trackName,
+        location: _session.location,
+        finishLineStart: path.first,
+        finishLineEnd: path.length > 1 ? path[1] : path.first,
+        trackPath: path,
+        widthMeters: 10.0, // Default width
+      );
+    }
+
+    return null;
   }
 
   Future<void> _loadSessionData() async {
@@ -262,6 +297,7 @@ class _ActivityDetailPageState extends State<ActivityDetailPage> {
                       _MapSection(
                         path: smoothPath,
                         trackName: _session.trackName,
+                        trackDefinition: _getTrackDefinition(),
                       ),
                     const SizedBox(height: 24),
 
@@ -281,6 +317,7 @@ class _ActivityDetailPageState extends State<ActivityDetailPage> {
                       avgAccuracy: _session.avgGpsAccuracy,
                       sampleRateHz: _session.gpsSampleRateHz,
                       points: _gpsData.length,
+                      deviceName: _session.usedBleDevice ? 'BLE GPS 15Hz' : 'Cellular GPS',
                     ),
                     const SizedBox(height: 24),
 
@@ -1048,11 +1085,129 @@ class _LapTimesList extends StatelessWidget {
 class _MapSection extends StatelessWidget {
   final List<ll.LatLng> path;
   final String trackName;
+  final TrackDefinition? trackDefinition;
 
   const _MapSection({
     required this.path,
     required this.trackName,
+    this.trackDefinition,
   });
+
+  /// Calcola i bordi del circuito (interno ed esterno) basandosi sulla linea centrale
+  List<Widget> _buildCircuitLayers(TrackDefinition track) {
+    if (track.trackPath == null || track.trackPath!.isEmpty) {
+      return [];
+    }
+
+    final centerLine = track.trackPath!;
+    final width = track.widthMeters ?? 10.0;
+    final halfWidth = width / 2;
+
+    final List<ll.LatLng> innerBorder = [];
+    final List<ll.LatLng> outerBorder = [];
+
+    for (int i = 0; i < centerLine.length; i++) {
+      final current = centerLine[i];
+
+      // Calculate tangent direction
+      ll.LatLng tangent;
+      if (i == 0) {
+        tangent = _subtractLatLng(centerLine[i + 1], current);
+      } else if (i == centerLine.length - 1) {
+        tangent = _subtractLatLng(current, centerLine[i - 1]);
+      } else {
+        final prev = _subtractLatLng(current, centerLine[i - 1]);
+        final next = _subtractLatLng(centerLine[i + 1], current);
+        tangent = ll.LatLng(
+          (prev.latitude + next.latitude) / 2,
+          (prev.longitude + next.longitude) / 2,
+        );
+      }
+
+      // Normalize tangent
+      final tangentLen = math.sqrt(
+        tangent.latitude * tangent.latitude +
+            tangent.longitude * tangent.longitude,
+      );
+      if (tangentLen < 1e-10) continue;
+
+      final tangentNorm = ll.LatLng(
+        tangent.latitude / tangentLen,
+        tangent.longitude / tangentLen,
+      );
+
+      // Calculate perpendicular normal
+      final normal = ll.LatLng(-tangentNorm.longitude, tangentNorm.latitude);
+
+      // Convert halfWidth from meters to degrees (approx 111km per degree)
+      final halfWidthDegrees = halfWidth / 111000.0;
+
+      // Calculate border points
+      innerBorder.add(ll.LatLng(
+        current.latitude - normal.latitude * halfWidthDegrees,
+        current.longitude - normal.longitude * halfWidthDegrees,
+      ));
+      outerBorder.add(ll.LatLng(
+        current.latitude + normal.latitude * halfWidthDegrees,
+        current.longitude + normal.longitude * halfWidthDegrees,
+      ));
+    }
+
+    return [
+      // Circuit polygon (area between inner and outer borders)
+      PolygonLayer(
+        polygons: [
+          Polygon(
+            points: [
+              ...innerBorder,
+              ...outerBorder.reversed,
+            ],
+            color: const Color(0xFF2A2A35).withAlpha(180),
+            borderStrokeWidth: 0,
+          ),
+        ],
+      ),
+      // Inner border
+      PolylineLayer(
+        polylines: [
+          Polyline(
+            points: innerBorder,
+            strokeWidth: 2.5,
+            color: const Color(0xFF1A1A25),
+            borderStrokeWidth: 1.0,
+            borderColor: Colors.black.withAlpha(128),
+          ),
+        ],
+      ),
+      // Outer border
+      PolylineLayer(
+        polylines: [
+          Polyline(
+            points: outerBorder,
+            strokeWidth: 2.5,
+            color: const Color(0xFF1A1A25),
+            borderStrokeWidth: 1.0,
+            borderColor: Colors.black.withAlpha(128),
+          ),
+        ],
+      ),
+      // Center line (optional, thin)
+      PolylineLayer(
+        polylines: [
+          Polyline(
+            points: centerLine,
+            strokeWidth: 1.0,
+            color: const Color(0xFF3A3A45).withAlpha(128),
+          ),
+        ],
+      ),
+    ];
+  }
+
+  /// Helper per sottrarre LatLng
+  ll.LatLng _subtractLatLng(ll.LatLng a, ll.LatLng b) {
+    return ll.LatLng(a.latitude - b.latitude, a.longitude - b.longitude);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1141,6 +1296,9 @@ class _MapSection extends StatelessWidget {
                         'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                     userAgentPackageName: 'com.racesense.pulse',
                   ),
+                  // Render circuit layers if trackDefinition is available
+                  if (trackDefinition != null) ..._buildCircuitLayers(trackDefinition!),
+                  // User's GPS path (green lime)
                   PolylineLayer(
                     polylines: [
                       Polyline(
