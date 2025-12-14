@@ -576,14 +576,24 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
     final dirUnit = Offset(dir.dx / length, dir.dy / length);
     final normalUnit = Offset(-dirUnit.dy, dirUnit.dx);
 
+    // IMPORTANTE: Estendi la linea di traguardo per creare un gate più largo
+    // Questo è necessario per rilevare il passaggio con GPS a bassa frequenza (1-5 Hz)
+    // Estendiamo la linea lungo la direzione della linea stessa
+    const double extensionMeters = 50.0; // Estende di 50m per lato
+    final Offset extendedStart = startLocal - (dirUnit * extensionMeters);
+    final Offset extendedEnd = endLocal + (dirUnit * extensionMeters);
+    final double extendedLength = (extendedEnd - extendedStart).distance;
+
     _finishLineStart = startPos;
     _finishLineEnd = endPos;
-    _finishLineStartLocal = startLocal;
-    _finishLineEndLocal = endLocal;
+    _finishLineStartLocal = extendedStart; // Usa la linea estesa
+    _finishLineEndLocal = extendedEnd;     // Usa la linea estesa
     _finishDirUnit = dirUnit;
     _finishNormalUnit = normalUnit;
-    _finishLength = length;
+    _finishLength = extendedLength;         // Usa la lunghezza estesa
     _finishLineConfiguredFromTrack = true;
+
+    print('✓ Finish line configurata da circuito tracciato (estesa a ${extendedLength.toStringAsFixed(1)}m)');
   }
 
   // ============================================================
