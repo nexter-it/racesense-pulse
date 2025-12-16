@@ -114,8 +114,27 @@ class LapDetectionService {
       throw Exception('Path troppo corta per generare microsettori');
     }
 
+    // 🔧 Adatta spacing e larghezza in base alla frequenza GPS
+    final gpsFrequency = _estimateGpsFrequency();
+    final double sectorSpacing;
+    final double sectorWidth;
+
+    if (gpsFrequency >= 15.0) {
+      // BLE GPS (15-20Hz): microsettori densi e stretti
+      sectorSpacing = 1.5; // metri tra microsettori
+      sectorWidth = 22.0;  // larghezza trasversale
+    } else if (gpsFrequency >= 5.0) {
+      // GPS intermedio: microsettori medi
+      sectorSpacing = 3.0;
+      sectorWidth = 30.0;
+    } else {
+      // GPS cellulare (1Hz): microsettori più spaziati e larghi
+      sectorSpacing = 5.0; // 🔧 Aumentato da 1.5m a 5m
+      // 🔧 Larghezza limitata a 40m per evitare sovrapposizioni su circuiti stretti
+      sectorWidth = 40.0;  // Ridotto da 45m a 40m (più sicuro)
+    }
+
     final sectors = <LapDetectionMicroSector>[];
-    const double sectorSpacing = 1.5; // metri tra un microsettore e l'altro
     double cumulativeDistance = 0.0;
 
     // Primo microsettore: sulla linea start/finish
@@ -131,6 +150,7 @@ class LapDetectionService {
       center: finishCenter,
       heading: finishHeading,
       cumulativeDistance: 0.0,
+      width: sectorWidth,
     ));
 
     // Genera microsettori lungo il percorso
@@ -154,6 +174,7 @@ class LapDetectionService {
           center: curr,
           heading: heading,
           cumulativeDistance: cumulativeDistance,
+          width: sectorWidth,
         ));
 
         distanceSinceLastSector = 0.0;
@@ -177,6 +198,18 @@ class LapDetectionService {
       throw Exception('Lista microSectors vuota');
     }
 
+    // 🔧 Adatta larghezza in base alla frequenza GPS (per circuiti custom)
+    final gpsFrequency = _estimateGpsFrequency();
+    final double widthMultiplier;
+
+    if (gpsFrequency >= 15.0) {
+      widthMultiplier = 1.0; // BLE: usa larghezza originale
+    } else if (gpsFrequency >= 5.0) {
+      widthMultiplier = 1.4; // GPS intermedio: 40% più largo
+    } else {
+      widthMultiplier = 2.0; // GPS cellulare: 2x più largo
+    }
+
     final sectors = <LapDetectionMicroSector>[];
     double cumulativeDistance = 0.0;
 
@@ -194,8 +227,9 @@ class LapDetectionService {
       final lineHeading = _calculateHeading(trackSector.start, trackSector.end);
       final trackHeading = (lineHeading + 90) % 360; // Perpendicular to the line
 
-      // Calcola larghezza del microsettore (lunghezza della linea start-end)
-      final width = _distanceBetween(trackSector.start, trackSector.end);
+      // Calcola larghezza del microsettore e adattala per GPS
+      final baseWidth = _distanceBetween(trackSector.start, trackSector.end);
+      final adaptedWidth = baseWidth * widthMultiplier;
 
       // Calcola distanza cumulativa dal settore precedente
       if (i > 0) {
@@ -211,9 +245,11 @@ class LapDetectionService {
         center: center,
         heading: trackHeading,
         cumulativeDistance: cumulativeDistance,
-        width: width,
+        width: adaptedWidth,
       ));
     }
+
+    print('✓ Convertiti ${sectors.length} microsettori (GPS ${gpsFrequency.toStringAsFixed(1)}Hz, moltiplicatore larghezza ${widthMultiplier.toStringAsFixed(1)}x)');
 
     return sectors;
   }
@@ -281,6 +317,16 @@ class LapDetectionService {
     final gpsFrequency = _estimateGpsFrequency();
     final searchWindow = _calculateSearchWindow(gpsFrequency);
 
+    // 🔧 GPS cellulare: interpola traiettoria tra ultimo punto e punto corrente
+    List<LatLng> pointsToCheck = [LatLng(position.latitude, position.longitude)];
+
+    if (gpsFrequency < 5.0 && _lastGpsPosition != null) {
+      // Interpola 3 punti intermedi per GPS lento
+      final start = LatLng(_lastGpsPosition!.latitude, _lastGpsPosition!.longitude);
+      final end = LatLng(position.latitude, position.longitude);
+      pointsToCheck = _interpolatePoints(start, end, 3);
+    }
+
     // Cerca il microsettore corrispondente nella finestra avanti
     int? foundSectorIndex;
     double minDistance = double.infinity;
@@ -291,34 +337,39 @@ class LapDetectionService {
       _microSectors!.length,
     );
 
-    for (int i = startSearch; i < endSearch; i++) {
-      final sector = _microSectors![i];
+    // Controlla tutti i punti (interpolati o singolo)
+    for (final checkPoint in pointsToCheck) {
+      for (int i = startSearch; i < endSearch; i++) {
+        final sector = _microSectors![i];
 
-      if (sector.containsPoint(
-        position.latitude,
-        position.longitude,
-        _originLat!,
-        _originLon!,
-      )) {
-        // Verifica heading se disponibile
-        if (vehicleHeading != null) {
-          if (!sector.isHeadingCompatible(vehicleHeading)) {
-            continue; // Skip se heading non compatibile
+        if (sector.containsPoint(
+          checkPoint.latitude,
+          checkPoint.longitude,
+          _originLat!,
+          _originLon!,
+        )) {
+          // Verifica heading se disponibile (solo per punto finale)
+          if (vehicleHeading != null && checkPoint == pointsToCheck.last) {
+            // 🔧 Tolleranza heading adattiva: GPS cellulare meno preciso
+            final headingTolerance = gpsFrequency < 5.0 ? 70.0 : 50.0;
+            if (!sector.isHeadingCompatible(vehicleHeading, tolerance: headingTolerance)) {
+              continue; // Skip se heading non compatibile
+            }
           }
-        }
 
-        // Calcola distanza dal centro del settore per scegliere il migliore
-        final distance = _distanceBetween(
-          LatLng(position.latitude, position.longitude),
-          sector.center,
-        );
+          // Calcola distanza dal centro del settore per scegliere il migliore
+          final distance = _distanceBetween(checkPoint, sector.center);
 
-        if (distance < minDistance) {
-          minDistance = distance;
-          foundSectorIndex = i;
+          if (distance < minDistance) {
+            minDistance = distance;
+            foundSectorIndex = i;
+          }
         }
       }
     }
+
+    // Salva ultima posizione per interpolazione
+    _lastGpsPosition = LatLng(position.latitude, position.longitude);
 
     // Se abbiamo trovato un settore, aggiorna la posizione
     if (foundSectorIndex != null) {
@@ -337,12 +388,43 @@ class LapDetectionService {
     return false;
   }
 
+  /// Interpola N punti tra start e end per GPS a bassa frequenza
+  List<LatLng> _interpolatePoints(LatLng start, LatLng end, int numPoints) {
+    final points = <LatLng>[start];
+
+    for (int i = 1; i <= numPoints; i++) {
+      final t = i / (numPoints + 1);
+      final lat = start.latitude + (end.latitude - start.latitude) * t;
+      final lon = start.longitude + (end.longitude - start.longitude) * t;
+      points.add(LatLng(lat, lon));
+    }
+
+    points.add(end);
+    return points;
+  }
+
+  LatLng? _lastGpsPosition;
+
   /// Verifica se è stato completato un giro
   bool _hasCompletedLap() {
     if (_microSectors == null || _microSectors!.isEmpty) return false;
 
-    // Deve aver attraversato almeno l'80% dei microsettori
-    final minSectorsForLap = (_microSectors!.length * 0.8).floor();
+    // 🔧 Soglia adattiva in base alla frequenza GPS
+    final gpsFrequency = _estimateGpsFrequency();
+    final double completionThreshold;
+
+    if (gpsFrequency >= 15.0) {
+      // BLE GPS (15-20Hz): soglia alta (85%)
+      completionThreshold = 0.85;
+    } else if (gpsFrequency >= 5.0) {
+      // GPS intermedio: soglia media (75%)
+      completionThreshold = 0.75;
+    } else {
+      // GPS cellulare (1Hz): soglia bassa (65%)
+      completionThreshold = 0.65; // 🔧 Ridotto da 80% a 65%
+    }
+
+    final minSectorsForLap = (_microSectors!.length * completionThreshold).floor();
     if (_lastCompletedSectorIndex < minSectorsForLap) return false;
 
     // Deve essere tornato vicino al settore 0

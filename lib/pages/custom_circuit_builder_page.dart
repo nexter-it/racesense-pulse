@@ -166,7 +166,9 @@ class _CustomCircuitBuilderPageState extends State<CustomCircuitBuilderPage> {
         final placemarks = await placemarkFromCoordinates(
             _trackPoints.first.latitude, _trackPoints.first.longitude);
         if (placemarks.isNotEmpty) {
-          city = placemarks.first.locality ?? placemarks.first.administrativeArea ?? '';
+          city = placemarks.first.locality ??
+              placemarks.first.administrativeArea ??
+              '';
           country = placemarks.first.country ?? '';
         }
       } catch (_) {}
@@ -225,7 +227,8 @@ class _CustomCircuitBuilderPageState extends State<CustomCircuitBuilderPage> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: const [
-                        Icon(Icons.bluetooth_connected, color: kBrandColor, size: 16),
+                        Icon(Icons.bluetooth_connected,
+                            color: kBrandColor, size: 16),
                         SizedBox(width: 6),
                         Text(
                           'Tracciato con dispositivo BLE',
@@ -245,7 +248,9 @@ class _CustomCircuitBuilderPageState extends State<CustomCircuitBuilderPage> {
                 onPressed: () {
                   final width = double.tryParse(widthCtrl.text) ?? 8.0;
                   Navigator.of(context).pop(_CircuitMeta(
-                    name: nameCtrl.text.isEmpty ? 'Circuito custom' : nameCtrl.text,
+                    name: nameCtrl.text.isEmpty
+                        ? 'Circuito custom'
+                        : nameCtrl.text,
                     widthMeters: width,
                   ));
                 },
@@ -273,7 +278,8 @@ class _CustomCircuitBuilderPageState extends State<CustomCircuitBuilderPage> {
         lengthMeters: length,
         createdAt: DateTime.now(),
         points: sectors,
-        microSectors: CustomCircuitInfo.buildSectorsFromPoints(sectors, widthMeters: result.widthMeters),
+        microSectors: CustomCircuitInfo.buildSectorsFromPoints(sectors,
+            widthMeters: result.widthMeters),
         usedBleDevice: _isUsingBleDevice,
       );
 
@@ -380,13 +386,17 @@ class _CustomCircuitBuilderPageState extends State<CustomCircuitBuilderPage> {
                 Row(
                   children: [
                     Icon(
-                      _isUsingBleDevice ? Icons.bluetooth_connected : Icons.gps_fixed,
+                      _isUsingBleDevice
+                          ? Icons.bluetooth_connected
+                          : Icons.gps_fixed,
                       color: kBrandColor,
                       size: 12,
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      _isUsingBleDevice ? 'Dispositivo BLE connesso' : 'GPS cellulare',
+                      _isUsingBleDevice
+                          ? 'Dispositivo BLE connesso'
+                          : 'GPS cellulare',
                       style: const TextStyle(
                         fontSize: 11,
                         color: kMutedColor,
@@ -437,7 +447,8 @@ class _CustomCircuitBuilderPageState extends State<CustomCircuitBuilderPage> {
             ),
             onTap: (tapPos, point) {
               setState(() {
-                if (_startLinePointA == null || (_startLinePointA != null && _startLinePointB != null)) {
+                if (_startLinePointA == null ||
+                    (_startLinePointA != null && _startLinePointB != null)) {
                   _startLinePointA = point;
                   _startLinePointB = null;
                 } else {
@@ -624,14 +635,15 @@ class _CustomCircuitBuilderPageState extends State<CustomCircuitBuilderPage> {
           Row(
             children: [
               OutlinedButton.icon(
-                onPressed: (_startLinePointA != null || _startLinePointB != null)
-                    ? () {
-                        setState(() {
-                          _startLinePointA = null;
-                          _startLinePointB = null;
-                        });
-                      }
-                    : null,
+                onPressed:
+                    (_startLinePointA != null || _startLinePointB != null)
+                        ? () {
+                            setState(() {
+                              _startLinePointA = null;
+                              _startLinePointB = null;
+                            });
+                          }
+                        : null,
                 icon: const Icon(Icons.restart_alt, size: 18),
                 label: const Text(
                   'Reset',
@@ -640,14 +652,18 @@ class _CustomCircuitBuilderPageState extends State<CustomCircuitBuilderPage> {
                 style: OutlinedButton.styleFrom(
                   foregroundColor: kBrandColor,
                   side: BorderSide(
-                    color: (_startLinePointA != null || _startLinePointB != null) ? kBrandColor : kLineColor,
+                    color:
+                        (_startLinePointA != null || _startLinePointB != null)
+                            ? kBrandColor
+                            : kLineColor,
                   ),
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(10),
                     color: hasLine
@@ -661,7 +677,9 @@ class _CustomCircuitBuilderPageState extends State<CustomCircuitBuilderPage> {
                   child: Row(
                     children: [
                       Icon(
-                        hasLine ? Icons.check_circle : Icons.radio_button_unchecked,
+                        hasLine
+                            ? Icons.check_circle
+                            : Icons.radio_button_unchecked,
                         color: hasLine ? kBrandColor : kMutedColor,
                         size: 18,
                       ),
@@ -670,7 +688,9 @@ class _CustomCircuitBuilderPageState extends State<CustomCircuitBuilderPage> {
                         child: Text(
                           hasLine
                               ? 'Linea definita'
-                              : (_startLinePointA != null ? 'Seleziona punto B' : 'Seleziona punto A'),
+                              : (_startLinePointA != null
+                                  ? 'Seleziona punto B'
+                                  : 'Seleziona punto A'),
                           style: TextStyle(
                             color: hasLine ? kBrandColor : kMutedColor,
                             fontSize: 12,
@@ -697,7 +717,9 @@ class _CustomCircuitBuilderPageState extends State<CustomCircuitBuilderPage> {
               child: Row(
                 children: [
                   Icon(
-                    _isUsingBleDevice ? Icons.bluetooth_connected : Icons.gps_fixed,
+                    _isUsingBleDevice
+                        ? Icons.bluetooth_connected
+                        : Icons.gps_fixed,
                     color: kBrandColor,
                     size: 16,
                   ),

@@ -1650,77 +1650,41 @@ class _SessionCard extends StatelessWidget {
                 ),
               ),
 
-              // Velocità max
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(10),
-                      gradient: LinearGradient(
-                        colors: [
-                          kBrandColor.withAlpha(30),
-                          kBrandColor.withAlpha(20),
-                        ],
-                      ),
-                      border: Border.all(color: kBrandColor.withAlpha(80)),
-                    ),
-                    child: Column(
-                      children: [
-                        Text(
-                          '${session.maxSpeedKmh.toStringAsFixed(0)}',
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w900,
-                            color: kBrandColor,
-                          ),
-                        ),
-                        const Text(
-                          'km/h',
-                          style: TextStyle(
-                            fontSize: 9,
-                            fontWeight: FontWeight.w700,
-                            color: kBrandColor,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              if (onShare != null || onEdit != null || onDelete != null) ...[
-                const SizedBox(width: 8),
-                PopupMenuButton<String>(
-                  icon:
-                      const Icon(Icons.more_vert, color: kMutedColor, size: 20),
-                  onSelected: (value) {
-                    if (value == 'share') {
-                      onShare?.call();
-                    } else if (value == 'edit') {
-                      onEdit?.call();
-                    } else if (value == 'delete') {
-                      onDelete?.call();
-                    }
-                  },
-                  itemBuilder: (context) => [
+              if (onShare != null || onDelete != null) ...[
+                const SizedBox(width: 10),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
                     if (onShare != null)
-                      const PopupMenuItem(
-                        value: 'share',
-                        child: Text('Condividi'),
-                      ),
-                    if (onEdit != null)
-                      const PopupMenuItem(
-                        value: 'edit',
-                        child: Text('Modifica'),
+                      Container(
+                        margin: const EdgeInsets.only(left: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withAlpha(12),
+                          borderRadius: BorderRadius.circular(12),
+                          border:
+                              Border.all(color: Colors.white.withAlpha(30)),
+                        ),
+                        child: IconButton(
+                          visualDensity: VisualDensity.compact,
+                          icon: const Icon(Icons.ios_share,
+                              size: 18, color: Colors.white),
+                          onPressed: onShare,
+                        ),
                       ),
                     if (onDelete != null)
-                      const PopupMenuItem(
-                        value: 'delete',
-                        child: Text(
-                          'Elimina',
-                          style: TextStyle(color: kErrorColor),
+                      Container(
+                        margin: const EdgeInsets.only(left: 6),
+                        decoration: BoxDecoration(
+                          color: kErrorColor.withAlpha(30),
+                          borderRadius: BorderRadius.circular(12),
+                          border:
+                              Border.all(color: kErrorColor.withAlpha(80)),
+                        ),
+                        child: IconButton(
+                          visualDensity: VisualDensity.compact,
+                          icon: const Icon(Icons.delete_outline,
+                              size: 18, color: kErrorColor),
+                          onPressed: onDelete,
                         ),
                       ),
                   ],
