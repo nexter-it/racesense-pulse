@@ -1107,9 +1107,9 @@ class _MapSection extends StatelessWidget {
               child: FlutterMap(
                 options: MapOptions(
                   initialCenter: LatLng(centerLat, centerLon),
-                  initialZoom: 15.0,
+                  initialZoom: 16.5,
                   minZoom: 10.0,
-                  maxZoom: 18.0,
+                  maxZoom: 20.0,
                 ),
                 children: [
                   TileLayer(
@@ -1126,9 +1126,9 @@ class _MapSection extends StatelessWidget {
                     polylines: [
                       Polyline(
                         points: path,
-                        strokeWidth: 4.0,
+                        strokeWidth: 2.5,
                         color: kBrandColor,
-                        borderStrokeWidth: 2.0,
+                        borderStrokeWidth: 1.0,
                         borderColor: Colors.black.withOpacity(0.5),
                       ),
                     ],
