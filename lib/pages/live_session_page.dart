@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:math' as math;
-import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
@@ -10,17 +9,9 @@ import 'package:sensors_plus/sensors_plus.dart';
 
 import '../theme.dart';
 import '../models/track_definition.dart';
-import '../widgets/pulse_background.dart';
 import '../services/ble_tracking_service.dart';
+import '../services/lap_detection_service.dart';
 import 'session_recap_page.dart';
-
-// Helper class per risultato intersezione segmenti
-class _IntersectionResult {
-  final double t; // Parametro lungo il primo segmento (traiettoria GPS)
-  final double u; // Parametro lungo il secondo segmento (linea finish)
-
-  _IntersectionResult({required this.t, required this.u});
-}
 
 class LiveSessionPage extends StatefulWidget {
   final TrackDefinition? trackDefinition;
@@ -61,24 +52,8 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
   Offset? _lastLocalSmoothed;
   Duration? _lastSampleTime;
 
-  // Finish line (lat/lon + locale in metri)
-  Position? _finishLineStart;
-  Position? _finishLineEnd;
-  Offset? _finishLineStartLocal;
-  Offset? _finishLineEndLocal;
-  bool _finishLineConfiguredFromTrack = false;
-
-  // Parametri "gate" del traguardo (in metri, in coordinate locali)
-  Offset?
-      _finishDirUnit; // Versore lungo la linea di arrivo (ORA radiale verso il centro)
-  Offset? _finishNormalUnit; // Versore normale (per distanza firmata)
-  double _finishLength = 0.0; // Lunghezza del segmento di arrivo originario
-
-  // Larghezza metà-gate (perpendicolare alla linea) in metri
-  // Ampiato per tollerare campionamenti lenti (1-5 Hz) a velocità elevate.
-  final double _gateHalfWidth = 25.0; // es. ±25m dalla linea
-  // Estensione lungo la linea oltre il segmento base (metri)
-  final double _gateHalfLength = 70.0; // es. 70m prima e 70m dopo
+  // ✨ NUOVO SISTEMA: Rilevamento giri con microsettori
+  final LapDetectionService _lapDetection = LapDetectionService();
 
   // Dati giri
   final List<Duration> _laps = [];
@@ -557,64 +532,62 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
     return fused.clamp(-2.5, 2.5);
   }
 
-  Position _positionFromLatLng(LatLng point) {
-    return Position(
-      longitude: point.longitude,
-      latitude: point.latitude,
-      timestamp: DateTime.now(),
-      accuracy: 1.0,
-      altitude: 0.0,
-      altitudeAccuracy: 1.0,
-      heading: 0.0,
-      headingAccuracy: 1.0,
-      speed: 0.0,
-      speedAccuracy: 0.0,
-      floor: null,
-      isMocked: true,
-    );
-  }
+  // ============================================================
+  // ✨ NUOVO SISTEMA: Inizializzazione microsettori
+  // ============================================================
+  void _initializeLapDetection() {
+    if (widget.trackDefinition != null) {
+      // Modalità pre-tracciato: inizializza con circuito esistente
+      _lapDetection.initializeWithTrack(widget.trackDefinition!);
+      print('✓ LapDetection inizializzato con circuito pre-tracciato: ${widget.trackDefinition!.name}');
+    } else {
+      // Modalità veloce: definisci finish line dai primi punti GPS e avvia registrazione primo giro
+      if (_gpsTrack.length >= 20) {
+        // Usa i primi punti per stimare il centro e creare una linea di traguardo virtuale
+        final List<Offset> locals = [];
+        for (int i = 0; i < math.min(20, _gpsTrack.length); i++) {
+          locals.add(_toLocalMeters(_gpsTrack[i]));
+        }
 
-  void _configureFinishLineFromTrackIfNeeded() {
-    if (_finishLineConfiguredFromTrack) return;
-    if (widget.trackDefinition == null) return;
-    if (_originLat == null || _originLon == null) return;
+        // Centro approssimato del tracciato
+        Offset center = Offset.zero;
+        for (final p in locals) {
+          center = Offset(center.dx + p.dx, center.dy + p.dy);
+        }
+        center = Offset(center.dx / locals.length, center.dy / locals.length);
 
-    final track = widget.trackDefinition!;
+        // Punto di passaggio della finish (primo punto registrato)
+        final Offset p0 = locals.first;
 
-    final startPos = _positionFromLatLng(track.finishLineStart);
-    final endPos = _positionFromLatLng(track.finishLineEnd);
+        // Direzione radiale dal centro verso p0
+        Offset radial = p0 - center;
+        final double radialLen = radial.distance;
 
-    final startLocal = _toLocalMeters(startPos);
-    final endLocal = _toLocalMeters(endPos);
+        if (radialLen < 1.0) {
+          final Offset p1 = locals.length > 1 ? locals[1] : p0 + const Offset(1, 0);
+          radial = p1 - p0;
+        }
 
-    final dir = endLocal - startLocal;
-    final length = dir.distance;
-    if (length < 0.5) {
-      return;
+        final double lineLen = radial.distance;
+        if (lineLen < 1.0) return;
+
+        final Offset lineDir = Offset(radial.dx / lineLen, radial.dy / lineLen);
+
+        // Definisci un segmento base centrato vicino a p0 lungo la direzione radiale
+        const double baseHalfLength = 10.0; // 20m totali attorno a p0
+        final Offset s = p0 - lineDir * baseHalfLength;
+        final Offset e = p0 + lineDir * baseHalfLength;
+
+        // Converti in LatLng per il servizio
+        final finishLineStart = _localToLatLng(s);
+        final finishLineEnd = _localToLatLng(e);
+
+        _lapDetection.initializeQuickMode(finishLineStart, finishLineEnd);
+        print('✓ LapDetection inizializzato in modalità veloce (primo giro)');
+      }
     }
-
-    final dirUnit = Offset(dir.dx / length, dir.dy / length);
-    final normalUnit = Offset(-dirUnit.dy, dirUnit.dx);
-
-    // IMPORTANTE: Estendi la linea di traguardo per creare un gate più largo
-    // Questo è necessario per rilevare il passaggio con GPS a bassa frequenza (1-5 Hz)
-    // Estendiamo la linea lungo la direzione della linea stessa
-    const double extensionMeters = 50.0; // Estende di 50m per lato
-    final Offset extendedStart = startLocal - (dirUnit * extensionMeters);
-    final Offset extendedEnd = endLocal + (dirUnit * extensionMeters);
-    final double extendedLength = (extendedEnd - extendedStart).distance;
-
-    _finishLineStart = startPos;
-    _finishLineEnd = endPos;
-    _finishLineStartLocal = extendedStart; // Usa la linea estesa
-    _finishLineEndLocal = extendedEnd;     // Usa la linea estesa
-    _finishDirUnit = dirUnit;
-    _finishNormalUnit = normalUnit;
-    _finishLength = extendedLength;         // Usa la lunghezza estesa
-    _finishLineConfiguredFromTrack = true;
-
-    print('✓ Finish line configurata da circuito tracciato (estesa a ${extendedLength.toStringAsFixed(1)}m)');
   }
+
 
   // ============================================================
   // GESTIONE DATI GPS (reali o simulati)
@@ -624,34 +597,34 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
 
     final nowT = _sessionWatch.elapsed;
 
-    // Coordinate locali in metri
+    // Coordinate locali in metri (mantieni per visualizzazione mappa)
     _initLocalOriginIfNeeded(pos);
-    _configureFinishLineFromTrackIfNeeded();
     final localRaw = _toLocalMeters(pos);
 
     // Salvo i valori precedenti PRIMA di aggiornare lo smoothing
-    final prevLocalSmoothed = _lastLocalSmoothed;
     final prevSampleTime = _lastSampleTime;
 
-    // Smoothing per detection
+    // Smoothing per detection (mantieni per retrocompatibilità)
     final localSmoothed = _smoothLocal(localRaw);
 
     // Salva posizione per mappa/recap
     _gpsTrack.add(pos);
 
-    // Definisci finish line dopo un po' di punti (per stimare il centro)
-    if (_gpsTrack.length == 20 && _finishLineStart == null) {
-      _defineFinishLine();
+    // ✨ NUOVO SISTEMA: Inizializza microsettori dopo aver raccolto alcuni punti
+    if (_gpsTrack.length == 20) {
+      _initializeLapDetection();
     }
 
-    // Controlla se abbiamo attraversato il traguardo (in coordinate locali, smoothed)
-    if (_finishLineStartLocal != null &&
-        _finishLineEndLocal != null &&
-        _finishDirUnit != null &&
-        _finishNormalUnit != null &&
-        prevLocalSmoothed != null &&
-        prevSampleTime != null) {
-      _checkLapCrossing(prevLocalSmoothed, localSmoothed, prevSampleTime, nowT);
+    // ✨ NUOVO SISTEMA: Tracking con microsettori
+    if (_gpsTrack.length >= 20) {
+      // Calcola heading dal GPS se disponibile (altrimenti usa null)
+      final vehicleHeading = pos.heading > 0 ? pos.heading : null;
+
+      final lapCompleted = _lapDetection.processGpsPoint(pos, vehicleHeading: vehicleHeading);
+
+      if (lapCompleted) {
+        _registerLapAtTime(nowT);
+      }
     }
 
     // Aggiorna velocità corrente
@@ -693,9 +666,16 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
       if (_useGpsSimulator) {
         _gpsStatus = 'GPS simulato';
       } else if (_isUsingBleGps) {
-        _gpsStatus = 'BLE GPS 15Hz: ${pos.accuracy.toStringAsFixed(1)}m';
+        final freq = _lapDetection.estimatedGpsFrequency;
+        _gpsStatus = 'BLE GPS ${freq.toStringAsFixed(1)}Hz: ${pos.accuracy.toStringAsFixed(1)}m';
       } else {
-        _gpsStatus = 'GPS cellulare 1Hz: ${pos.accuracy.toStringAsFixed(1)}m';
+        final freq = _lapDetection.estimatedGpsFrequency;
+        _gpsStatus = 'GPS cellulare ${freq.toStringAsFixed(1)}Hz: ${pos.accuracy.toStringAsFixed(1)}m';
+      }
+
+      // Mostra info microsettori se stiamo registrando primo giro
+      if (_lapDetection.isRecordingFirstLap) {
+        _gpsStatus += ' (Primo giro: ${_lapDetection.lapProgress.toStringAsFixed(0)}%)';
       }
     });
 
@@ -704,225 +684,6 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
     _lastLocalSmoothed = localSmoothed;
   }
 
-  // ============================================================
-  // FINISH LINE VIRTUALE + GATE (radiale, non tangente)
-  // ============================================================
-  void _defineFinishLine() {
-    if (_finishLineConfiguredFromTrack || widget.trackDefinition != null) {
-      return;
-    }
-    if (_gpsTrack.length < 5 || _originLat == null || _originLon == null)
-      return;
-
-    // Salva comunque start/end GPS "logici"
-    _finishLineStart = _gpsTrack[0];
-    _finishLineEnd = _gpsTrack[1];
-
-    // Calcola i primi N punti in coordinate locali per stimare il centro del tracciato
-    const int numForCenter = 20;
-    final int n = math.min(numForCenter, _gpsTrack.length);
-
-    final List<Offset> locals = [];
-    for (int i = 0; i < n; i++) {
-      locals.add(_toLocalMeters(_gpsTrack[i]));
-    }
-
-    if (locals.isEmpty) return;
-
-    // Centro approssimato del tracciato
-    Offset center = Offset.zero;
-    for (final p in locals) {
-      center = Offset(center.dx + p.dx, center.dy + p.dy);
-    }
-    center = Offset(center.dx / locals.length, center.dy / locals.length);
-
-    // Punto di passaggio della finish (primo punto registrato)
-    final Offset p0 = locals.first;
-
-    // Direzione radiale dal centro verso p0 (questa è la direzione della linea di gara)
-    Offset radial = p0 - center;
-    final double radialLen = radial.distance;
-
-    if (radialLen < 1.0) {
-      // fallback: se per qualche motivo centro ~ p0, usa i primi due punti come direzione
-      final Offset p1 = locals.length > 1 ? locals[1] : p0 + const Offset(1, 0);
-      radial = p1 - p0;
-    }
-
-    final double lineLen = radial.distance;
-    if (lineLen < 1.0) return;
-
-    final Offset lineDir = Offset(radial.dx / lineLen, radial.dy / lineLen);
-    final Offset lineNormal = Offset(-lineDir.dy, lineDir.dx); // perpendicolare
-
-    _finishDirUnit = lineDir; // la linea del traguardo è radiale
-    _finishNormalUnit = lineNormal;
-
-    // Definisci un piccolo segmento base centrato vicino a p0 lungo la direzione radiale
-    const double baseHalfLength = 2.0; // 4m totali attorno a p0
-    final Offset s = p0 - lineDir * baseHalfLength;
-    final Offset e = p0 + lineDir * baseHalfLength;
-
-    _finishLineStartLocal = s;
-    _finishLineEndLocal = e;
-    _finishLength = (e - s).distance;
-
-    print('✓ Finish line (gate radiale) definita in metri');
-  }
-
-  // Signed distance dalla linea del traguardo (metri, +/− a seconda del lato)
-  double _signedDistanceToFinish(Offset p) {
-    if (_finishLineStartLocal == null || _finishNormalUnit == null) return 0.0;
-    final v = p - _finishLineStartLocal!;
-    return v.dx * _finishNormalUnit!.dx + v.dy * _finishNormalUnit!.dy;
-  }
-
-  // Proiezione di p lungo la linea del traguardo (0 all'inizio, cresce lungo la linea)
-  double _projectionOnFinish(Offset p) {
-    if (_finishLineStartLocal == null || _finishDirUnit == null) return 0.0;
-    final v = p - _finishLineStartLocal!;
-    return v.dx * _finishDirUnit!.dx + v.dy * _finishDirUnit!.dy;
-  }
-
-  // ============================================================
-  // RILEVAMENTO GIRI (gate + intersezione geometrica + interpolazione tempo)
-  // ============================================================
-  void _checkLapCrossing(
-    Offset prevLocal,
-    Offset currentLocal,
-    Duration prevTime,
-    Duration currentTime,
-  ) {
-    if (_finishLineStartLocal == null ||
-        _finishLineEndLocal == null ||
-        _finishDirUnit == null ||
-        _finishNormalUnit == null) {
-      return;
-    }
-
-    // 1. GATE VALIDATION - Verifica che almeno un punto sia nel gate
-    final prevDist = _signedDistanceToFinish(prevLocal);
-    final curDist = _signedDistanceToFinish(currentLocal);
-
-    final prevProj = _projectionOnFinish(prevLocal);
-    final curProj = _projectionOnFinish(currentLocal);
-
-    final double minProj = math.min(prevProj, curProj);
-    final double maxProj = math.max(prevProj, curProj);
-
-    final double gateStart = -_gateHalfLength;
-    final double gateEnd = _finishLength + _gateHalfLength;
-
-    // Se entrambi i punti sono completamente fuori dal gate longitudinale, scarta
-    if (maxProj < gateStart || minProj > gateEnd) {
-      return;
-    }
-
-    // Verifica che almeno un punto sia nel gate trasversale
-    final prevInGate = prevDist.abs() <= _gateHalfWidth;
-    final curInGate = curDist.abs() <= _gateHalfWidth;
-
-    if (!prevInGate && !curInGate) {
-      // Entrambi lontani dalla linea, scarta
-      return;
-    }
-
-    // 2. SEGMENT INTERSECTION - Verifica intersezione geometrica
-    final intersection = _segmentIntersection(
-      prevLocal,
-      currentLocal,
-      _finishLineStartLocal!,
-      _finishLineEndLocal!,
-    );
-
-    if (intersection != null) {
-      // Crossing geometrico verificato!
-      final t = intersection.t; // Parametro 0..1 lungo prev->curr
-      final crossingTime = _interpolateTime(prevTime, currentTime, t);
-
-      if (_canMarkLap(crossingTime)) {
-        _registerLapAtTime(crossingTime);
-      }
-      return;
-    }
-
-    // 3. FALLBACK - Cambio di segno (per robustezza con jitter GPS)
-    // Usa questo solo se segment intersection fallisce per errori numerici
-    final sameSide = prevDist * curDist > 0;
-    if (!sameSide) {
-      // I punti sono su lati opposti, calcola t dove distanza = 0
-      final denom = prevDist - curDist;
-      if (denom.abs() < 1e-6) {
-        return;
-      }
-
-      final double t = prevDist / denom;
-      if (t >= 0.0 && t <= 1.0) {
-        final crossingTime = _interpolateTime(prevTime, currentTime, t);
-
-        if (_canMarkLap(crossingTime)) {
-          _registerLapAtTime(crossingTime);
-        }
-      }
-    }
-  }
-
-  // Calcola intersezione tra segmento traiettoria GPS e linea di finish
-  // Returns null se non c'è intersezione valida, altrimenti parametri t e u
-  _IntersectionResult? _segmentIntersection(
-    Offset p1,
-    Offset p2, // Segmento traiettoria GPS
-    Offset q1,
-    Offset q2, // Segmento linea di finish
-  ) {
-    // Parametric equations:
-    // P(t) = p1 + t(p2-p1), t ∈ [0,1]  (traiettoria GPS)
-    // Q(u) = q1 + u(q2-q1), u ∈ [0,1]  (linea finish)
-    // Risolviamo: P(t) = Q(u)
-
-    final r = p2 - p1; // Direzione traiettoria
-    final s = q2 - q1; // Direzione linea finish
-    final qp = q1 - p1; // Vettore da p1 a q1
-
-    final rxs = _cross2D(r, s);
-
-    // Paralleli o coincidenti
-    if (rxs.abs() < 1e-10) {
-      return null;
-    }
-
-    final u = _cross2D(qp, r) / rxs;
-    final t = _cross2D(qp, s) / rxs;
-
-    // Intersezione valida solo se entrambi i parametri sono in [0,1]
-    if (t >= 0.0 && t <= 1.0 && u >= 0.0 && u <= 1.0) {
-      return _IntersectionResult(t: t, u: u);
-    }
-
-    return null;
-  }
-
-  // Prodotto vettoriale 2D (restituisce lo scalare z)
-  double _cross2D(Offset a, Offset b) => a.dx * b.dy - a.dy * b.dx;
-
-  bool _canMarkLap(Duration time) {
-    // Min 10s dall'inizio sessione per evitare falsi positivi iniziali
-    if (time.inSeconds <= 10) return false;
-    // Rispetta il minimo tempo tra giri (per evitare doppi conteggi da jitter)
-    const minLap = Duration(seconds: 20);
-    if (time - _lastLapMark < minLap) return false;
-    return true;
-  }
-
-  // Interpolazione temporale tra due sample
-  Duration _interpolateTime(Duration t1, Duration t2, double alpha) {
-    alpha = alpha.clamp(0.0, 1.0);
-    final ms1 = t1.inMilliseconds;
-    final ms2 = t2.inMilliseconds;
-    final diff = ms2 - ms1;
-    final interpMs = (ms1 + diff * alpha).round();
-    return Duration(milliseconds: interpMs);
-  }
 
   // Registra un giro sapendo l'istante esatto (Duration) del crossing
   void _registerLapAtTime(Duration crossingTime) {
@@ -1288,36 +1049,7 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
     );
   }
 
-  // Costruisce i 4 vertici del gate in lat/lon per mostrarlo a schermo
-  List<LatLng> _buildGatePolygonLatLngs() {
-    if (_finishLineStartLocal == null ||
-        _finishDirUnit == null ||
-        _finishNormalUnit == null) {
-      return [];
-    }
-
-    final s = _finishLineStartLocal!;
-    final dir = _finishDirUnit!;
-    final norm = _finishNormalUnit!;
-
-    final gateStart = -_gateHalfLength;
-    final gateEnd = _finishLength + _gateHalfLength;
-
-    final p1 = s + dir * gateStart + norm * _gateHalfWidth;
-    final p2 = s + dir * gateEnd + norm * _gateHalfWidth;
-    final p3 = s + dir * gateEnd - norm * _gateHalfWidth;
-    final p4 = s + dir * gateStart - norm * _gateHalfWidth;
-
-    return [
-      _localToLatLng(p1),
-      _localToLatLng(p2),
-      _localToLatLng(p3),
-      _localToLatLng(p4),
-    ];
-  }
-
   Widget _buildMap() {
-    final gatePolygon = _buildGatePolygonLatLngs();
 
     return ClipRRect(
       borderRadius: const BorderRadius.vertical(
@@ -1353,18 +1085,6 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
                   points: _smoothPath,
                   strokeWidth: 4.0,
                   color: kBrandColor,
-                ),
-              ],
-            ),
-          // Gate del traguardo (area considerata per il giro)
-          if (gatePolygon.isNotEmpty)
-            PolygonLayer(
-              polygons: [
-                Polygon(
-                  points: gatePolygon,
-                  color: kPulseColor.withOpacity(0.2),
-                  borderColor: kPulseColor,
-                  borderStrokeWidth: 2,
                 ),
               ],
             ),

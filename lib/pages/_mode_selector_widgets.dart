@@ -311,12 +311,18 @@ class _PrivateCircuitsPageState extends State<PrivateCircuitsPage> {
         .map((ms) => TrackMicroSector(start: ms.start, end: ms.end))
         .toList();
 
+    // Usa il primo microsettore per la finish line, se disponibile
+    final firstMicroSector = c.microSectors.isNotEmpty ? c.microSectors.first : null;
+    final finishLineStart = firstMicroSector?.start ?? c.points.first;
+    final finishLineEnd = firstMicroSector?.end ??
+        (c.points.length > 1 ? c.points[1] : c.points.first);
+
     return TrackDefinition(
       id: 'custom-${c.name}-${c.createdAt.millisecondsSinceEpoch}',
       name: c.name,
       location: '${c.city} ${c.country}'.trim(),
-      finishLineStart: c.points.first,
-      finishLineEnd: c.points.length > 1 ? c.points[1] : c.points.first,
+      finishLineStart: finishLineStart,
+      finishLineEnd: finishLineEnd,
       estimatedLengthMeters: c.lengthMeters,
       trackPath: c.points,
       microSectors: trackMicroSectors,
