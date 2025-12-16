@@ -36,6 +36,11 @@ dependencies:
   cloud_firestore: ^6.1.0
   shared_preferences: ^2.3.3
 
+  # Image picker & sharing
+  image_picker: ^1.0.7
+  share_plus: ^10.1.4
+  permission_handler: ^11.3.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
