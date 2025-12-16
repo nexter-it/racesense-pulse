@@ -281,6 +281,7 @@ class _FeedPageState extends State<FeedPage> {
     }
     if (!_hasMore) return;
 
+    if (!mounted) return;
     setState(() => _isLoadingMore = true);
     int added = 0;
     int attempts = 0;

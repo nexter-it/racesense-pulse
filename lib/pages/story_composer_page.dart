@@ -184,66 +184,54 @@ class _StoryComposerPageState extends State<StoryComposerPage> {
                 padding: EdgeInsets.zero,
                 children: [
                   // Story canvas
-                  RepaintBoundary(
-                    key: _storyKey,
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 16),
                     child: AspectRatio(
                       aspectRatio: 9 / 16,
                       child: Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 16),
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
                               color: const ui.Color.fromARGB(0, 192, 255, 3)),
-                          color: const Color(0xFF000000),
+                          // Checkboard pattern for transparency preview
+                          color: _backgroundImage == null
+                              ? const Color(0xFF1a1a2e)
+                              : const Color(0xFF000000),
                         ),
                         clipBehavior: Clip.hardEdge,
-                        child: Stack(
-                          fit: StackFit.expand,
-                          children: [
-                            // Background image or gradient
-                            if (_backgroundImage != null)
+                        child: RepaintBoundary(
+                          key: _storyKey,
+                          child: Stack(
+                            fit: StackFit.expand,
+                            children: [
+                            // Background image (or transparent if not set)
+                            if (_backgroundImage != null) ...[
                               Positioned.fill(
                                 child: Image.file(
                                   _backgroundImage!,
                                   fit: BoxFit.cover,
                                 ),
-                              )
-                            else
-                              Positioned.fill(
-                                child: Container(
-                                  decoration: const BoxDecoration(
-                                    gradient: LinearGradient(
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                      colors: [
-                                        Color(0xFF1a1a2e),
-                                        Color(0xFF0f0f1e),
-                                      ],
+                              ),
+                              // Blur overlay (only if image is set and blur > 0)
+                              if (_blur > 0)
+                                Positioned.fill(
+                                  child: BackdropFilter(
+                                    filter: ui.ImageFilter.blur(
+                                      sigmaX: _blur,
+                                      sigmaY: _blur,
+                                    ),
+                                    child: Container(
+                                      color: Colors.transparent,
                                     ),
                                   ),
                                 ),
-                              ),
-
-                            // Blur overlay (if blur > 0)
-                            if (_blur > 0)
+                              // Darken overlay (only if image is set)
                               Positioned.fill(
-                                child: BackdropFilter(
-                                  filter: ui.ImageFilter.blur(
-                                    sigmaX: _blur,
-                                    sigmaY: _blur,
-                                  ),
-                                  child: Container(
-                                    color: Colors.transparent,
-                                  ),
+                                child: Container(
+                                  color: Colors.black.withOpacity(_darken),
                                 ),
                               ),
-
-                            // Darken overlay
-                            Positioned.fill(
-                              child: Container(
-                                color: Colors.black.withOpacity(_darken),
-                              ),
-                            ),
+                            ],
 
                             // Content overlay
                             Positioned.fill(
@@ -410,6 +398,7 @@ class _StoryComposerPageState extends State<StoryComposerPage> {
                         ),
                       ),
                     ),
+                  ),
                   ),
 
                   const SizedBox(height: 20),
