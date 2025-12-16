@@ -9,6 +9,7 @@ import 'pages/new_post_page.dart';
 import 'pages/activity_detail_page.dart';
 import 'pages/auth_gate.dart';
 import 'pages/search_page.dart';
+import 'pages/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -35,7 +36,9 @@ class RacesensePulseApp extends StatelessWidget {
       title: 'Racesense Pulse',
       debugShowCheckedModeBanner: false,
       theme: buildPulseTheme(),
-      home: const AuthGate(), // AuthGate gestisce login/home automaticamente
+      home: const SplashScreen(
+        nextPage: AuthGate(), // Mostra splash screen poi va all'AuthGate
+      ),
       routes: {
         ActivityDetailPage.routeName: (_) => const ActivityDetailPage(),
         NewPostPage.routeName: (_) => const NewPostPage(),
