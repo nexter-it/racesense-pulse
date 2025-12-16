@@ -358,6 +358,12 @@ class SessionRecapPage extends StatelessWidget {
                       ),
                     const SizedBox(height: 24),
 
+                    // Track Info Section
+                    if (trackDefinition != null)
+                      _TrackInfoSection(trackDefinition: trackDefinition!),
+                    if (trackDefinition != null)
+                      const SizedBox(height: 24),
+
                     // Technical Data
                     _TechnicalDataSection(
                       maxSpeedKmh: maxSpeed,
@@ -1301,6 +1307,117 @@ class _MapSection extends StatelessWidget {
   /// Helper per sottrarre coordinate LatLng
   LatLng _subtractLatLng(LatLng a, LatLng b) {
     return LatLng(a.latitude - b.latitude, a.longitude - b.longitude);
+  }
+}
+
+/* -------------------------------------------------------------
+   TRACK INFO SECTION
+------------------------------------------------------------- */
+
+class _TrackInfoSection extends StatelessWidget {
+  final TrackDefinition trackDefinition;
+
+  const _TrackInfoSection({required this.trackDefinition});
+
+  @override
+  Widget build(BuildContext context) {
+    final hasTrackPath = trackDefinition.trackPath != null &&
+                         trackDefinition.trackPath!.isNotEmpty;
+    final hasMicroSectors = trackDefinition.microSectors != null &&
+                            trackDefinition.microSectors!.isNotEmpty;
+    final estimatedLength = trackDefinition.estimatedLengthMeters;
+    final width = trackDefinition.widthMeters ?? 10.0;
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        gradient: const LinearGradient(
+          colors: [Color(0xFF1A1A20), Color(0xFF0F0F15)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        border: Border.all(color: kLineColor),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(80),
+            blurRadius: 10,
+            spreadRadius: -2,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: kBrandColor.withAlpha(20),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: kBrandColor.withAlpha(60)),
+                ),
+                child: const Icon(Icons.route, size: 16, color: kBrandColor),
+              ),
+              const SizedBox(width: 10),
+              const Text(
+                'INFORMAZIONI TRACCIATO',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w900,
+                  color: kBrandColor,
+                  letterSpacing: 0.8,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          _InfoRow(
+            icon: Icons.track_changes,
+            label: 'Circuito',
+            value: trackDefinition.name,
+          ),
+          const SizedBox(height: 14),
+          _InfoRow(
+            icon: Icons.location_on_outlined,
+            label: 'Località',
+            value: trackDefinition.location,
+          ),
+          if (estimatedLength != null) ...[
+            const SizedBox(height: 14),
+            _InfoRow(
+              icon: Icons.straighten,
+              label: 'Lunghezza',
+              value: '${(estimatedLength / 1000).toStringAsFixed(2)} km',
+            ),
+          ],
+          const SizedBox(height: 14),
+          _InfoRow(
+            icon: Icons.open_in_full,
+            label: 'Larghezza',
+            value: '${width.toStringAsFixed(1)} m',
+          ),
+          if (hasMicroSectors) ...[
+            const SizedBox(height: 14),
+            _InfoRow(
+              icon: Icons.workspaces_outlined,
+              label: 'Microsettori',
+              value: '${trackDefinition.microSectors!.length}',
+            ),
+          ],
+          if (hasTrackPath) ...[
+            const SizedBox(height: 14),
+            _InfoRow(
+              icon: Icons.share_location,
+              label: 'Punti tracciato',
+              value: '${trackDefinition.trackPath!.length}',
+            ),
+          ],
+        ],
+      ),
+    );
   }
 }
 
