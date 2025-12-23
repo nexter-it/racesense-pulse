@@ -308,19 +308,21 @@ class _CustomCircuitsPageState extends State<CustomCircuitsPage> {
                   _buildStat(
                     icon: Icons.straighten,
                     label: 'Lunghezza',
-                    value: '${circuit.lengthMeters.toStringAsFixed(0)} m',
-                  ),
-                  Container(width: 1, height: 30, color: kLineColor),
-                  _buildStat(
-                    icon: Icons.width_normal,
-                    label: 'Larghezza',
-                    value: '${circuit.widthMeters.toStringAsFixed(1)} m',
+                    value: '${(circuit.lengthMeters / 1000).toStringAsFixed(2)} km',
                   ),
                   Container(width: 1, height: 30, color: kLineColor),
                   _buildStat(
                     icon: Icons.gps_fixed,
-                    label: 'Punti',
+                    label: 'Punti GPS',
                     value: circuit.points.length.toString(),
+                  ),
+                  Container(width: 1, height: 30, color: kLineColor),
+                  _buildStat(
+                    icon: Icons.speed,
+                    label: 'Frequenza',
+                    value: circuit.gpsFrequencyHz != null
+                        ? '${circuit.gpsFrequencyHz!.toStringAsFixed(0)} Hz'
+                        : '1 Hz',
                   ),
                 ],
               ),

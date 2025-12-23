@@ -598,33 +598,35 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
       ),
       child: Column(
         children: [
-          const SizedBox(height: 24),
+          const SizedBox(height: 16),
 
-          // Velocità
+          // Velocità - MOLTO PIÙ GRANDE
           Text(
             _currentSpeedKmh.toStringAsFixed(0),
             style: const TextStyle(
-              fontSize: 96,
+              fontSize: 130,
               fontWeight: FontWeight.w900,
               color: kFgColor,
-              height: 1.0,
+              height: 0.9,
+              letterSpacing: -4,
             ),
           ),
           const Text(
             'km/h',
             style: TextStyle(
-              fontSize: 20,
+              fontSize: 24,
               color: kMutedColor,
               fontWeight: FontWeight.w700,
+              letterSpacing: 2,
             ),
           ),
 
-          const SizedBox(height: 32),
+          const SizedBox(height: 24),
 
           // Lap info
           if (widget.trackDefinition != null) ...[
             _buildLapInfo(),
-            const SizedBox(height: 32),
+            const SizedBox(height: 24),
           ],
 
           // G-Force
@@ -632,8 +634,10 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
 
           const Spacer(),
 
-          // Stats
-          _buildStats(),
+          // Tempo totale sessione (invece di stats GPS)
+          _buildSessionTime(),
+
+          const SizedBox(height: 8),
         ],
       ),
     );
@@ -644,7 +648,7 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
 
     return Column(
       children: [
-        // Current lap
+        // LAP NUMBER - Più grande
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -652,30 +656,86 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
               'LAP ',
               style: TextStyle(
                 color: kMutedColor,
-                fontSize: 16,
+                fontSize: 20,
                 fontWeight: FontWeight.w700,
+                letterSpacing: 2,
               ),
             ),
             Text(
               '${_laps.length + 1}',
               style: const TextStyle(
                 color: kBrandColor,
-                fontSize: 24,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-            const SizedBox(width: 24),
-            Text(
-              currentLap != null ? _formatLap(currentLap) : '0:00.0',
-              style: const TextStyle(
-                color: kFgColor,
-                fontSize: 32,
+                fontSize: 36,
                 fontWeight: FontWeight.w900,
               ),
             ),
           ],
         ),
 
+        const SizedBox(height: 12),
+
+        // CURRENT LAP TIME - MOLTO PIÙ GRANDE
+        Text(
+          currentLap != null ? _formatLap(currentLap) : '0:00.0',
+          style: const TextStyle(
+            color: kFgColor,
+            fontSize: 56,
+            fontWeight: FontWeight.w900,
+            height: 1.0,
+            letterSpacing: -1,
+          ),
+        ),
+        const Text(
+          'TEMPO CORRENTE',
+          style: TextStyle(
+            color: kMutedColor,
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 1.5,
+          ),
+        ),
+
+        const SizedBox(height: 20),
+
+        // BEST LAP - Più prominente
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            gradient: LinearGradient(
+              colors: [
+                Colors.green.withAlpha(30),
+                Colors.green.withAlpha(10),
+              ],
+            ),
+            border: Border.all(color: Colors.green.withAlpha(100), width: 1.5),
+          ),
+          child: Column(
+            children: [
+              const Text(
+                'TEMPO MIGLIORE',
+                style: TextStyle(
+                  color: Colors.green,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1.5,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                _bestLap != null ? _formatLap(_bestLap!) : '---',
+                style: const TextStyle(
+                  color: Colors.green,
+                  fontSize: 32,
+                  fontWeight: FontWeight.w900,
+                  height: 1.0,
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // Delta e Previous (più piccoli, secondari)
         if (_previousLap != null) ...[
           const SizedBox(height: 16),
           Row(
@@ -685,11 +745,12 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
               Column(
                 children: [
                   const Text(
-                    'PREVIOUS',
+                    'PRECEDENTE',
                     style: TextStyle(
                       color: kMutedColor,
-                      fontSize: 10,
+                      fontSize: 9,
                       fontWeight: FontWeight.w700,
+                      letterSpacing: 1,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -697,14 +758,19 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
                     _formatLap(_previousLap!),
                     style: const TextStyle(
                       color: kFgColor,
-                      fontSize: 18,
+                      fontSize: 16,
                       fontWeight: FontWeight.w900,
                     ),
                   ),
                 ],
               ),
 
-              const SizedBox(width: 32),
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 24),
+                width: 1,
+                height: 30,
+                color: kLineColor,
+              ),
 
               // Delta
               Column(
@@ -713,8 +779,9 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
                     'DELTA',
                     style: TextStyle(
                       color: kMutedColor,
-                      fontSize: 10,
+                      fontSize: 9,
                       fontWeight: FontWeight.w700,
+                      letterSpacing: 1,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -722,32 +789,7 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
                     _formatDelta(),
                     style: TextStyle(
                       color: _formatDelta().startsWith('+') ? Colors.red : Colors.green,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(width: 32),
-
-              // Best lap
-              Column(
-                children: [
-                  const Text(
-                    'BEST',
-                    style: TextStyle(
-                      color: kMutedColor,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _bestLap != null ? _formatLap(_bestLap!) : '---',
-                    style: const TextStyle(
-                      color: Colors.green,
-                      fontSize: 18,
+                      fontSize: 16,
                       fontWeight: FontWeight.w900,
                     ),
                   ),
@@ -829,61 +871,82 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
     );
   }
 
-  Widget _buildStats() {
+  Widget _buildSessionTime() {
     return Container(
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        gradient: const LinearGradient(
+          colors: [
+            Color.fromRGBO(255, 255, 255, 0.08),
+            Color.fromRGBO(255, 255, 255, 0.04),
+          ],
+        ),
+        border: Border.all(color: kLineColor),
+      ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _buildStatItem(
-            icon: Icons.gps_fixed,
-            label: 'GPS Points',
-            value: _gpsTrack.length.toString(),
+          // Tempo totale
+          Expanded(
+            child: Column(
+              children: [
+                const Icon(Icons.timer_outlined, color: kBrandColor, size: 22),
+                const SizedBox(height: 6),
+                const Text(
+                  'DURATA TOTALE',
+                  style: TextStyle(
+                    color: kMutedColor,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  _formatSessionTime(),
+                  style: const TextStyle(
+                    color: kFgColor,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ],
+            ),
           ),
-          _buildStatItem(
-            icon: Icons.flag,
-            label: 'Laps',
-            value: _laps.length.toString(),
-          ),
-          _buildStatItem(
-            icon: Icons.my_location,
-            label: 'Accuracy',
-            value: _lastPosition != null
-                ? '${_lastPosition!.accuracy.toStringAsFixed(1)}m'
-                : '--',
+
+          Container(width: 1, height: 50, color: kLineColor),
+
+          // Numero giri completati
+          Expanded(
+            child: Column(
+              children: [
+                const Icon(Icons.flag, color: kBrandColor, size: 22),
+                const SizedBox(height: 6),
+                const Text(
+                  'GIRI COMPLETATI',
+                  style: TextStyle(
+                    color: kMutedColor,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  _laps.length.toString(),
+                  style: const TextStyle(
+                    color: kFgColor,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildStatItem({
-    required IconData icon,
-    required String label,
-    required String value,
-  }) {
-    return Column(
-      children: [
-        Icon(icon, color: kBrandColor, size: 20),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: const TextStyle(
-            color: kMutedColor,
-            fontSize: 10,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          value,
-          style: const TextStyle(
-            color: kFgColor,
-            fontSize: 14,
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-      ],
     );
   }
 
