@@ -3,7 +3,6 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:latlong2/latlong.dart';
 
 import '../services/ble_tracking_service.dart';
 import '../theme.dart';
@@ -11,6 +10,10 @@ import '../models/track_definition.dart';
 import 'live_session_page.dart';
 import '_mode_selector_widgets.dart';
 
+/// Pagina di preparazione GPS - RaceChrono Pro Style
+///
+/// Solo circuiti pre-tracciati (esistenti o custom).
+/// Rimosso: quick mode, manual line.
 class GpsWaitPage extends StatefulWidget {
   const GpsWaitPage({super.key});
 
@@ -39,14 +42,13 @@ class _GpsWaitPageState extends State<GpsWaitPage> {
   String? _connectedDeviceName;
   GpsData? _lastBleGpsData;
 
-  // Soglia "fix buono" (puoi tarare)
+  // Soglia "fix buono"
   static const double _targetAccuracy = 10.0; // metri
   static const double _worstAccuracy = 60.0; // per grafica/progress
 
-  // Selezione circuito
+  // Selezione circuito (solo pre-tracciati)
   TrackDefinition? _selectedTrack;
-  LatLng? _manualLineStart;
-  LatLng? _manualLineEnd;
+  StartMode? _selectedMode;
 
   @override
   void initState() {
@@ -76,7 +78,6 @@ class _GpsWaitPageState extends State<GpsWaitPage> {
   }
 
   void _listenBleConnectionChanges() {
-    // Ascolta lo stream dei dispositivi per trovare quello connesso
     _bleDeviceSub?.cancel();
     _bleDeviceSub = _bleService.deviceStream.listen((devices) {
       final connected = devices.values.firstWhere(
@@ -94,9 +95,7 @@ class _GpsWaitPageState extends State<GpsWaitPage> {
           if (connected.isConnected) {
             _connectedDeviceId = connected.id;
             _connectedDeviceName = connected.name;
-            // Se connesso, ascoltiamo il GPS BLE
             _listenBleGps();
-            // Stop GPS cellulare: il fix-check deve usare la sorgente BLE.
             _gpsSub?.cancel();
             _gpsSub = null;
           } else {
@@ -105,7 +104,6 @@ class _GpsWaitPageState extends State<GpsWaitPage> {
             _lastBleGpsData = null;
             _bleGpsSub?.cancel();
             _bleGpsSub = null;
-            // Fallback a GPS cellulare se permessi ok.
             if (_gpsSub == null && !_checkingPermissions && !_hasError) {
               _startGpsStream();
             }
@@ -161,7 +159,6 @@ class _GpsWaitPageState extends State<GpsWaitPage> {
         return;
       }
 
-      // Ok, permessi a posto → iniziamo stream + timer
       if (!_isUsingBleDevice) {
         _startGpsStream();
       }
@@ -214,7 +211,6 @@ class _GpsWaitPageState extends State<GpsWaitPage> {
 
   bool get _hasFix {
     if (_isUsingBleDevice) {
-      // Per dispositivo BLE, controlliamo se abbiamo dati GPS recenti e un buon fix
       if (_lastBleGpsData == null) return false;
       if (_elapsedSeconds < 3) return false;
 
@@ -223,11 +219,9 @@ class _GpsWaitPageState extends State<GpsWaitPage> {
         if (age.inSeconds > 6) return false;
       }
 
-      // Fix valido se fix >= 1 e ci sono satelliti
       return (_lastBleGpsData!.fix ?? 0) >= 1 &&
              (_lastBleGpsData!.satellites ?? 0) >= 4;
     } else {
-      // GPS del cellulare
       if (_accuracy == null) return false;
       if (_elapsedSeconds < 3) return false;
 
@@ -242,10 +236,8 @@ class _GpsWaitPageState extends State<GpsWaitPage> {
 
   double get _qualityProgress {
     if (_isUsingBleDevice) {
-      // Per BLE mostriamo la qualità basata sul numero di satelliti
       final sats = _lastBleGpsData?.satellites ?? 0;
       if (sats == 0) return 0.0;
-      // 4 satelliti = 0.3, 12+ satelliti = 1.0
       return (sats / 12).clamp(0.0, 1.0);
     } else {
       if (_accuracy == null) return 0.0;
@@ -276,7 +268,6 @@ class _GpsWaitPageState extends State<GpsWaitPage> {
         return 'GPS professionale pronto';
       }
     } else {
-      // GPS cellulare
       if (_accuracy == null) {
         return 'In attesa del primo fix...';
       }
@@ -316,66 +307,20 @@ class _GpsWaitPageState extends State<GpsWaitPage> {
   }
 
   void _goToLivePage() {
-    TrackDefinition? track;
-    switch (_selectedMode) {
-      case StartMode.existing:
-        track = _selectedTrack;
-        break;
-      case StartMode.manualLine:
-        track = _buildManualTrackDefinition();
-        break;
-      case StartMode.privateCustom:
-        track = _selectedTrack;
-        break;
-      case null:
-        return;
-    }
     if (!_canStartRecording) return;
+    if (_selectedTrack == null) return;
 
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
         builder: (_) => LiveSessionPage(
-          trackDefinition: track,
+          trackDefinition: _selectedTrack,
         ),
       ),
     );
   }
 
-  void _selectTrack(TrackDefinition track) {
-    setState(() {
-      _selectedTrack = track;
-      _manualLineStart = null;
-      _manualLineEnd = null;
-    });
-  }
-
-  TrackDefinition? _buildManualTrackDefinition() {
-    if (!_hasManualLine) return null;
-    return TrackDefinition(
-      id: 'manual-${DateTime.now().millisecondsSinceEpoch}',
-      name: 'Linea manuale',
-      location: 'Circuito personalizzato',
-      finishLineStart: _manualLineStart!,
-      finishLineEnd: _manualLineEnd!,
-    );
-  }
-
-  bool get _hasManualLine => _manualLineStart != null && _manualLineEnd != null;
-
-  bool get _hasSelectedTrack => _selectedTrack != null;
-
-  StartMode? _selectedMode;
-
   bool get _canStartRecording {
-    if (!_hasFix || _selectedMode == null) return false;
-    switch (_selectedMode!) {
-      case StartMode.existing:
-        return _hasSelectedTrack;
-      case StartMode.manualLine:
-        return _hasManualLine;
-      case StartMode.privateCustom:
-        return _hasSelectedTrack;
-    }
+    return _hasFix && _selectedTrack != null;
   }
 
   @override
@@ -439,8 +384,6 @@ class _GpsWaitPageState extends State<GpsWaitPage> {
                               if (track != null) {
                                 setState(() {
                                   _selectedTrack = track;
-                                  _manualLineStart = null;
-                                  _manualLineEnd = null;
                                   _selectedMode = mode;
                                 });
                               }
@@ -455,31 +398,6 @@ class _GpsWaitPageState extends State<GpsWaitPage> {
                               if (track != null) {
                                 setState(() {
                                   _selectedTrack = track;
-                                  _manualLineStart = null;
-                                  _manualLineEnd = null;
-                                  _selectedMode = mode;
-                                });
-                              }
-                              break;
-                            case StartMode.manualLine:
-                              final result =
-                                  await Navigator.of(context).push<LineResult?>(
-                                MaterialPageRoute(
-                                  builder: (_) => ManualLinePage(
-                                    initialCenter: _lastPosition != null
-                                        ? LatLng(_lastPosition!.latitude,
-                                            _lastPosition!.longitude)
-                                        : (_lastBleGpsData != null
-                                            ? _lastBleGpsData!.position
-                                            : null),
-                                  ),
-                                ),
-                              );
-                              if (result != null) {
-                                setState(() {
-                                  _manualLineStart = result.start;
-                                  _manualLineEnd = result.end;
-                                  _selectedTrack = null;
                                   _selectedMode = mode;
                                 });
                               }
@@ -568,7 +486,7 @@ class _GpsWaitPageState extends State<GpsWaitPage> {
                     ),
                   if (_hasFix && !_canStartRecording && !_hasError)
                     const Text(
-                      'Seleziona un circuito o disegna la linea di via per attivare la registrazione.',
+                      'Seleziona un circuito per attivare la registrazione.',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 11,
@@ -839,7 +757,6 @@ class _GpsWaitPageState extends State<GpsWaitPage> {
       child: Stack(
         alignment: Alignment.center,
         children: [
-          // cerchio di base
           Container(
             width: 120,
             height: 120,
@@ -849,7 +766,6 @@ class _GpsWaitPageState extends State<GpsWaitPage> {
               border: Border.all(color: kLineColor),
             ),
           ),
-          // progress "arco"
           CustomPaint(
             size: const Size(120, 120),
             painter: _ArcPainter(
@@ -857,7 +773,6 @@ class _GpsWaitPageState extends State<GpsWaitPage> {
               color: color,
             ),
           ),
-          // testo al centro
           Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -911,9 +826,9 @@ class _GpsWaitPageState extends State<GpsWaitPage> {
               SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  'Inizia la registrazione quando sei già dentro al circuito. '
-                  'Scegli un tracciato o disegna la linea Start/Finish fissa '
-                  'per rilevare i giri in modo affidabile.',
+                  'Sistema RaceChrono Pro: seleziona un circuito pre-tracciato. '
+                  'Durante la sessione live avrai tempi giro best-effort. '
+                  'A fine sessione puoi riprocessare la traccia per tempi precisi con interpolazione sub-secondo.',
                   style: TextStyle(
                     fontSize: 13,
                     height: 1.4,
@@ -957,40 +872,14 @@ class _GpsWaitPageState extends State<GpsWaitPage> {
   }
 
   Widget _selectionSummaryCard() {
-    String title = 'Nessuna modalità selezionata';
-    String subtitle = 'Scegli un\'opzione per iniziare';
+    String title = 'Nessun circuito selezionato';
+    String subtitle = 'Scegli un circuito per iniziare';
     bool ready = false;
 
-    switch (_selectedMode) {
-      case StartMode.existing:
-        title = 'Circuito esistente';
-        if (_selectedTrack != null) {
-          subtitle = '${_selectedTrack!.name} · ${_selectedTrack!.location}';
-          ready = true;
-        } else {
-          subtitle = 'Seleziona un circuito dalla lista';
-        }
-        break;
-      case StartMode.privateCustom:
-        title = 'Circuito privato';
-        if (_selectedTrack != null) {
-          subtitle = '${_selectedTrack!.name} · ${_selectedTrack!.location}';
-          ready = true;
-        } else {
-          subtitle = 'Scegli un circuito custom salvato';
-        }
-        break;
-      case StartMode.manualLine:
-        title = 'Linea start/finish manuale';
-        if (_hasManualLine) {
-          subtitle = 'Linea impostata sulla mappa';
-          ready = true;
-        } else {
-          subtitle = 'Definisci la linea su mappa';
-        }
-        break;
-      case null:
-        break;
+    if (_selectedTrack != null) {
+      title = _selectedMode == StartMode.existing ? 'Circuito ufficiale' : 'Circuito custom';
+      subtitle = '${_selectedTrack!.name} · ${_selectedTrack!.location}';
+      ready = true;
     }
 
     return Container(

@@ -1,59 +1,36 @@
 import 'package:latlong2/latlong.dart';
 
-/// Micro settore - linea perpendicolare che definisce una sezione del tracciato
-class TrackMicroSector {
-  final LatLng start; // Punto su un bordo (es. interno)
-  final LatLng end;   // Punto su altro bordo (es. esterno)
-
-  const TrackMicroSector({required this.start, required this.end});
-
-  Map<String, dynamic> toMap() {
-    return {
-      'start': {'lat': start.latitude, 'lon': start.longitude},
-      'end': {'lat': end.latitude, 'lon': end.longitude},
-    };
-  }
-
-  factory TrackMicroSector.fromMap(Map<String, dynamic> map) {
-    return TrackMicroSector(
-      start: LatLng(
-        map['start']['lat'] as double,
-        map['start']['lon'] as double,
-      ),
-      end: LatLng(
-        map['end']['lat'] as double,
-        map['end']['lon'] as double,
-      ),
-    );
-  }
-}
-
-/// Definizione di un circuito con linea di traguardo fissa
+/// Definizione di un circuito con linea Start/Finish
+///
+/// Sistema RaceChrono Pro: solo GPS grezzo + linea S/F disegnata manualmente.
+/// Niente microsettori: lap detection via intersezione geometrica.
 class TrackDefinition {
   final String id;
   final String name;
   final String location;
 
-  /// Punto iniziale della linea di traguardo (lat/lon)
+  /// Punto iniziale della linea Start/Finish (lat/lon)
   final LatLng finishLineStart;
 
-  /// Punto finale della linea di traguardo (lat/lon)
+  /// Punto finale della linea Start/Finish (lat/lon)
   final LatLng finishLineEnd;
 
-  /// Lunghezza stimata del circuito in metri (opzionale)
+  /// Lunghezza stimata del circuito in metri
+  /// (calcolata dal post-processing della mediana dei lap)
   final double? estimatedLengthMeters;
 
   /// URL o path dell'immagine del circuito (opzionale)
   final String? imageUrl;
 
   /// Tracciato completo del circuito (lista di punti GPS)
+  /// GPS grezzo registrato durante la sessione di tracciamento
   final List<LatLng>? trackPath;
 
-  /// Microsettori per definire i bordi del circuito
-  final List<TrackMicroSector>? microSectors;
+  /// Se questo circuito è stato creato con dispositivo BLE GPS
+  final bool? usedBleDevice;
 
-  /// Larghezza del circuito in metri (per circuiti custom)
-  final double? widthMeters;
+  /// Frequenza GPS media usata durante il tracciamento (Hz)
+  final double? gpsFrequencyHz;
 
   const TrackDefinition({
     required this.id,
@@ -64,11 +41,11 @@ class TrackDefinition {
     this.estimatedLengthMeters,
     this.imageUrl,
     this.trackPath,
-    this.microSectors,
-    this.widthMeters,
+    this.usedBleDevice,
+    this.gpsFrequencyHz,
   });
 
-  /// Calcola il punto centrale della linea di traguardo
+  /// Calcola il punto centrale della linea Start/Finish
   LatLng get finishLineCenter {
     return LatLng(
       (finishLineStart.latitude + finishLineEnd.latitude) / 2,
@@ -76,7 +53,7 @@ class TrackDefinition {
     );
   }
 
-  /// Calcola la lunghezza della linea di traguardo in metri
+  /// Calcola la lunghezza della linea Start/Finish in metri
   double get finishLineLength {
     const distance = Distance();
     return distance.as(
@@ -107,9 +84,8 @@ class TrackDefinition {
         'trackPath': trackPath!
             .map((p) => {'lat': p.latitude, 'lon': p.longitude})
             .toList(),
-      if (microSectors != null)
-        'microSectors': microSectors!.map((s) => s.toMap()).toList(),
-      if (widthMeters != null) 'widthMeters': widthMeters,
+      if (usedBleDevice != null) 'usedBleDevice': usedBleDevice,
+      if (gpsFrequencyHz != null) 'gpsFrequencyHz': gpsFrequencyHz,
     };
   }
 
@@ -134,12 +110,35 @@ class TrackDefinition {
               .map((p) => LatLng(p['lat'] as double, p['lon'] as double))
               .toList()
           : null,
-      microSectors: map['microSectors'] != null
-          ? (map['microSectors'] as List)
-              .map((s) => TrackMicroSector.fromMap(s as Map<String, dynamic>))
-              .toList()
-          : null,
-      widthMeters: map['widthMeters'] as double?,
+      usedBleDevice: map['usedBleDevice'] as bool?,
+      gpsFrequencyHz: map['gpsFrequencyHz'] as double?,
+    );
+  }
+
+  /// Copia con modifiche
+  TrackDefinition copyWith({
+    String? id,
+    String? name,
+    String? location,
+    LatLng? finishLineStart,
+    LatLng? finishLineEnd,
+    double? estimatedLengthMeters,
+    String? imageUrl,
+    List<LatLng>? trackPath,
+    bool? usedBleDevice,
+    double? gpsFrequencyHz,
+  }) {
+    return TrackDefinition(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      location: location ?? this.location,
+      finishLineStart: finishLineStart ?? this.finishLineStart,
+      finishLineEnd: finishLineEnd ?? this.finishLineEnd,
+      estimatedLengthMeters: estimatedLengthMeters ?? this.estimatedLengthMeters,
+      imageUrl: imageUrl ?? this.imageUrl,
+      trackPath: trackPath ?? this.trackPath,
+      usedBleDevice: usedBleDevice ?? this.usedBleDevice,
+      gpsFrequencyHz: gpsFrequencyHz ?? this.gpsFrequencyHz,
     );
   }
 
@@ -149,7 +148,7 @@ class TrackDefinition {
   }
 }
 
-/// Circuiti predefiniti statici
+/// Circuiti predefiniti statici (circuiti ufficiali)
 class PredefinedTracks {
   static final List<TrackDefinition> all = [
     const TrackDefinition(

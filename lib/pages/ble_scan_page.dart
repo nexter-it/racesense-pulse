@@ -15,7 +15,7 @@ class BleScanPage extends StatefulWidget {
 class _BleScanPageState extends State<BleScanPage> {
   final BleTrackingService _bleService = BleTrackingService();
 
-  static const _targetPrefix = 'GPS Tracker';
+  static const _targetPrefix = 'GPS-';
 
   bool get _scanning => _bleService.isScanning;
 

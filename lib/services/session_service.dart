@@ -590,4 +590,167 @@ class SessionService {
       return UserStats.empty();
     }
   }
+
+  // ============================================================
+  // POST-PROCESSING & RE-ELABORAZIONE (RaceChrono Pro)
+  // ============================================================
+
+  /// Recupera GPS grezzo completo per post-processing
+  ///
+  /// Unisce tutti i chunks GPS in un unico array di Position
+  Future<List<Position>> getSessionGpsTrack(String sessionId) async {
+    try {
+      print('📥 Caricamento GPS grezzo per sessione: $sessionId');
+
+      final querySnapshot = await _firestore
+          .collection('sessions')
+          .doc(sessionId)
+          .collection('gpsData')
+          .orderBy('chunkIndex')
+          .get();
+
+      final allPositions = <Position>[];
+
+      for (final doc in querySnapshot.docs) {
+        final chunk = GpsDataChunk.fromFirestore(doc.data());
+
+        // Converti GpsPoint in Position
+        for (final gpsPoint in chunk.points) {
+          allPositions.add(Position(
+            latitude: gpsPoint.latitude,
+            longitude: gpsPoint.longitude,
+            timestamp: gpsPoint.timestamp,
+            accuracy: gpsPoint.accuracy,
+            altitude: 0.0,
+            altitudeAccuracy: 0.0,
+            heading: 0.0,
+            headingAccuracy: 0.0,
+            speed: gpsPoint.speedKmh / 3.6, // km/h → m/s
+            speedAccuracy: 0.0,
+          ));
+        }
+      }
+
+      print('✅ Caricati ${allPositions.length} punti GPS');
+      return allPositions;
+    } catch (e) {
+      print('❌ Errore caricamento GPS track: $e');
+      rethrow;
+    }
+  }
+
+  /// Rielabora sessione con nuova linea S/F (post-processing)
+  ///
+  /// Questo metodo permette di ricalcolare i lap usando PostProcessingService
+  /// quando l'utente modifica la linea Start/Finish dopo la sessione live.
+  Future<void> reprocessSession({
+    required String sessionId,
+    required String userId,
+    required List<Duration> newLaps,
+    required Duration? newBestLap,
+    Function(double)? onProgress,
+  }) async {
+    try {
+      // Verifica ownership
+      final sessionDoc = await _firestore.collection('sessions').doc(sessionId).get();
+      if (!sessionDoc.exists || sessionDoc.data()?['userId'] != userId) {
+        throw 'Non autorizzato a modificare questa sessione';
+      }
+
+      onProgress?.call(0.2);
+
+      // Aggiorna documento principale con nuovi lap
+      await _firestore.collection('sessions').doc(sessionId).update({
+        'lapCount': newLaps.length,
+        'bestLap': newBestLap?.inMilliseconds,
+      });
+
+      onProgress?.call(0.4);
+
+      // Elimina vecchi lap
+      final oldLapsSnapshot = await _firestore
+          .collection('sessions')
+          .doc(sessionId)
+          .collection('laps')
+          .get();
+
+      final deleteBatch = _firestore.batch();
+      for (final doc in oldLapsSnapshot.docs) {
+        deleteBatch.delete(doc.reference);
+      }
+      await deleteBatch.commit();
+
+      onProgress?.call(0.6);
+
+      // Salva nuovi lap (senza speed history perché non disponibile)
+      final saveBatch = _firestore.batch();
+      for (int i = 0; i < newLaps.length; i++) {
+        final lapModel = LapModel(
+          lapIndex: i,
+          duration: newLaps[i],
+          avgSpeedKmh: 0.0, // Non disponibile in post-processing
+          maxSpeedKmh: 0.0, // Non disponibile in post-processing
+        );
+
+        final lapRef = _firestore
+            .collection('sessions')
+            .doc(sessionId)
+            .collection('laps')
+            .doc('lap_$i');
+
+        saveBatch.set(lapRef, lapModel.toFirestore());
+      }
+      await saveBatch.commit();
+
+      onProgress?.call(0.8);
+
+      // Aggiorna best lap nelle stats utente se migliorato
+      final oldBestLap = sessionDoc.data()?['bestLap'] != null
+          ? Duration(milliseconds: sessionDoc.data()!['bestLap'] as int)
+          : null;
+
+      if (newBestLap != null && (oldBestLap == null || newBestLap < oldBestLap)) {
+        final userRef = _firestore.collection('users').doc(userId);
+        final userDoc = await userRef.get();
+
+        if (userDoc.exists && userDoc.data()?['stats'] != null) {
+          final currentStats = UserStats.fromMap(
+            userDoc.data()!['stats'] as Map<String, dynamic>
+          );
+
+          final trackName = sessionDoc.data()?['trackName'] as String? ?? '';
+
+          if (currentStats.bestLapEver == null || newBestLap < currentStats.bestLapEver!) {
+            await userRef.update({
+              'stats.bestLapEver': newBestLap.inMilliseconds,
+              'stats.bestLapTrack': trackName,
+            });
+          }
+        }
+      }
+
+      onProgress?.call(1.0);
+      print('✅ Sessione $sessionId rielaborata con ${newLaps.length} nuovi lap');
+    } catch (e) {
+      print('❌ Errore rielaborazione sessione: $e');
+      rethrow;
+    }
+  }
+
+  /// Verifica se una sessione ha GPS grezzo disponibile per post-processing
+  Future<bool> hasGpsDataForReprocessing(String sessionId) async {
+    try {
+      final gpsSnapshot = await _firestore
+          .collection('sessions')
+          .doc(sessionId)
+          .collection('gpsData')
+          .limit(1)
+          .get();
+
+      return gpsSnapshot.docs.isNotEmpty;
+    } catch (e) {
+      print('❌ Errore verifica GPS data: $e');
+      return false;
+    }
+  }
 }

@@ -1,38 +1,51 @@
-import 'dart:math' as math;
-
 import 'package:latlong2/latlong.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../models/track_definition.dart';
 import 'track_service.dart';
 
+/// Info per circuito custom - RaceChrono Pro style
+///
+/// Solo GPS grezzo + linea S/F. Niente microsettori.
 class CustomCircuitInfo {
   final String name;
-  final double widthMeters;
   final String city;
   final String country;
   final double lengthMeters;
   final DateTime createdAt;
-  final List<LatLng> points;
-  final List<MicroSector> microSectors;
+  final List<LatLng> points; // GPS grezzo
   final bool usedBleDevice;
+
+  // Nuovi campi RaceChrono Pro
+  final LatLng? finishLineStart;
+  final LatLng? finishLineEnd;
+  final double? gpsFrequencyHz;
+
+  // Deprecated (mantenuto per backward compatibility)
+  @Deprecated('Non più usato - rimuovere in futuro')
+  final double widthMeters;
+  @Deprecated('Non più usato - rimuovere in futuro')
+  final List<MicroSector> microSectors;
 
   CustomCircuitInfo({
     required this.name,
-    required this.widthMeters,
     required this.city,
     required this.country,
     required this.lengthMeters,
     required this.createdAt,
     required this.points,
-    required this.microSectors,
     this.usedBleDevice = false,
+    this.finishLineStart,
+    this.finishLineEnd,
+    this.gpsFrequencyHz,
+    // Deprecated fields
+    this.widthMeters = 0.0,
+    this.microSectors = const [],
   });
 
   Map<String, dynamic> toJson() {
     return {
       'name': name,
-      'widthMeters': widthMeters,
       'city': city,
       'country': country,
       'lengthMeters': lengthMeters,
@@ -43,8 +56,21 @@ class CustomCircuitInfo {
                 'lon': p.longitude,
               })
           .toList(),
-      'microSectors': microSectors.map((s) => s.toJson()).toList(),
       'usedBleDevice': usedBleDevice,
+      if (finishLineStart != null)
+        'finishLineStart': {
+          'lat': finishLineStart!.latitude,
+          'lon': finishLineStart!.longitude,
+        },
+      if (finishLineEnd != null)
+        'finishLineEnd': {
+          'lat': finishLineEnd!.latitude,
+          'lon': finishLineEnd!.longitude,
+        },
+      if (gpsFrequencyHz != null) 'gpsFrequencyHz': gpsFrequencyHz,
+      // Backward compatibility (deprecated)
+      'widthMeters': widthMeters,
+      'microSectors': microSectors.map((s) => s.toJson()).toList(),
     };
   }
 
@@ -55,109 +81,89 @@ class CustomCircuitInfo {
               (p['lon'] as num).toDouble(),
             ))
         .toList();
+
+    // Parse finish line (nuovo formato)
+    LatLng? finishLineStart;
+    LatLng? finishLineEnd;
+
+    if (json['finishLineStart'] != null) {
+      final fls = json['finishLineStart'] as Map<String, dynamic>;
+      finishLineStart = LatLng(
+        (fls['lat'] as num).toDouble(),
+        (fls['lon'] as num).toDouble(),
+      );
+    }
+
+    if (json['finishLineEnd'] != null) {
+      final fle = json['finishLineEnd'] as Map<String, dynamic>;
+      finishLineEnd = LatLng(
+        (fle['lat'] as num).toDouble(),
+        (fle['lon'] as num).toDouble(),
+      );
+    }
+
+    // Fallback: se non ha finishLine ma ha microSectors, usa primo microsettore
+    if (finishLineStart == null && finishLineEnd == null) {
+      final microSectors = (json['microSectors'] as List<dynamic>?)
+          ?.map((s) => MicroSector.fromJson(s as Map<String, dynamic>))
+          .toList();
+
+      if (microSectors != null && microSectors.isNotEmpty) {
+        finishLineStart = microSectors.first.start;
+        finishLineEnd = microSectors.first.end;
+      } else if (pts.isNotEmpty) {
+        // Ultimo fallback: usa primi due punti della traccia
+        finishLineStart = pts.first;
+        finishLineEnd = pts.length > 1 ? pts[1] : pts.first;
+      }
+    }
+
     return CustomCircuitInfo(
       name: json['name'] as String? ?? 'Circuito',
-      widthMeters: (json['widthMeters'] as num?)?.toDouble() ?? 8.0,
       city: json['city'] as String? ?? '',
       country: json['country'] as String? ?? '',
       lengthMeters: (json['lengthMeters'] as num?)?.toDouble() ?? 0.0,
       createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ??
           DateTime.now(),
       points: pts,
+      usedBleDevice: json['usedBleDevice'] as bool? ?? false,
+      finishLineStart: finishLineStart,
+      finishLineEnd: finishLineEnd,
+      gpsFrequencyHz: (json['gpsFrequencyHz'] as num?)?.toDouble(),
+      // Deprecated (backward compatibility)
+      widthMeters: (json['widthMeters'] as num?)?.toDouble() ?? 0.0,
       microSectors: (json['microSectors'] as List<dynamic>?)
               ?.map((s) => MicroSector.fromJson(s as Map<String, dynamic>))
               .toList() ??
-          buildSectorsFromPoints(pts),
-      usedBleDevice: json['usedBleDevice'] as bool? ?? false,
+          [],
     );
-  }
-
-  static List<MicroSector> buildSectorsFromPoints(List<LatLng> pts, {double widthMeters = 8.0}) {
-    final List<MicroSector> sectors = [];
-    if (pts.length < 2) return sectors;
-
-    // Costanti per conversione metri -> gradi
-    const latMetersPerDegree = 111111.0;
-
-    for (int i = 0; i < pts.length; i++) {
-      final p = pts[i];
-
-      // Calcola la direzione del tracciato in questo punto usando media delle direzioni (smoothing)
-      double dx, dy;
-
-      if (i == 0) {
-        // Primo punto: usa direzione verso il prossimo
-        dx = pts[1].longitude - p.longitude;
-        dy = pts[1].latitude - p.latitude;
-      } else if (i == pts.length - 1) {
-        // Ultimo punto: usa direzione dal precedente
-        dx = p.longitude - pts[i - 1].longitude;
-        dy = p.latitude - pts[i - 1].latitude;
-      } else {
-        // Punto intermedio: usa la direzione media per smoothing
-        final dxIn = p.longitude - pts[i - 1].longitude;
-        final dyIn = p.latitude - pts[i - 1].latitude;
-        final dxOut = pts[i + 1].longitude - p.longitude;
-        final dyOut = pts[i + 1].latitude - p.latitude;
-
-        // Media delle due direzioni
-        dx = (dxIn + dxOut) / 2;
-        dy = (dyIn + dyOut) / 2;
-      }
-
-      if (dx == 0 && dy == 0) continue;
-
-      // Vettore perpendicolare (ruotato di 90°)
-      final perpX = -dy;
-      final perpY = dx;
-
-      // Normalizza il vettore perpendicolare
-      final length = math.sqrt(perpX * perpX + perpY * perpY);
-      if (length == 0) continue;
-
-      final normX = perpX / length;
-      final normY = perpY / length;
-
-      // Scala per la larghezza del circuito (metà larghezza per lato)
-      final lonMetersPerDegree = latMetersPerDegree * math.cos(p.latitude * math.pi / 180);
-      final halfWidth = widthMeters / 2;
-
-      // Punti perpendicolari ai lati del circuito (da bordo a bordo)
-      final start = LatLng(
-        p.latitude + normY * (halfWidth / latMetersPerDegree),
-        p.longitude + normX * (halfWidth / lonMetersPerDegree),
-      );
-
-      final end = LatLng(
-        p.latitude - normY * (halfWidth / latMetersPerDegree),
-        p.longitude - normX * (halfWidth / lonMetersPerDegree),
-      );
-
-      sectors.add(MicroSector(start: start, end: end));
-    }
-
-    return sectors;
   }
 
   /// Converti CustomCircuitInfo in TrackDefinition per Firebase
   TrackDefinition toTrackDefinition() {
-    // La linea del via è definita dal primo micro settore
-    final finishLine = microSectors.isNotEmpty
-        ? microSectors.first
-        : MicroSector(start: points.first, end: points.first);
+    // Usa finish line se disponibile, altrimenti primo microsettore (fallback)
+    LatLng fStart = finishLineStart ?? points.first;
+    LatLng fEnd = finishLineEnd ??
+        (points.length > 1 ? points[1] : points.first);
+
+    // Se c'è microSectors (vecchio formato), usa quello come fallback
+    if (finishLineStart == null &&
+        finishLineEnd == null &&
+        microSectors.isNotEmpty) {
+      fStart = microSectors.first.start;
+      fEnd = microSectors.first.end;
+    }
 
     return TrackDefinition(
       id: name.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '_'),
       name: name,
       location: '$city, $country',
-      finishLineStart: finishLine.start,
-      finishLineEnd: finishLine.end,
+      finishLineStart: fStart,
+      finishLineEnd: fEnd,
       estimatedLengthMeters: lengthMeters,
       trackPath: points,
-      widthMeters: widthMeters,
-      microSectors: microSectors
-          .map((s) => TrackMicroSector(start: s.start, end: s.end))
-          .toList(),
+      usedBleDevice: usedBleDevice,
+      gpsFrequencyHz: gpsFrequencyHz,
     );
   }
 
@@ -167,7 +173,6 @@ class CustomCircuitInfo {
 
     return CustomCircuitInfo(
       name: trackDef.name,
-      widthMeters: trackDef.widthMeters ?? 8.0,
       city: trackDef.location.split(',').first.trim(),
       country: trackDef.location.contains(',')
           ? trackDef.location.split(',').last.trim()
@@ -175,15 +180,17 @@ class CustomCircuitInfo {
       lengthMeters: trackDef.estimatedLengthMeters ?? 0.0,
       createdAt: track.createdAt,
       points: trackDef.trackPath ?? [],
-      microSectors: trackDef.microSectors
-              ?.map((s) => MicroSector(start: s.start, end: s.end))
-              .toList() ??
-          [],
-      usedBleDevice: false, // Info non salvata in TrackDefinition
+      usedBleDevice: trackDef.usedBleDevice ?? false,
+      finishLineStart: trackDef.finishLineStart,
+      finishLineEnd: trackDef.finishLineEnd,
+      gpsFrequencyHz: trackDef.gpsFrequencyHz,
     );
   }
 }
 
+/// MicroSector - DEPRECATED
+/// Mantenuto solo per backward compatibility con vecchi circuiti
+@Deprecated('Non più usato - RaceChrono Pro usa solo linea S/F')
 class MicroSector {
   final LatLng start;
   final LatLng end;

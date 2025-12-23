@@ -73,7 +73,6 @@ class _ActivityDetailPageState extends State<ActivityDetailPage> {
         finishLineStart: path.first,
         finishLineEnd: path.length > 1 ? path[1] : path.first,
         trackPath: path,
-        widthMeters: 10.0, // Default width
       );
     }
 
@@ -1106,7 +1105,7 @@ class _MapSection extends StatelessWidget {
     }
 
     final centerLine = track.trackPath!;
-    final width = track.widthMeters ?? 10.0;
+    final width = 10.0; // Default track width in meters
     final halfWidth = width / 2;
 
     final List<ll.LatLng> innerBorder = [];
@@ -1379,10 +1378,7 @@ class _TrackInfoSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final hasTrackPath = trackDefinition.trackPath != null &&
                          trackDefinition.trackPath!.isNotEmpty;
-    final hasMicroSectors = trackDefinition.microSectors != null &&
-                            trackDefinition.microSectors!.isNotEmpty;
     final estimatedLength = trackDefinition.estimatedLengthMeters;
-    final width = trackDefinition.widthMeters ?? 10.0;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -1447,20 +1443,6 @@ class _TrackInfoSection extends StatelessWidget {
               icon: Icons.straighten,
               label: 'Lunghezza',
               value: '${(estimatedLength / 1000).toStringAsFixed(2)} km',
-            ),
-          ],
-          const SizedBox(height: 14),
-          _InfoRow(
-            icon: Icons.open_in_full,
-            label: 'Larghezza',
-            value: '${width.toStringAsFixed(1)} m',
-          ),
-          if (hasMicroSectors) ...[
-            const SizedBox(height: 14),
-            _InfoRow(
-              icon: Icons.workspaces_outlined,
-              label: 'Microsettori',
-              value: '${trackDefinition.microSectors!.length}',
             ),
           ],
           if (hasTrackPath) ...[
