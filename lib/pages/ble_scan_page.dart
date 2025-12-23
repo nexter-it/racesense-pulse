@@ -14,9 +14,10 @@ class BleScanPage extends StatefulWidget {
 
 class _BleScanPageState extends State<BleScanPage> {
   final BleTrackingService _bleService = BleTrackingService();
-  bool _scanning = false;
 
-  static const _targetPrefix = 'GPS-Tracker-';
+  static const _targetPrefix = 'GPS Tracker';
+
+  bool get _scanning => _bleService.isScanning;
 
   @override
   void initState() {
@@ -26,25 +27,47 @@ class _BleScanPageState extends State<BleScanPage> {
 
   @override
   void dispose() {
-    // Lascia lo scan attivo solo se ci sono altre pagine che ascoltano; qui lo fermiamo.
+    // Ferma lo scan quando lasci la pagina (il servizio manterrà la cache)
     _bleService.stopScan();
     super.dispose();
   }
 
   Future<void> _startScan() async {
-    setState(() => _scanning = true);
-    await _bleService.startScan(nameFilters: const [_targetPrefix]);
-    setState(() => _scanning = false);
+    // Avvia scan continuo (si riavvia automaticamente ogni 10 secondi)
+    await _bleService.startScan(
+      nameFilters: const [_targetPrefix],
+      continuous: true,
+    );
+
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   Future<void> _connect(String deviceId, String deviceName) async {
-    final ok = await _bleService.connect(deviceId);
-    if (ok && mounted) {
+    // Mostra dialog di caricamento
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation(kBrandColor),
+        ),
+      ),
+    );
+
+    final ok = await _bleService.connect(deviceId, autoReconnect: true);
+
+    if (!mounted) return;
+    Navigator.of(context).pop(); // Chiudi loading dialog
+
+    if (ok) {
       Navigator.of(context).pop({'id': deviceId, 'name': deviceName});
-    } else if (mounted) {
+    } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Connessione fallita'),
+          content: Text('Connessione fallita. Riprova.'),
           backgroundColor: kErrorColor,
         ),
       );

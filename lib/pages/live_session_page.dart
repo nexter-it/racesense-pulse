@@ -85,6 +85,10 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
   final BleTrackingService _bleService = BleTrackingService();
   String? _connectedBleDeviceId;
   bool _isUsingBleGps = false;
+  StreamSubscription<Map<String, BleDeviceSnapshot>>? _bleDeviceStreamSub;
+
+  // Formation lap - il timer parte solo dopo il primo passaggio dal via
+  bool _timerStarted = false;
 
   // 🔁 Timer simulatore GPS
   Timer? _simTimer;
@@ -183,9 +187,10 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
   // INIZIO SESSIONE
   // ============================================================
   void _startSession() {
-    _sessionWatch.start();
+    // ⚠️ NON avviare il timer qui - parte solo dopo il formation lap
+    // Il timer verrà avviato in _onGpsData quando si passa dal via
 
-    // Timer UI per aggiornare il cronometro
+    // Timer UI per aggiornare il cronometro (ma mostra 0:00 finché non inizia)
     _uiTimer = Timer.periodic(const Duration(milliseconds: 100), (_) {
       if (mounted && _recording) {
         setState(() {});
@@ -209,8 +214,25 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
   }
 
   void _checkBleGpsDevice() {
-    // Verifica se c'è un dispositivo BLE connesso
-    _bleService.deviceStream.listen((devices) {
+    // Verifica iniziale: controlla se c'è già un dispositivo BLE connesso
+    final connectedDevices = _bleService.getConnectedDeviceIds();
+    if (connectedDevices.isNotEmpty && !_isUsingBleGps) {
+      final deviceId = connectedDevices.first;
+      print('✓ Dispositivo BLE già connesso all\'avvio: $deviceId');
+      setState(() {
+        _connectedBleDeviceId = deviceId;
+        _isUsingBleGps = true;
+      });
+      _startBleGpsStream();
+      return; // Non avviare GPS cellulare
+    }
+
+    // Setup listener per monitorare cambiamenti di stato dispositivi BLE
+    // ⚠️ IMPORTANTE: Cancellare questo listener in dispose() per evitare memory leak
+    _bleDeviceStreamSub?.cancel();
+    _bleDeviceStreamSub = _bleService.deviceStream.listen((devices) {
+      if (!mounted) return;
+
       final connected = devices.values.firstWhere(
         (d) => d.isConnected,
         orElse: () => BleDeviceSnapshot(
@@ -222,21 +244,23 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
       );
 
       if (connected.isConnected && !_isUsingBleGps) {
-        // Dispositivo BLE trovato, passa all'uso del GPS BLE
+        // Dispositivo BLE connesso durante la sessione
+        print('✓ Dispositivo BLE connesso: ${connected.id}');
         setState(() {
           _connectedBleDeviceId = connected.id;
           _isUsingBleGps = true;
         });
-        // Ferma il GPS cellulare e inizia quello BLE
+        // Ferma il GPS cellulare e passa al GPS BLE
         _gpsSub?.cancel();
         _startBleGpsStream();
       } else if (!connected.isConnected && _isUsingBleGps) {
-        // Dispositivo BLE disconnesso, torna al GPS cellulare
+        // Dispositivo BLE disconnesso, fallback a GPS cellulare
+        print('⚠️ Dispositivo BLE disconnesso, fallback a GPS cellulare');
         setState(() {
           _connectedBleDeviceId = null;
           _isUsingBleGps = false;
         });
-        // Ferma il GPS BLE e inizia quello cellulare
+        // Ferma il GPS BLE e torna al GPS cellulare
         _bleGpsSub?.cancel();
         if (!_useGpsSimulator) {
           _startGpsStream();
@@ -617,10 +641,20 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
 
     // ✨ NUOVO SISTEMA: Tracking con microsettori
     if (_gpsTrack.length >= 20) {
+      // Salva lo stato del formation lap prima del processing
+      final wasInFormationLap = _lapDetection.inFormationLap;
+
       // Calcola heading dal GPS se disponibile (altrimenti usa null)
       final vehicleHeading = pos.heading > 0 ? pos.heading : null;
 
       final lapCompleted = _lapDetection.processGpsPoint(pos, vehicleHeading: vehicleHeading);
+
+      // 🏁 Avvia il timer quando il formation lap termina
+      if (wasInFormationLap && !_lapDetection.inFormationLap && !_timerStarted) {
+        _sessionWatch.start();
+        _timerStarted = true;
+        print('✓ Timer avviato dopo formation lap');
+      }
 
       if (lapCompleted) {
         _registerLapAtTime(nowT);
@@ -673,8 +707,12 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
         _gpsStatus = 'GPS cellulare ${freq.toStringAsFixed(1)}Hz: ${pos.accuracy.toStringAsFixed(1)}m';
       }
 
+      // Mostra info formation lap
+      if (_lapDetection.inFormationLap) {
+        _gpsStatus += ' (Formation Lap)';
+      }
       // Mostra info microsettori se stiamo registrando primo giro
-      if (_lapDetection.isRecordingFirstLap) {
+      else if (_lapDetection.isRecordingFirstLap) {
         _gpsStatus += ' (Primo giro: ${_lapDetection.lapProgress.toStringAsFixed(0)}%)';
       }
     });
@@ -833,6 +871,10 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
 
     _simTimer?.cancel();
     _simTimer = null;
+
+    // ⚠️ IMPORTANTE: Cancella listener BLE per evitare memory leak
+    _bleDeviceStreamSub?.cancel();
+    _bleDeviceStreamSub = null;
   }
 
   // ============================================================
@@ -988,6 +1030,10 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
                 ],
               ),
             ),
+
+            // Formation Lap Banner
+            if (_lapDetection.inFormationLap)
+              _buildFormationLapBanner(),
 
             // Area principale stile RaceChrono
             Expanded(
@@ -1251,6 +1297,89 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildFormationLapBanner() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            const Color(0xFFFFA500).withOpacity(0.9),
+            const Color(0xFFFF8C00).withOpacity(0.9),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.3),
+          width: 2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFFFA500).withOpacity(0.4),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.flag,
+              color: Colors.white,
+              size: 28,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'FORMATION LAP',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Passa dalla linea del via per iniziare',
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.95),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(
+              Icons.arrow_forward,
+              color: Colors.white,
+              size: 24,
+            ),
+          ),
+        ],
+      ),
     );
   }
 

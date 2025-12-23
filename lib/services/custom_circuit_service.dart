@@ -218,13 +218,17 @@ class CustomCircuitService {
 
   /// Salva un circuito su Firebase
   /// Usa TrackService per scalabilità e condivisione
-  Future<String> saveCircuit(CustomCircuitInfo circuit) async {
+  Future<String> saveCircuit(
+    CustomCircuitInfo circuit, {
+    Function(double progress)? onProgress, // 0.0 - 1.0
+  }) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       throw Exception('User not authenticated');
     }
 
     // Converti CustomCircuitInfo in TrackDefinition
+    onProgress?.call(0.2);
     final trackDefinition = circuit.toTrackDefinition();
 
     // Salva su Firebase (di default privato, l'utente può renderlo pubblico dopo)
@@ -232,6 +236,10 @@ class CustomCircuitService {
       userId: user.uid,
       trackDefinition: trackDefinition,
       isPublic: false,
+      onProgress: (p) {
+        // Rimappa in un range "salvataggio" (0.2 -> 1.0)
+        onProgress?.call(0.2 + (p * 0.8));
+      },
     );
 
     return trackId;

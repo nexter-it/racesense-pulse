@@ -1143,7 +1143,7 @@ class _ConnectDevicesTile extends StatelessWidget {
                     ),
                     SizedBox(height: 6),
                     Text(
-                      'Gestisci e collega i tracker GPS-Tracker-F10N al tuo profilo.',
+                      'Gestisci e collega i tracker GPS Tracker al tuo profilo.',
                       style: TextStyle(
                         color: kMutedColor,
                         fontSize: 12,

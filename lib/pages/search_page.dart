@@ -36,6 +36,8 @@ class _SearchPageState extends State<SearchPage>
 
   bool _loadingUsers = false;
   bool _loadingCircuits = false;
+  bool _loadingTopUsers = false;
+  bool _loadingTopCircuits = false;
   String? _usersError;
   String? _circuitsError;
 
@@ -84,21 +86,27 @@ class _SearchPageState extends State<SearchPage>
   }
 
   Future<void> _loadTopUsers() async {
+    setState(() => _loadingTopUsers = true);
     try {
       final snap = await _firestore
           .collection('users')
           .orderBy('stats.followerCount', descending: true)
           .limit(3)
           .get();
+      if (!mounted) return;
       setState(() {
         _topUsers = snap.docs.map((d) => {'id': d.id, ...d.data()}).toList();
+        _loadingTopUsers = false;
       });
     } catch (_) {
       // silenzioso: top utenti opzionale
+      if (!mounted) return;
+      setState(() => _loadingTopUsers = false);
     }
   }
 
   Future<void> _loadTopCircuits() async {
+    setState(() => _loadingTopCircuits = true);
     try {
       final snap = await _firestore
           .collection('sessions')
@@ -117,12 +125,16 @@ class _SearchPageState extends State<SearchPage>
 
       final ordered = groups.keys.toList()
         ..sort((a, b) => groups[b]!.length.compareTo(groups[a]!.length));
+      if (!mounted) return;
       setState(() {
         _topCircuitGroups = groups;
         _topCircuitOrder = ordered.take(3).toList();
+        _loadingTopCircuits = false;
       });
     } catch (_) {
       // silenzioso: top circuiti opzionale
+      if (!mounted) return;
+      setState(() => _loadingTopCircuits = false);
     }
   }
 
@@ -293,13 +305,24 @@ class _SearchPageState extends State<SearchPage>
       return _buildSearchHint(
         title: 'Top 3 piloti',
         subtitle: 'Top 3 piloti più seguiti della piattaforma.',
+        loadingWidget: (_loadingTopUsers && _topUsers.isEmpty)
+            ? _buildPremiumSearchLoading(
+                title: 'Sto cercando i più seguiti…',
+                subtitle: 'Caricamento...',
+              )
+            : null,
         placeholderList:
             _topUsers.map((u) => _buildUserCard(u)).take(3).toList(),
       );
     }
 
     if (_loadingUsers) {
-      return const Center(child: CircularProgressIndicator());
+      return Center(
+        child: _buildPremiumSearchLoading(
+          title: 'Ricerca in corso…',
+          subtitle: 'Sto interrogando Firebase',
+        ),
+      );
     }
 
     print(_usersError);
@@ -582,12 +605,23 @@ class _SearchPageState extends State<SearchPage>
       return _buildSearchHint(
         title: 'Top 3 circuiti',
         subtitle: 'Lista dei circuiti con più sessioni tracciate.',
+        loadingWidget: (_loadingTopCircuits && _topCircuitOrder.isEmpty)
+            ? _buildPremiumSearchLoading(
+                title: 'Sto cercando i circuiti top…',
+                subtitle: 'Caricamento...',
+              )
+            : null,
         placeholderList: widgets,
       );
     }
 
     if (_loadingCircuits) {
-      return const Center(child: CircularProgressIndicator());
+      return Center(
+        child: _buildPremiumSearchLoading(
+          title: 'Ricerca in corso…',
+          subtitle: 'Sto interrogando Firebase',
+        ),
+      );
     }
 
     if (_circuitsError != null) {
@@ -933,6 +967,7 @@ class _SearchPageState extends State<SearchPage>
     required String title,
     required String subtitle,
     List<Widget> placeholderList = const [],
+    Widget? loadingWidget,
   }) {
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -950,11 +985,103 @@ class _SearchPageState extends State<SearchPage>
           subtitle,
           style: const TextStyle(fontSize: 12, color: kMutedColor),
         ),
+        if (loadingWidget != null) ...[
+          const SizedBox(height: 16),
+          loadingWidget,
+        ],
         if (placeholderList.isNotEmpty) ...[
           const SizedBox(height: 16),
           ...placeholderList,
         ],
       ],
+    );
+  }
+
+  Widget _buildPremiumSearchLoading({
+    required String title,
+    required String subtitle,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        gradient: LinearGradient(
+          colors: [
+            const Color(0xFF1A1A20).withAlpha(255),
+            const Color(0xFF0F0F15).withAlpha(255),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        border: Border.all(color: kLineColor.withAlpha(180), width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(120),
+            blurRadius: 14,
+            spreadRadius: -2,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              SizedBox(
+                width: 46,
+                height: 46,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.4,
+                  valueColor:
+                      AlwaysStoppedAnimation<Color>(kBrandColor.withAlpha(220)),
+                  backgroundColor: kLineColor.withAlpha(80),
+                ),
+              ),
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    colors: [
+                      kBrandColor.withAlpha(40),
+                      kPulseColor.withAlpha(20),
+                    ],
+                  ),
+                  border: Border.all(color: kBrandColor.withAlpha(140)),
+                ),
+                child: const Icon(Icons.search, color: kBrandColor, size: 20),
+              ),
+            ],
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: kFgColor,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    color: kMutedColor,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 

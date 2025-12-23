@@ -24,8 +24,19 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
   @override
   void initState() {
     super.initState();
-    _bleService.startScan(nameFilters: const ['GPS-Tracker-']);
+    // Avvia scan continuo per mantenere aggiornata la lista
+    _bleService.startScan(
+      nameFilters: const ['GPS Tracker'],
+      continuous: true,
+    );
     _loadDevices();
+    _attemptAutoReconnect();
+  }
+
+  @override
+  void dispose() {
+    // Mantieni scan attivo per altre pagine, ma se tutti i widget lo lasciano si fermerà
+    super.dispose();
   }
 
   Future<void> _loadDevices() async {
@@ -38,6 +49,23 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
         _devices = devices;
         _loading = false;
       });
+    }
+  }
+
+  /// Prova a riconnettere automaticamente i dispositivi salvati che sono visibili
+  Future<void> _attemptAutoReconnect() async {
+    await Future.delayed(const Duration(seconds: 1));
+
+    for (final deviceId in _devices.keys) {
+      // Verifica se il device è già connesso
+      if (_bleService.isConnected(deviceId)) continue;
+
+      // Verifica se il device è visibile nello scan
+      final snapshot = _bleService.getSnapshot(deviceId);
+      if (snapshot != null && !snapshot.isConnected) {
+        // Prova a riconnettere in background
+        _bleService.connect(deviceId, autoReconnect: true);
+      }
     }
   }
 
@@ -390,11 +418,37 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
                                                     BorderRadius.circular(12),
                                               ),
                                             ),
-                                            onPressed: () {
+                                            onPressed: () async {
                                               if (connected) {
-                                                _bleService.disconnect(id);
+                                                await _bleService.disconnect(id);
                                               } else {
-                                                _bleService.connect(id);
+                                                // Mostra feedback visivo durante connessione
+                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                  const SnackBar(
+                                                    content: Text('Connessione in corso...'),
+                                                    duration: Duration(seconds: 2),
+                                                  ),
+                                                );
+                                                final success = await _bleService.connect(id, autoReconnect: true);
+                                                if (mounted) {
+                                                  ScaffoldMessenger.of(context).clearSnackBars();
+                                                  if (success) {
+                                                    ScaffoldMessenger.of(context).showSnackBar(
+                                                      const SnackBar(
+                                                        content: Text('Dispositivo connesso'),
+                                                        backgroundColor: kBrandColor,
+                                                        duration: Duration(seconds: 1),
+                                                      ),
+                                                    );
+                                                  } else {
+                                                    ScaffoldMessenger.of(context).showSnackBar(
+                                                      const SnackBar(
+                                                        content: Text('Connessione fallita. Riprova.'),
+                                                        backgroundColor: kErrorColor,
+                                                      ),
+                                                    );
+                                                  }
+                                                }
                                               }
                                             },
                                             icon: Icon(

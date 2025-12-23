@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../services/ble_tracking_service.dart';
@@ -21,16 +23,34 @@ class _NewPostPageState extends State<NewPostPage> {
   final BleTrackingService _bleService = BleTrackingService();
   String? _connectedDeviceId;
   String? _connectedDeviceName;
+  StreamSubscription<Map<String, BleDeviceSnapshot>>? _bleDeviceSub;
 
   @override
   void initState() {
     super.initState();
-    _checkConnectedDevices();
+    _syncConnectedDeviceFromService();
+    _listenBleConnectionChanges();
   }
 
-  void _checkConnectedDevices() {
+  @override
+  void dispose() {
+    _bleDeviceSub?.cancel();
+    super.dispose();
+  }
+
+  void _syncConnectedDeviceFromService() {
+    final connectedIds = _bleService.getConnectedDeviceIds();
+    if (connectedIds.isEmpty) return;
+    final id = connectedIds.first;
+    final snap = _bleService.getSnapshot(id);
+    _connectedDeviceId = id;
+    _connectedDeviceName = snap?.name ?? id;
+  }
+
+  void _listenBleConnectionChanges() {
     // Ascolta lo stream dei dispositivi per trovare quello connesso
-    _bleService.deviceStream.listen((devices) {
+    _bleDeviceSub?.cancel();
+    _bleDeviceSub = _bleService.deviceStream.listen((devices) {
       final connected = devices.values.firstWhere(
         (d) => d.isConnected,
         orElse: () => BleDeviceSnapshot(

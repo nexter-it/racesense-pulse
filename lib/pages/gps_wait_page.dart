@@ -22,6 +22,7 @@ class _GpsWaitPageState extends State<GpsWaitPage> {
   final BleTrackingService _bleService = BleTrackingService();
   StreamSubscription<Position>? _gpsSub;
   StreamSubscription<Map<String, GpsData>>? _bleGpsSub;
+  StreamSubscription<Map<String, BleDeviceSnapshot>>? _bleDeviceSub;
   Timer? _timer;
 
   bool _checkingPermissions = true;
@@ -50,7 +51,8 @@ class _GpsWaitPageState extends State<GpsWaitPage> {
   @override
   void initState() {
     super.initState();
-    _checkConnectedDevices();
+    _syncConnectedDeviceFromService();
+    _listenBleConnectionChanges();
     _initGps();
   }
 
@@ -58,13 +60,25 @@ class _GpsWaitPageState extends State<GpsWaitPage> {
   void dispose() {
     _gpsSub?.cancel();
     _bleGpsSub?.cancel();
+    _bleDeviceSub?.cancel();
     _timer?.cancel();
     super.dispose();
   }
 
-  void _checkConnectedDevices() {
+  void _syncConnectedDeviceFromService() {
+    final connectedIds = _bleService.getConnectedDeviceIds();
+    if (connectedIds.isEmpty) return;
+    final id = connectedIds.first;
+    final snap = _bleService.getSnapshot(id);
+    _connectedDeviceId = id;
+    _connectedDeviceName = snap?.name ?? id;
+    _listenBleGps();
+  }
+
+  void _listenBleConnectionChanges() {
     // Ascolta lo stream dei dispositivi per trovare quello connesso
-    _bleService.deviceStream.listen((devices) {
+    _bleDeviceSub?.cancel();
+    _bleDeviceSub = _bleService.deviceStream.listen((devices) {
       final connected = devices.values.firstWhere(
         (d) => d.isConnected,
         orElse: () => BleDeviceSnapshot(
@@ -82,12 +96,19 @@ class _GpsWaitPageState extends State<GpsWaitPage> {
             _connectedDeviceName = connected.name;
             // Se connesso, ascoltiamo il GPS BLE
             _listenBleGps();
+            // Stop GPS cellulare: il fix-check deve usare la sorgente BLE.
+            _gpsSub?.cancel();
+            _gpsSub = null;
           } else {
             _connectedDeviceId = null;
             _connectedDeviceName = null;
             _lastBleGpsData = null;
             _bleGpsSub?.cancel();
             _bleGpsSub = null;
+            // Fallback a GPS cellulare se permessi ok.
+            if (_gpsSub == null && !_checkingPermissions && !_hasError) {
+              _startGpsStream();
+            }
           }
         });
       }
@@ -141,7 +162,9 @@ class _GpsWaitPageState extends State<GpsWaitPage> {
       }
 
       // Ok, permessi a posto → iniziamo stream + timer
-      _startGpsStream();
+      if (!_isUsingBleDevice) {
+        _startGpsStream();
+      }
       _startElapsedTimer();
 
       setState(() {
@@ -157,6 +180,7 @@ class _GpsWaitPageState extends State<GpsWaitPage> {
   }
 
   void _startGpsStream() {
+    if (_isUsingBleDevice) return;
     const settings = LocationSettings(
       accuracy: LocationAccuracy.best,
       distanceFilter: 0,

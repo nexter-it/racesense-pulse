@@ -30,6 +30,10 @@ class LapDetectionService {
   bool _isRecordingFirstLap = false;
   DateTime? _firstLapStartTime;
 
+  // Formation lap: attende primo passaggio dalla linea del via
+  bool _inFormationLap = true;
+  bool _formationLapCrossed = false;
+
   // Callback per notifica giro completato
   Function(Duration lapTime)? onLapCompleted;
 
@@ -98,7 +102,19 @@ class LapDetectionService {
     _firstLapRecording.clear();
     _isRecordingFirstLap = false;
     _firstLapStartTime = null;
+    _inFormationLap = true;
+    _formationLapCrossed = false;
   }
+
+  // ============================================================
+  // GETTERS - FORMATION LAP
+  // ============================================================
+
+  /// Indica se siamo in formation lap (in attesa del primo passaggio dalla linea)
+  bool get inFormationLap => _inFormationLap;
+
+  /// Indica se abbiamo già attraversato la linea durante il formation lap
+  bool get formationLapCrossed => _formationLapCrossed;
 
   // ============================================================
   // GENERAZIONE MICROSETTORI
@@ -288,6 +304,22 @@ class LapDetectionService {
     // Aggiorna storia timestamp per rilevamento frequenza
     _updateGpsTimestamps(DateTime.now());
 
+    // ============================================================
+    // FORMATION LAP: Attende primo passaggio dalla linea del via
+    // ============================================================
+    if (_inFormationLap) {
+      final crossed = _checkFinishLineCrossing(position);
+      if (crossed) {
+        _formationLapCrossed = true;
+        _inFormationLap = false;
+        print('✓ Formation lap completato: inizia tracciamento giri');
+        // Reset tracking per iniziare dal primo settore
+        _currentSectorIndex = 0;
+        _lastCompletedSectorIndex = -1;
+      }
+      return false; // Durante formation lap non contiamo giri
+    }
+
     // Se stiamo registrando il primo giro (modalità veloce)
     if (_isRecordingFirstLap) {
       _firstLapRecording.add(position);
@@ -438,6 +470,42 @@ class LapDetectionService {
   void _resetLapTracking() {
     _currentSectorIndex = 0;
     _lastCompletedSectorIndex = -1;
+  }
+
+  // ============================================================
+  // FORMATION LAP - RILEVAMENTO PASSAGGIO LINEA
+  // ============================================================
+
+  /// Verifica se abbiamo attraversato la linea di start/finish durante formation lap
+  bool _checkFinishLineCrossing(Position position) {
+    if (_finishLineStart == null || _finishLineEnd == null) return false;
+
+    // Calcola centro della linea
+    final finishCenter = LatLng(
+      (_finishLineStart!.latitude + _finishLineEnd!.latitude) / 2,
+      (_finishLineStart!.longitude + _finishLineEnd!.longitude) / 2,
+    );
+
+    // Calcola distanza dal centro
+    final distance = _distanceBetween(
+      LatLng(position.latitude, position.longitude),
+      finishCenter,
+    );
+
+    // Geofence: 30m dal centro (generoso per formation lap)
+    if (distance > 30.0) {
+      return false;
+    }
+
+    // Calcola larghezza della linea
+    final lineWidth = _distanceBetween(_finishLineStart!, _finishLineEnd!);
+
+    // Verifica se siamo dentro la larghezza della linea (±10m di tolleranza)
+    if (distance <= (lineWidth / 2 + 10.0)) {
+      return true;
+    }
+
+    return false;
   }
 
   // ============================================================

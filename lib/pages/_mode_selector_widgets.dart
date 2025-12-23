@@ -488,13 +488,15 @@ class _ManualLinePageState extends State<ManualLinePage> {
 
   StreamSubscription<Position>? _gpsSubscription;
   StreamSubscription<Map<String, GpsData>>? _bleGpsSubscription;
+  StreamSubscription<Map<String, BleDeviceSnapshot>>? _bleDeviceSub;
   String? _connectedDeviceId;
   bool _isUsingBleDevice = false;
 
   @override
   void initState() {
     super.initState();
-    _checkConnectedDevices();
+    _syncConnectedDeviceFromService();
+    _listenBleConnectionChanges();
     _startLocationTracking();
   }
 
@@ -502,11 +504,20 @@ class _ManualLinePageState extends State<ManualLinePage> {
   void dispose() {
     _gpsSubscription?.cancel();
     _bleGpsSubscription?.cancel();
+    _bleDeviceSub?.cancel();
     super.dispose();
   }
 
-  void _checkConnectedDevices() {
-    _bleService.deviceStream.listen((devices) {
+  void _syncConnectedDeviceFromService() {
+    final connectedIds = _bleService.getConnectedDeviceIds();
+    if (connectedIds.isEmpty) return;
+    _connectedDeviceId = connectedIds.first;
+    _isUsingBleDevice = true;
+  }
+
+  void _listenBleConnectionChanges() {
+    _bleDeviceSub?.cancel();
+    _bleDeviceSub = _bleService.deviceStream.listen((devices) {
       final connected = devices.values.firstWhere(
         (d) => d.isConnected,
         orElse: () => BleDeviceSnapshot(
@@ -522,9 +533,11 @@ class _ManualLinePageState extends State<ManualLinePage> {
           if (connected.isConnected) {
             _connectedDeviceId = connected.id;
             _isUsingBleDevice = true;
+            _stopCellularTracking();
           } else {
             _connectedDeviceId = null;
             _isUsingBleDevice = false;
+            _startCellularTrackingIfNeeded();
           }
         });
       }
@@ -544,21 +557,28 @@ class _ManualLinePageState extends State<ManualLinePage> {
       }
     });
 
-    // Listen to cellular GPS data (fallback)
-    if (!_isUsingBleDevice) {
-      _gpsSubscription = Geolocator.getPositionStream(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
-          distanceFilter: 1,
-        ),
-      ).listen((position) {
-        if (mounted && !_isUsingBleDevice) {
-          setState(() {
-            _currentPosition = LatLng(position.latitude, position.longitude);
-          });
-        }
-      });
-    }
+    _startCellularTrackingIfNeeded();
+  }
+
+  void _startCellularTrackingIfNeeded() {
+    if (_isUsingBleDevice || _gpsSubscription != null) return;
+    _gpsSubscription = Geolocator.getPositionStream(
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 1,
+      ),
+    ).listen((position) {
+      if (mounted && !_isUsingBleDevice) {
+        setState(() {
+          _currentPosition = LatLng(position.latitude, position.longitude);
+        });
+      }
+    });
+  }
+
+  void _stopCellularTracking() {
+    _gpsSubscription?.cancel();
+    _gpsSubscription = null;
   }
 
   @override

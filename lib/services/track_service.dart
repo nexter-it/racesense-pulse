@@ -21,10 +21,13 @@ class TrackService {
     required String userId,
     required TrackDefinition trackDefinition,
     required bool isPublic,
+    Function(double progress)? onProgress, // 0.0 - 1.0
   }) async {
     try {
+      onProgress?.call(0.6);
       final trackData = trackDefinition.toMap();
 
+      onProgress?.call(0.8);
       final doc = await _firestore.collection('tracks').add({
         'userId': userId,
         'name': trackDefinition.name,
@@ -36,6 +39,7 @@ class TrackService {
       });
 
       print('✓ Circuito salvato su Firebase: ${doc.id}');
+      onProgress?.call(1.0);
       return doc.id;
     } catch (e) {
       print('❌ Errore salvataggio circuito: $e');

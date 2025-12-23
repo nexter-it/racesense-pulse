@@ -27,6 +27,7 @@ class _CustomCircuitBuilderPageState extends State<CustomCircuitBuilderPage> {
 
   StreamSubscription<Position>? _cellularGpsSubscription;
   StreamSubscription<Map<String, GpsData>>? _bleGpsSubscription;
+  StreamSubscription<Map<String, BleDeviceSnapshot>>? _bleDeviceSub;
 
   BuilderStep _step = BuilderStep.selectStartLine;
   bool _saving = false;
@@ -47,7 +48,8 @@ class _CustomCircuitBuilderPageState extends State<CustomCircuitBuilderPage> {
   @override
   void initState() {
     super.initState();
-    _checkBleConnection();
+    _syncConnectedDeviceFromService();
+    _listenBleConnectionChanges();
     _startLocationTracking();
   }
 
@@ -55,11 +57,20 @@ class _CustomCircuitBuilderPageState extends State<CustomCircuitBuilderPage> {
   void dispose() {
     _cellularGpsSubscription?.cancel();
     _bleGpsSubscription?.cancel();
+    _bleDeviceSub?.cancel();
     super.dispose();
   }
 
-  void _checkBleConnection() {
-    _bleService.deviceStream.listen((devices) {
+  void _syncConnectedDeviceFromService() {
+    final connectedIds = _bleService.getConnectedDeviceIds();
+    if (connectedIds.isEmpty) return;
+    _connectedDeviceId = connectedIds.first;
+    _isUsingBleDevice = true;
+  }
+
+  void _listenBleConnectionChanges() {
+    _bleDeviceSub?.cancel();
+    _bleDeviceSub = _bleService.deviceStream.listen((devices) {
       final connected = devices.values.firstWhere(
         (d) => d.isConnected,
         orElse: () => BleDeviceSnapshot(
@@ -75,9 +86,11 @@ class _CustomCircuitBuilderPageState extends State<CustomCircuitBuilderPage> {
           if (connected.isConnected) {
             _connectedDeviceId = connected.id;
             _isUsingBleDevice = true;
+            _stopCellularTracking();
           } else {
             _connectedDeviceId = null;
             _isUsingBleDevice = false;
+            _startCellularTrackingIfNeeded();
           }
         });
       }
@@ -110,7 +123,11 @@ class _CustomCircuitBuilderPageState extends State<CustomCircuitBuilderPage> {
       }
     });
 
-    // Listen to cellular GPS data (fallback)
+    _startCellularTrackingIfNeeded();
+  }
+
+  void _startCellularTrackingIfNeeded() {
+    if (_isUsingBleDevice || _cellularGpsSubscription != null) return;
     _cellularGpsSubscription = Geolocator.getPositionStream(
       locationSettings: const LocationSettings(
         accuracy: LocationAccuracy.high,
@@ -137,6 +154,11 @@ class _CustomCircuitBuilderPageState extends State<CustomCircuitBuilderPage> {
         }
       }
     });
+  }
+
+  void _stopCellularTracking() {
+    _cellularGpsSubscription?.cancel();
+    _cellularGpsSubscription = null;
   }
 
   void _startTracking() {
@@ -270,6 +292,73 @@ class _CustomCircuitBuilderPageState extends State<CustomCircuitBuilderPage> {
         return;
       }
 
+      if (!mounted) return;
+      final progressNotifier = ValueNotifier<double>(0.0);
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => ValueListenableBuilder<double>(
+          valueListenable: progressNotifier,
+          builder: (context, progress, _) => Center(
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 40),
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF1A1A20), Color(0xFF0F0F15)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: kLineColor),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.track_changes, color: kBrandColor, size: 48),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Salvataggio circuito',
+                    style: TextStyle(
+                      fontSize: 18,
+                      color: Colors.white,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: LinearProgressIndicator(
+                      value: progress,
+                      minHeight: 8,
+                      backgroundColor: kLineColor,
+                      valueColor:
+                          const AlwaysStoppedAnimation<Color>(kBrandColor),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    '${(progress * 100).toInt()}%',
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w900,
+                      color: kBrandColor,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+
+      progressNotifier.value = 0.1;
+      final microSectors = CustomCircuitInfo.buildSectorsFromPoints(
+        sectors,
+        widthMeters: result.widthMeters,
+      );
+      progressNotifier.value = 0.2;
+
       final circuit = CustomCircuitInfo(
         name: result.name,
         widthMeters: result.widthMeters,
@@ -278,20 +367,34 @@ class _CustomCircuitBuilderPageState extends State<CustomCircuitBuilderPage> {
         lengthMeters: length,
         createdAt: DateTime.now(),
         points: sectors,
-        microSectors: CustomCircuitInfo.buildSectorsFromPoints(sectors,
-            widthMeters: result.widthMeters),
+        microSectors: microSectors,
         usedBleDevice: _isUsingBleDevice,
       );
 
-      await _service.saveCircuit(circuit);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Circuito custom salvato'),
-          backgroundColor: kBrandColor,
-        ),
-      );
-      Navigator.of(context).pop();
+      try {
+        await _service.saveCircuit(
+          circuit,
+          onProgress: (p) => progressNotifier.value = p,
+        );
+        if (!mounted) return;
+        Navigator.of(context).pop(); // chiudi progress dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Circuito custom salvato'),
+            backgroundColor: kBrandColor,
+          ),
+        );
+        Navigator.of(context).pop();
+      } catch (e) {
+        if (!mounted) return;
+        Navigator.of(context).pop(); // chiudi progress dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Errore: $e'),
+            backgroundColor: kErrorColor,
+          ),
+        );
+      }
     } finally {
       if (mounted) {
         setState(() => _saving = false);
