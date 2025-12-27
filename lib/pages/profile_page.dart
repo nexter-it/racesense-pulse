@@ -5,6 +5,7 @@ import '../models/session_model.dart';
 import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
 import '../services/session_service.dart';
+import '../services/profile_cache_service.dart';
 import '../theme.dart';
 import '../widgets/follow_counts.dart';
 import '../widgets/pulse_background.dart';
@@ -23,6 +24,7 @@ class ProfilePage extends StatefulWidget {
 class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
   final FirestoreService _firestoreService = FirestoreService();
   final SessionService _sessionService = SessionService();
+  final ProfileCacheService _cacheService = ProfileCacheService();
 
   String _userName = '';
   String _userTag = '';
@@ -149,7 +151,7 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _loadUserData();
+    _bootstrapProfile();
   }
 
   @override
@@ -160,40 +162,88 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      _loadUserData();
-    }
+    // Non ricaricare automaticamente al resume - l'utente può fare pull-to-refresh
   }
 
-  Future<void> _loadUserData() async {
+  /// Bootstrap profilo: carica da cache se disponibile, altrimenti da Firebase
+  Future<void> _bootstrapProfile() async {
+    setState(() => _isLoading = true);
+
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      print('❌ ProfilePage: Nessun utente loggato');
+      setState(() => _isLoading = false);
+      return;
+    }
+
+    // Prima prova a caricare dalla cache
+    if (_cacheService.hasCachedData) {
+      print('📦 ProfilePage: Caricamento da cache locale...');
+      _loadFromCache();
+      setState(() => _isLoading = false);
+      return;
+    }
+
+    // Nessuna cache: carica da Firebase
+    print('🔄 ProfilePage: Nessuna cache, caricamento da Firebase...');
+    await _refreshFromFirebase();
+  }
+
+  /// Carica i dati dalla cache locale
+  void _loadFromCache() {
+    final user = FirebaseAuth.instance.currentUser;
+    final fullName = _cacheService.getCachedFullName();
+
+    String tag;
+    final nameParts = fullName.split(' ');
+    if (nameParts.length >= 2) {
+      tag = nameParts[0][0].toUpperCase() + nameParts[1][0].toUpperCase();
+    } else if (nameParts.isNotEmpty && nameParts[0].length >= 2) {
+      tag = nameParts[0].substring(0, 2).toUpperCase();
+    } else {
+      tag = 'US';
+    }
+
+    final sessions = _cacheService.cachedSessions;
+    final stats = _cacheService.cachedUserStats ?? UserStats.empty();
+
+    setState(() {
+      _userName = fullName;
+      _userTag = tag;
+      _username = _cacheService.getCachedUsername();
+      _userStats = stats;
+      _recentSessions = sessions;
+      _followerCount = stats.followerCount;
+      _followingCount = stats.followingCount;
+      _affiliateCode = _cacheService.getCachedAffiliateCode();
+      _referredByCode = _cacheService.getCachedReferredByCode();
+      _hasAllSessions = sessions.length < 5;
+    });
+
+    print('✅ ProfilePage: Caricato da cache (${sessions.length} sessioni)');
+  }
+
+  /// Refresh completo da Firebase (pull-to-refresh)
+  Future<void> _refreshFromFirebase() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       print('❌ ProfilePage: Nessun utente loggato');
       return;
     }
 
-    print('🔄 ProfilePage: Caricamento dati per ${user.uid}');
+    print('🔄 ProfilePage: Refreshing da Firebase...');
 
     try {
-      await _firestoreService.initializeStatsIfNeeded(user.uid);
+      final profileData = await _cacheService.refreshFromFirebase();
 
-      final results = await Future.wait([
-        _firestoreService.getUserData(user.uid),
-        _sessionService.getUserSessions(user.uid, limit: 5),
-      ]);
-
-      final userData = results[0] as Map<String, dynamic>?;
-      final sessions = results[1] as List<SessionModel>;
-
-      final stats = (userData != null && userData['stats'] != null)
-          ? UserStats.fromMap(userData['stats'] as Map<String, dynamic>)
-          : UserStats.empty();
-
-      print(
-          '✅ ProfilePage: Dati caricati - Stats: ${stats.totalSessions} sessioni, Sessioni: ${sessions.length}');
+      final userData = profileData.userData;
+      final stats = profileData.stats;
+      final sessions = profileData.sessions;
 
       if (mounted) {
         final fullName = userData?['fullName'] ?? user.displayName ?? 'Utente';
+
+        // Assicura search tokens e username (background, non blocca UI)
         if (userData == null || userData['searchTokens'] == null) {
           _firestoreService.ensureSearchTokens(user.uid, fullName);
         }
@@ -223,16 +273,16 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
           _affiliateCode = userData?['affiliateCode'] as String?;
           _referredByCode = userData?['referredByCode'] as String?;
           _isLoading = false;
-          _hasAllSessions = sessions.length < 5 ? true : false;
+          _hasAllSessions = sessions.length < 5;
         });
-        print('✅ ProfilePage: UI aggiornata');
+
+        print('✅ ProfilePage: Refreshed da Firebase (${sessions.length} sessioni)');
       }
     } catch (e) {
-      print('❌ ProfilePage: Errore caricamento dati - $e');
+      print('❌ ProfilePage: Errore refresh - $e');
       if (mounted) {
-        final user = FirebaseAuth.instance.currentUser;
         setState(() {
-          _userName = user?.displayName ?? 'Utente';
+          _userName = user.displayName ?? 'Utente';
           _userTag = _userName.length >= 2
               ? _userName.substring(0, 2).toUpperCase()
               : 'US';
@@ -240,6 +290,11 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
         });
       }
     }
+  }
+
+  /// Vecchio metodo per compatibilità (chiama refresh)
+  Future<void> _loadUserData() async {
+    await _refreshFromFirebase();
   }
 
   Future<void> _showCreateAffiliateDialog() async {
@@ -327,8 +382,8 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
     });
 
     try {
-      final sessions =
-          await _sessionService.getUserSessions(user.uid, limit: 50);
+      // Usa il cache service per caricare tutte le sessioni
+      final sessions = await _cacheService.loadAllSessions();
       setState(() {
         _allSessions = sessions;
         _showAllSessions = true;
@@ -455,9 +510,11 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
                     ),
                   )
                 : RefreshIndicator(
-                    onRefresh: _loadUserData,
+                    onRefresh: _refreshFromFirebase,
                     color: kBrandColor,
+                    backgroundColor: kBgColor,
                     child: ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
                       padding: const EdgeInsets.symmetric(
                           horizontal: 16, vertical: 8),
                       children: [
@@ -1267,91 +1324,6 @@ class _ProfileHighlights extends StatelessWidget {
                 ),
               )
             ],
-          ),
-          const SizedBox(height: 16),
-
-          // Best lap card
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              gradient: LinearGradient(
-                colors: [
-                  kPulseColor.withAlpha(40),
-                  kPulseColor.withAlpha(40),
-                  // const Color(0xFF0F0F15),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              border: Border.all(color: kPulseColor.withAlpha(90)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: kPulseColor.withAlpha(30),
-                        border: Border.all(
-                            color: kPulseColor.withAlpha(120), width: 1),
-                      ),
-                      child:
-                          const Icon(Icons.speed, color: kPulseColor, size: 20),
-                    ),
-                    const SizedBox(width: 12),
-                    const Text(
-                      'Best lap assoluto',
-                      style: TextStyle(
-                        color: kPulseColor,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  bestLapText,
-                  style: const TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 0.3,
-                    color: kPulseColor,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(10),
-                    color: kPulseColor.withAlpha(25),
-                    border: Border.all(color: kPulseColor.withAlpha(80)),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.track_changes,
-                          size: 14, color: kPulseColor),
-                      const SizedBox(width: 4),
-                      Text(
-                        bestLapTrack,
-                        style: const TextStyle(
-                          color: kPulseColor,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
           ),
           const SizedBox(height: 16),
 

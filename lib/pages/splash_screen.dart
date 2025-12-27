@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
+import '../services/feed_cache_service.dart';
+import '../services/profile_cache_service.dart';
 
 class SplashScreen extends StatefulWidget {
   final Widget nextPage;
@@ -64,25 +66,40 @@ class _SplashScreenState extends State<SplashScreen>
     // Avvia animazione
     _controller.forward();
 
-    // Naviga alla prossima schermata dopo 2.5 secondi
-    Timer(const Duration(milliseconds: 2500), () {
-      if (mounted) {
-        Navigator.of(context).pushReplacement(
-          PageRouteBuilder(
-            pageBuilder: (context, animation, secondaryAnimation) =>
-                widget.nextPage,
-            transitionsBuilder:
-                (context, animation, secondaryAnimation, child) {
-              return FadeTransition(
-                opacity: animation,
-                child: child,
-              );
-            },
-            transitionDuration: const Duration(milliseconds: 500),
-          ),
-        );
-      }
-    });
+    // Inizializza cache e naviga alla prossima schermata
+    _initializeAndNavigate();
+  }
+
+  Future<void> _initializeAndNavigate() async {
+    // Inizializza le cache in parallelo con l'animazione
+    final feedCacheService = FeedCacheService();
+    final profileCacheService = ProfileCacheService();
+
+    await Future.wait([
+      feedCacheService.initialize(),
+      profileCacheService.initialize(),
+    ]);
+    print('✅ Cache inizializzate (feed + profilo)');
+
+    // Aspetta almeno 2.5 secondi per l'animazione
+    await Future.delayed(const Duration(milliseconds: 2500));
+
+    if (mounted) {
+      Navigator.of(context).pushReplacement(
+        PageRouteBuilder(
+          pageBuilder: (context, animation, secondaryAnimation) =>
+              widget.nextPage,
+          transitionsBuilder:
+              (context, animation, secondaryAnimation, child) {
+            return FadeTransition(
+              opacity: animation,
+              child: child,
+            );
+          },
+          transitionDuration: const Duration(milliseconds: 500),
+        ),
+      );
+    }
   }
 
   @override

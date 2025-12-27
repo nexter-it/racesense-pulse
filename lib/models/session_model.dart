@@ -227,6 +227,79 @@ class SessionModel {
       usedBleDevice: data['usedBleDevice'] as bool? ?? false,
     );
   }
+
+  /// Converte in JSON per cache locale (SharedPreferences)
+  Map<String, dynamic> toCacheJson() {
+    return {
+      'sessionId': sessionId,
+      'userId': userId,
+      'trackName': trackName,
+      'driverFullName': driverFullName,
+      'driverUsername': driverUsername,
+      'likesCount': likesCount,
+      'challengeCount': challengeCount,
+      'location': location,
+      'locationLat': locationCoords.latitude,
+      'locationLon': locationCoords.longitude,
+      'dateTime': dateTime.millisecondsSinceEpoch,
+      'isPublic': isPublic,
+      'totalDuration': totalDuration.inMilliseconds,
+      'distanceKm': distanceKm,
+      'bestLap': bestLap?.inMilliseconds,
+      'lapCount': lapCount,
+      'maxSpeedKmh': maxSpeedKmh,
+      'avgSpeedKmh': avgSpeedKmh,
+      'maxGForce': maxGForce,
+      'avgGpsAccuracy': avgGpsAccuracy,
+      'gpsSampleRateHz': gpsSampleRateHz,
+      'usedBleDevice': usedBleDevice,
+      if (displayPath != null) 'displayPath': displayPath,
+    };
+  }
+
+  /// Crea da JSON cache locale
+  factory SessionModel.fromCacheJson(Map<String, dynamic> json) {
+    List<Map<String, double>>? displayPath;
+    final rawPath = json['displayPath'] as List<dynamic>?;
+    if (rawPath != null) {
+      displayPath = rawPath
+          .map((m) => {
+                'lat': (m['lat'] as num).toDouble(),
+                'lon': (m['lon'] as num).toDouble(),
+              })
+          .toList();
+    }
+
+    return SessionModel(
+      sessionId: json['sessionId'] as String,
+      userId: json['userId'] as String,
+      trackName: json['trackName'] as String,
+      driverFullName: json['driverFullName'] as String? ?? 'Pilota',
+      driverUsername: json['driverUsername'] as String? ?? 'user',
+      likesCount: json['likesCount'] as int? ?? 0,
+      challengeCount: json['challengeCount'] as int? ?? 0,
+      location: json['location'] as String,
+      locationCoords: GeoPoint(
+        json['locationLat'] as double,
+        json['locationLon'] as double,
+      ),
+      dateTime: DateTime.fromMillisecondsSinceEpoch(json['dateTime'] as int),
+      isPublic: json['isPublic'] as bool,
+      totalDuration: Duration(milliseconds: json['totalDuration'] as int),
+      distanceKm: (json['distanceKm'] as num).toDouble(),
+      bestLap: json['bestLap'] != null
+          ? Duration(milliseconds: json['bestLap'] as int)
+          : null,
+      lapCount: json['lapCount'] as int,
+      maxSpeedKmh: (json['maxSpeedKmh'] as num).toDouble(),
+      avgSpeedKmh: (json['avgSpeedKmh'] as num).toDouble(),
+      maxGForce: (json['maxGForce'] as num).toDouble(),
+      avgGpsAccuracy: (json['avgGpsAccuracy'] as num).toDouble(),
+      gpsSampleRateHz: json['gpsSampleRateHz'] as int,
+      displayPath: displayPath,
+      usedBleDevice: json['usedBleDevice'] as bool? ?? false,
+    );
+  }
 }
 
 /// Modello per un singolo giro

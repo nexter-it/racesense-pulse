@@ -11,6 +11,7 @@ import 'activity_detail_page.dart';
 
 import '../services/session_service.dart';
 import '../services/follow_service.dart';
+import '../services/feed_cache_service.dart';
 import '../models/session_model.dart';
 
 class PulseActivity {
@@ -153,6 +154,7 @@ class _FeedSessionItem {
 class _FeedPageState extends State<FeedPage> {
   final SessionService _sessionService = SessionService();
   final FollowService _followService = FollowService();
+  final FeedCacheService _cacheService = FeedCacheService();
   final ScrollController _scrollController = ScrollController();
 
   final List<_FeedSessionItem> _feedItems = [];
@@ -164,6 +166,7 @@ class _FeedPageState extends State<FeedPage> {
   bool _isLoading = true;
   bool _isLoadingMore = false;
   bool _hasMore = true;
+  bool _isRefreshing = false;
 
   static const int _pageSize = 10;
   static const int _fetchBatchSize =
@@ -187,21 +190,84 @@ class _FeedPageState extends State<FeedPage> {
     super.dispose();
   }
 
+  /// Bootstrap feed: carica da cache se disponibile, altrimenti da Firebase
   Future<void> _bootstrapFeed() async {
     setState(() => _isLoading = true);
     try {
+      // Prima prova a caricare dalla cache
+      if (_cacheService.hasCachedData) {
+        print('📦 Caricamento feed da cache locale...');
+        _followingIds = _cacheService.getCachedFollowingIds();
+        _userPosition = await _getUserLocation();
+
+        final cachedSessions = _cacheService.getCachedFeed();
+        _feedItems.clear();
+        for (final session in cachedSessions) {
+          final isFollowed = _followingIds.contains(session.userId);
+          final isNearby = _isNearby(session);
+          _feedItems.add(_FeedSessionItem(
+            session: session,
+            isFollowed: isFollowed,
+            isNearby: isNearby,
+          ));
+        }
+        _hasMore = cachedSessions.length >= _pageSize;
+
+        print('✅ Feed caricato da cache: ${_feedItems.length} sessioni');
+
+        if (mounted) {
+          setState(() => _isLoading = false);
+        }
+        return;
+      }
+
+      // Nessuna cache: carica da Firebase
+      print('🔄 Nessuna cache, caricamento da Firebase...');
+      await _refreshFromFirebase();
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  /// Refresh completo da Firebase (pull-to-refresh)
+  Future<void> _refreshFromFirebase() async {
+    setState(() => _isRefreshing = true);
+    try {
+      // Carica following ids e posizione in parallelo
       final results = await Future.wait([
-        _followService.getFollowingIds(limit: 200),
+        _cacheService.refreshFollowingIds(limit: 200),
         _getUserLocation(),
       ]);
 
       _followingIds = results[0] as Set<String>;
       _userPosition = results[1] as Position?;
 
-      await _loadMore(reset: true);
+      // Refresh feed da Firebase con cache
+      final sessions = await _cacheService.refreshFeed(
+        followingIds: _followingIds,
+        isNearbyFilter: _isNearby,
+        pageSize: _pageSize,
+      );
+
+      _feedItems.clear();
+      _lastDoc = null;
+      for (final session in sessions) {
+        final isFollowed = _followingIds.contains(session.userId);
+        final isNearby = _isNearby(session);
+        _feedItems.add(_FeedSessionItem(
+          session: session,
+          isFollowed: isFollowed,
+          isNearby: isNearby,
+        ));
+      }
+      _hasMore = sessions.length >= _pageSize;
+
+      print('✅ Feed refreshed da Firebase: ${_feedItems.length} sessioni');
     } finally {
       if (mounted) {
-        setState(() => _isLoading = false);
+        setState(() => _isRefreshing = false);
       }
     }
   }
@@ -386,48 +452,75 @@ class _FeedPageState extends State<FeedPage> {
                               AlwaysStoppedAnimation<Color>(kBrandColor),
                         ),
                       )
-                    : _feedItems.isEmpty
-                        ? Center(
-                            child: Padding(
-                              padding: const EdgeInsets.all(32),
-                              child: Text(
-                                'Nessuna sessione da piloti che segui o vicina a te',
-                                style: TextStyle(color: kMutedColor),
-                                textAlign: TextAlign.center,
-                              ),
-                            ),
-                          )
-                        : ListView.builder(
-                            controller: _scrollController,
-                            padding: const EdgeInsets.symmetric(
-                                    horizontal: 16, vertical: 8)
-                                .copyWith(bottom: 24),
-                            itemCount: _feedItems.length +
-                                (_isLoadingMore && _hasMore ? 1 : 0),
-                            itemBuilder: (context, index) {
-                              if (index >= _feedItems.length) {
-                                return const Padding(
-                                  padding: EdgeInsets.all(16.0),
-                                  child: Center(
-                                    child: CircularProgressIndicator(
-                                      valueColor: AlwaysStoppedAnimation<Color>(
-                                          kBrandColor),
+                    : RefreshIndicator(
+                        onRefresh: _refreshFromFirebase,
+                        color: kBrandColor,
+                        backgroundColor: kBgColor,
+                        child: _feedItems.isEmpty
+                            ? ListView(
+                                physics: const AlwaysScrollableScrollPhysics(),
+                                children: [
+                                  SizedBox(
+                                    height: MediaQuery.of(context).size.height * 0.4,
+                                    child: Center(
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(32),
+                                        child: Column(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            Text(
+                                              'Nessuna sessione da piloti che segui o vicina a te',
+                                              style: TextStyle(color: kMutedColor),
+                                              textAlign: TextAlign.center,
+                                            ),
+                                            const SizedBox(height: 16),
+                                            Text(
+                                              'Scorri verso il basso per aggiornare',
+                                              style: TextStyle(
+                                                color: kMutedColor.withAlpha(150),
+                                                fontSize: 12,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
                                     ),
                                   ),
-                                );
-                              }
+                                ],
+                              )
+                            : ListView.builder(
+                                controller: _scrollController,
+                                physics: const AlwaysScrollableScrollPhysics(),
+                                padding: const EdgeInsets.symmetric(
+                                        horizontal: 16, vertical: 8)
+                                    .copyWith(bottom: 24),
+                                itemCount: _feedItems.length +
+                                    (_isLoadingMore && _hasMore ? 1 : 0),
+                                itemBuilder: (context, index) {
+                                  if (index >= _feedItems.length) {
+                                    return const Padding(
+                                      padding: EdgeInsets.all(16.0),
+                                      child: Center(
+                                        child: CircularProgressIndicator(
+                                          valueColor: AlwaysStoppedAnimation<Color>(
+                                              kBrandColor),
+                                        ),
+                                      ),
+                                    );
+                                  }
 
-                              final item = _feedItems[index];
-                              final track2d =
-                                  _buildTrack2dFromSession(item.session);
-                              return _ActivityCard(
-                                session: item.session,
-                                track2d: track2d,
-                                isFollowed: item.isFollowed,
-                                isNearby: item.isNearby,
-                              );
-                            },
-                          ),
+                                  final item = _feedItems[index];
+                                  final track2d =
+                                      _buildTrack2dFromSession(item.session);
+                                  return _ActivityCard(
+                                    session: item.session,
+                                    track2d: track2d,
+                                    isFollowed: item.isFollowed,
+                                    isNearby: item.isNearby,
+                                  );
+                                },
+                              ),
+                      ),
               ),
             ],
           ),
@@ -739,35 +832,10 @@ class _PremiumLogoTitle extends StatelessWidget {
                 ),
               ],
             ),
-            child: FittedBox(
-              fit: isNarrow ? BoxFit.scaleDown : BoxFit.none,
-              alignment: Alignment.centerLeft,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _GradientText(
-                    text: 'RACESENSE',
-                    gradient: const LinearGradient(
-                      colors: [
-                        neon,
-                        Color(0xFFE7FF4F),
-                      ],
-                    ),
-                    shadowColor: neon.withOpacity(0.55),
-                  ),
-                  const SizedBox(width: 10),
-                  _GradientText(
-                    text: 'PULSE',
-                    gradient: const LinearGradient(
-                      colors: [
-                        lilac,
-                        Color(0xFFD9D4FF),
-                      ],
-                    ),
-                    shadowColor: lilac.withOpacity(0.6),
-                  ),
-                ],
-              ),
+            child: Image.asset(
+              'assets/icon/allrspulselogoo.png',
+              height: 32,
+              fit: BoxFit.contain,
             ),
           );
         },

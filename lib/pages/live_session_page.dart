@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
@@ -433,150 +434,108 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
   }
 
   // ============================================================
-  // UI
+  // UI - RaceChrono Pro Style
   // ============================================================
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: kBgColor,
+      backgroundColor: const Color(0xFF0A0A0A),
       body: SafeArea(
         child: Stack(
           children: [
-            // Mappa (opzionale)
-            _buildMap(),
-
-            // Dashboard sovrapposta
+            // Main dashboard
             Column(
               children: [
                 _buildHeader(),
-                Expanded(child: _buildDashboard()),
-                _buildBottomControls(),
+                Expanded(child: _buildMainDisplay()),
+                _buildGForceBar(),
+                _buildStopButton(),
               ],
             ),
 
             // Banner formation lap
             if (widget.trackDefinition != null && _lapDetection.inFormationLap)
               _buildFormationLapBanner(),
-
-            // Banner post-processing
-            if (widget.trackDefinition != null && !_lapDetection.inFormationLap)
-              _buildPostProcessingBanner(),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildMap() {
-    if (_displayPath.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    return Positioned.fill(
-      child: FlutterMap(
-        mapController: _mapController,
-        options: MapOptions(
-          initialCenter: _displayPath.last,
-          initialZoom: 17.0,
-          interactionOptions: const InteractionOptions(
-            flags: InteractiveFlag.pinchZoom | InteractiveFlag.drag,
-          ),
-        ),
-        children: [
-          TileLayer(
-            urlTemplate: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-            userAgentPackageName: 'com.racesense.pulse',
-          ),
-          if (_displayPath.length > 1)
-            PolylineLayer(
-              polylines: [
-                Polyline(
-                  points: _displayPath,
-                  strokeWidth: 4,
-                  color: kBrandColor,
-                ),
-              ],
-            ),
-          if (_displayPath.isNotEmpty)
-            MarkerLayer(
-              markers: [
-                Marker(
-                  point: _displayPath.last,
-                  width: 16,
-                  height: 16,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: kBrandColor,
-                      boxShadow: [
-                        BoxShadow(
-                          color: kBrandColor.withAlpha(128),
-                          blurRadius: 16,
-                          spreadRadius: 4,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-        ],
       ),
     );
   }
 
   Widget _buildHeader() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: kBgColor.withAlpha(240),
-        border: const Border(bottom: BorderSide(color: kLineColor)),
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       child: Row(
         children: [
-          const Icon(Icons.circle, color: Colors.red, size: 12),
-          const SizedBox(width: 8),
-          const Text(
-            'LIVE',
-            style: TextStyle(
-              color: Colors.red,
-              fontWeight: FontWeight.w900,
-              fontSize: 12,
+          // Recording indicator
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.red.withAlpha(30),
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: Colors.red.withAlpha(150)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.red,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                const Text(
+                  'REC',
+                  style: TextStyle(
+                    color: Colors.red,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 12,
+                    letterSpacing: 1,
+                  ),
+                ),
+              ],
             ),
           ),
           const Spacer(),
+          // BLE indicator
           if (_isUsingBleGps)
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
-                color: kBrandColor.withAlpha(30),
-                borderRadius: BorderRadius.circular(4),
-                border: Border.all(color: kBrandColor),
+                color: kBrandColor.withAlpha(20),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: kBrandColor.withAlpha(100)),
               ),
-              child: Row(
+              child: const Row(
                 mainAxisSize: MainAxisSize.min,
-                children: const [
-                  Icon(Icons.bluetooth_connected, color: kBrandColor, size: 12),
-                  SizedBox(width: 4),
+                children: [
+                  Icon(Icons.bluetooth_connected, color: kBrandColor, size: 14),
+                  SizedBox(width: 6),
                   Text(
-                    'BLE GPS',
+                    'GPS',
                     style: TextStyle(
                       color: kBrandColor,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.5,
                     ),
                   ),
                 ],
               ),
             ),
           const SizedBox(width: 12),
+          // Session time
           Text(
             _formatSessionTime(),
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w900,
-              color: kFgColor,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: Colors.white.withAlpha(150),
+              letterSpacing: 1,
             ),
           ),
         ],
@@ -584,400 +543,444 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
     );
   }
 
-  Widget _buildDashboard() {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            kBgColor.withAlpha(240),
-            kBgColor.withAlpha(200),
+  Widget _buildMainDisplay() {
+    final currentLap = _lapDetection.currentLapTime;
+    final hasTrack = widget.trackDefinition != null;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
+        children: [
+          const SizedBox(height: 8),
+
+          // LAP NUMBER - prominent
+          if (hasTrack)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.white.withAlpha(8),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'LAP',
+                    style: TextStyle(
+                      color: Colors.white.withAlpha(100),
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 3,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    '${_laps.length + 1}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 32,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+          const Spacer(flex: 1),
+
+          // CURRENT LAP TIME - MASSIVE
+          if (hasTrack) ...[
+            Text(
+              currentLap != null ? _formatLapPrecise(currentLap) : '0:00.00',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 72,
+                fontWeight: FontWeight.w900,
+                height: 1.0,
+                letterSpacing: -2,
+                fontFeatures: [FontFeature.tabularFigures()],
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'CURRENT LAP',
+              style: TextStyle(
+                color: Colors.white.withAlpha(80),
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 3,
+              ),
+            ),
+          ] else ...[
+            // No track - show session timer big
+            Text(
+              _formatSessionTime(),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 72,
+                fontWeight: FontWeight.w900,
+                height: 1.0,
+                letterSpacing: -2,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'SESSION TIME',
+              style: TextStyle(
+                color: Colors.white.withAlpha(80),
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 3,
+              ),
+            ),
           ],
+
+          const Spacer(flex: 1),
+
+          // DELTA TIME - prominent when available
+          if (hasTrack && _bestLap != null && currentLap != null)
+            _buildLiveDelta(currentLap),
+
+          if (hasTrack) const SizedBox(height: 24),
+
+          // LAST LAP & BEST LAP - side by side
+          if (hasTrack) _buildLapComparison(),
+
+          const Spacer(flex: 1),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLiveDelta(Duration currentLap) {
+    // Calculate live delta against best lap
+    final deltaMs = currentLap.inMilliseconds - _bestLap!.inMilliseconds;
+    final deltaSeconds = deltaMs / 1000.0;
+    final isAhead = deltaMs < 0;
+
+    // Only show delta if we have meaningful data
+    if (_laps.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+      decoration: BoxDecoration(
+        color: isAhead
+            ? Colors.green.withAlpha(25)
+            : Colors.red.withAlpha(25),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isAhead
+              ? Colors.green.withAlpha(80)
+              : Colors.red.withAlpha(80),
+          width: 1.5,
         ),
       ),
       child: Column(
         children: [
-          const SizedBox(height: 16),
-
-          // Velocità - MOLTO PIÙ GRANDE
           Text(
-            _currentSpeedKmh.toStringAsFixed(0),
-            style: const TextStyle(
-              fontSize: 130,
-              fontWeight: FontWeight.w900,
-              color: kFgColor,
-              height: 0.9,
-              letterSpacing: -4,
-            ),
-          ),
-          const Text(
-            'km/h',
+            'DELTA',
             style: TextStyle(
-              fontSize: 24,
-              color: kMutedColor,
+              color: (isAhead ? Colors.green : Colors.red).withAlpha(180),
+              fontSize: 11,
               fontWeight: FontWeight.w700,
               letterSpacing: 2,
             ),
           ),
-
-          const SizedBox(height: 24),
-
-          // Lap info
-          if (widget.trackDefinition != null) ...[
-            _buildLapInfo(),
-            const SizedBox(height: 24),
-          ],
-
-          // G-Force
-          _buildGForceIndicator(),
-
-          const Spacer(),
-
-          // Tempo totale sessione (invece di stats GPS)
-          _buildSessionTime(),
-
-          const SizedBox(height: 8),
+          const SizedBox(height: 4),
+          Text(
+            '${isAhead ? '-' : '+'}${deltaSeconds.abs().toStringAsFixed(2)}',
+            style: TextStyle(
+              color: isAhead ? Colors.green : Colors.red,
+              fontSize: 36,
+              fontWeight: FontWeight.w900,
+              height: 1.0,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildLapInfo() {
-    final currentLap = _lapDetection.currentLapTime;
-
-    return Column(
+  Widget _buildLapComparison() {
+    return Row(
       children: [
-        // LAP NUMBER - Più grande
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text(
-              'LAP ',
-              style: TextStyle(
-                color: kMutedColor,
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 2,
-              ),
+        // LAST LAP
+        Expanded(
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            decoration: BoxDecoration(
+              color: Colors.white.withAlpha(6),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.white.withAlpha(15)),
             ),
-            Text(
-              '${_laps.length + 1}',
-              style: const TextStyle(
-                color: kBrandColor,
-                fontSize: 36,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-          ],
-        ),
-
-        const SizedBox(height: 12),
-
-        // CURRENT LAP TIME - MOLTO PIÙ GRANDE
-        Text(
-          currentLap != null ? _formatLap(currentLap) : '0:00.0',
-          style: const TextStyle(
-            color: kFgColor,
-            fontSize: 56,
-            fontWeight: FontWeight.w900,
-            height: 1.0,
-            letterSpacing: -1,
-          ),
-        ),
-        const Text(
-          'TEMPO CORRENTE',
-          style: TextStyle(
-            color: kMutedColor,
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 1.5,
-          ),
-        ),
-
-        const SizedBox(height: 20),
-
-        // BEST LAP - Più prominente
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            gradient: LinearGradient(
-              colors: [
-                Colors.green.withAlpha(30),
-                Colors.green.withAlpha(10),
-              ],
-            ),
-            border: Border.all(color: Colors.green.withAlpha(100), width: 1.5),
-          ),
-          child: Column(
-            children: [
-              const Text(
-                'TEMPO MIGLIORE',
-                style: TextStyle(
-                  color: Colors.green,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1.5,
+            child: Column(
+              children: [
+                Text(
+                  'LAST LAP',
+                  style: TextStyle(
+                    color: Colors.white.withAlpha(100),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 2,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                _bestLap != null ? _formatLap(_bestLap!) : '---',
-                style: const TextStyle(
-                  color: Colors.green,
-                  fontSize: 32,
-                  fontWeight: FontWeight.w900,
-                  height: 1.0,
+                const SizedBox(height: 8),
+                Text(
+                  _previousLap != null ? _formatLapPrecise(_previousLap!) : '--:--.--',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 28,
+                    fontWeight: FontWeight.w900,
+                    height: 1.0,
+                    fontFeatures: [FontFeature.tabularFigures()],
+                  ),
                 ),
-              ),
-            ],
-          ),
-        ),
-
-        // Delta e Previous (più piccoli, secondari)
-        if (_previousLap != null) ...[
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // Previous lap
-              Column(
-                children: [
-                  const Text(
-                    'PRECEDENTE',
-                    style: TextStyle(
-                      color: kMutedColor,
-                      fontSize: 9,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _formatLap(_previousLap!),
-                    style: const TextStyle(
-                      color: kFgColor,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                ],
-              ),
-
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 24),
-                width: 1,
-                height: 30,
-                color: kLineColor,
-              ),
-
-              // Delta
-              Column(
-                children: [
-                  const Text(
-                    'DELTA',
-                    style: TextStyle(
-                      color: kMutedColor,
-                      fontSize: 9,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
+                if (_previousLap != null && _bestLap != null && _laps.length > 1) ...[
+                  const SizedBox(height: 6),
                   Text(
                     _formatDelta(),
                     style: TextStyle(
-                      color: _formatDelta().startsWith('+') ? Colors.red : Colors.green,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w900,
+                      color: _formatDelta().startsWith('+')
+                          ? Colors.red.withAlpha(200)
+                          : Colors.green.withAlpha(200),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
                     ),
                   ),
                 ],
+              ],
+            ),
+          ),
+        ),
+
+        const SizedBox(width: 12),
+
+        // BEST LAP
+        Expanded(
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Colors.purple.withAlpha(20),
+                  Colors.purple.withAlpha(10),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.purple.withAlpha(60)),
+            ),
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.emoji_events,
+                      color: Colors.purple.withAlpha(180),
+                      size: 14,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'BEST LAP',
+                      style: TextStyle(
+                        color: Colors.purple.withAlpha(200),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 2,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  _bestLap != null ? _formatLapPrecise(_bestLap!) : '--:--.--',
+                  style: TextStyle(
+                    color: Colors.purple.shade200,
+                    fontSize: 28,
+                    fontWeight: FontWeight.w900,
+                    height: 1.0,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildGForceBar() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withAlpha(6),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withAlpha(15)),
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'G-FORCE',
+                style: TextStyle(
+                  color: Colors.white.withAlpha(100),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 2,
+                ),
+              ),
+              Text(
+                _gForceMagnitude.toStringAsFixed(2),
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                  color: Colors.white,
+                  fontFeatures: [FontFeature.tabularFigures()],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              // BRAKE indicator
+              Text(
+                'BRAKE',
+                style: TextStyle(
+                  color: Colors.red.withAlpha(150),
+                  fontSize: 9,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1,
+                ),
+              ),
+              const SizedBox(width: 8),
+              // Decel bar (right to left)
+              Expanded(
+                child: Container(
+                  height: 10,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(5),
+                    color: Colors.white.withAlpha(15),
+                  ),
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: FractionallySizedBox(
+                      widthFactor: (_gForceY / 2.5).clamp(0.0, 1.0),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(5),
+                          gradient: LinearGradient(
+                            colors: [
+                              Colors.red.withAlpha(180),
+                              Colors.red,
+                            ],
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.red.withAlpha(100),
+                              blurRadius: 8,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              // Accel bar (left to right)
+              Expanded(
+                child: Container(
+                  height: 10,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(5),
+                    color: Colors.white.withAlpha(15),
+                  ),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: FractionallySizedBox(
+                      widthFactor: (_gForceX / 2.5).clamp(0.0, 1.0),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(5),
+                          gradient: LinearGradient(
+                            colors: [
+                              Colors.green,
+                              Colors.green.withAlpha(180),
+                            ],
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.green.withAlpha(100),
+                              blurRadius: 8,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              // ACCEL indicator
+              Text(
+                'ACCEL',
+                style: TextStyle(
+                  color: Colors.green.withAlpha(150),
+                  fontSize: 9,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1,
+                ),
               ),
             ],
           ),
         ],
-      ],
+      ),
     );
   }
 
-  Widget _buildGForceIndicator() {
-    return Column(
-      children: [
-        const Text(
-          'G-FORCE',
-          style: TextStyle(
-            color: kMutedColor,
-            fontSize: 12,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // Decel (braking)
-            Container(
-              width: 60,
-              height: 8,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(4),
-                color: kLineColor,
-              ),
-              child: Align(
-                alignment: Alignment.centerRight,
-                child: Container(
-                  width: 60 * (_gForceY / 2.5).clamp(0.0, 1.0),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(4),
-                    color: Colors.red,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 16),
-            Text(
-              _gForceMagnitude.toStringAsFixed(2),
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.w900,
-                color: kFgColor,
-              ),
-            ),
-            const SizedBox(width: 16),
-            // Accel
-            Container(
-              width: 60,
-              height: 8,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(4),
-                color: kLineColor,
-              ),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Container(
-                  width: 60 * (_gForceX / 2.5).clamp(0.0, 1.0),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(4),
-                    color: Colors.green,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSessionTime() {
+  Widget _buildStopButton() {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        gradient: const LinearGradient(
-          colors: [
-            Color.fromRGBO(255, 255, 255, 0.08),
-            Color.fromRGBO(255, 255, 255, 0.04),
-          ],
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+      child: SizedBox(
+        width: double.infinity,
+        child: ElevatedButton(
+          onPressed: _finishSession,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.red.withAlpha(30),
+            foregroundColor: Colors.red,
+            padding: const EdgeInsets.symmetric(vertical: 18),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(color: Colors.red.withAlpha(150), width: 1.5),
+            ),
+            elevation: 0,
+          ),
+          child: const Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.stop_rounded, size: 22),
+              SizedBox(width: 10),
+              Text(
+                'END SESSION',
+                style: TextStyle(
+                  fontWeight: FontWeight.w900,
+                  fontSize: 15,
+                  letterSpacing: 1.5,
+                ),
+              ),
+            ],
+          ),
         ),
-        border: Border.all(color: kLineColor),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          // Tempo totale
-          Expanded(
-            child: Column(
-              children: [
-                const Icon(Icons.timer_outlined, color: kBrandColor, size: 22),
-                const SizedBox(height: 6),
-                const Text(
-                  'DURATA TOTALE',
-                  style: TextStyle(
-                    color: kMutedColor,
-                    fontSize: 9,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  _formatSessionTime(),
-                  style: const TextStyle(
-                    color: kFgColor,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          Container(width: 1, height: 50, color: kLineColor),
-
-          // Numero giri completati
-          Expanded(
-            child: Column(
-              children: [
-                const Icon(Icons.flag, color: kBrandColor, size: 22),
-                const SizedBox(height: 6),
-                const Text(
-                  'GIRI COMPLETATI',
-                  style: TextStyle(
-                    color: kMutedColor,
-                    fontSize: 9,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  _laps.length.toString(),
-                  style: const TextStyle(
-                    color: kFgColor,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBottomControls() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: kBgColor.withAlpha(240),
-        border: const Border(top: BorderSide(color: kLineColor)),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: ElevatedButton.icon(
-              onPressed: _finishSession,
-              icon: const Icon(Icons.stop),
-              label: const Text(
-                'TERMINA SESSIONE',
-                style: TextStyle(fontWeight: FontWeight.w900),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: kErrorColor,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -985,10 +988,10 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
   Widget _buildFormationLapBanner() {
     return Positioned(
       top: 80,
-      left: 16,
-      right: 16,
+      left: 20,
+      right: 20,
       child: Container(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: [
@@ -998,18 +1001,25 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
           ),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: Colors.orange, width: 2),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.orange.withAlpha(50),
+              blurRadius: 20,
+              spreadRadius: 2,
+            ),
+          ],
         ),
-        child: Row(
-          children: const [
-            Icon(Icons.flag, color: Colors.white, size: 20),
-            SizedBox(width: 12),
+        child: const Row(
+          children: [
+            Icon(Icons.flag_rounded, color: Colors.white, size: 22),
+            SizedBox(width: 14),
             Expanded(
               child: Text(
-                'Passa dalla linea del via per iniziare',
+                'Cross the start/finish line to begin timing',
                 style: TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.w800,
-                  fontSize: 13,
+                  fontSize: 14,
                 ),
               ),
             ),
@@ -1019,38 +1029,11 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
     );
   }
 
-  Widget _buildPostProcessingBanner() {
-    return Positioned(
-      bottom: 90,
-      left: 16,
-      right: 16,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: kBrandColor.withAlpha(30),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: kBrandColor.withAlpha(100)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: const [
-            Icon(Icons.info_outline, color: kBrandColor, size: 16),
-            SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                'Tempi giro finali dopo elaborazione',
-                style: TextStyle(
-                  color: kBrandColor,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+  String _formatLapPrecise(Duration d) {
+    final minutes = d.inMinutes;
+    final seconds = d.inSeconds % 60;
+    final hundredths = (d.inMilliseconds % 1000) ~/ 10;
+    return '$minutes:${seconds.toString().padLeft(2, '0')}.${hundredths.toString().padLeft(2, '0')}';
   }
 }
 
