@@ -34,7 +34,11 @@ dependencies:
   firebase_core: ^4.2.1
   firebase_auth: ^6.1.2
   cloud_firestore: ^6.1.0
+  firebase_database: ^12.1.0
   shared_preferences: ^2.3.3
+
+  # QR Code Scanner
+  qr_code_scanner: ^1.0.1
 
   # Image picker & sharing
   image_picker: ^1.0.7

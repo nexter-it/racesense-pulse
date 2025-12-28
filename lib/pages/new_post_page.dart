@@ -9,6 +9,7 @@ import '../widgets/pulse_chip.dart';
 import 'connect_devices_page.dart';
 import 'custom_circuits_page.dart';
 import 'gps_wait_page.dart';
+import 'qr_scanner_page.dart';
 
 class NewPostPage extends StatefulWidget {
   static const routeName = '/new';
@@ -185,6 +186,41 @@ class _NewPostPageState extends State<NewPostPage> {
                             borderRadius: BorderRadius.circular(16),
                           ),
                           side: const BorderSide(color: kBrandColor, width: 2),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    // LIVE TIMING QR
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: () async {
+                          await Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const QrScannerPage(),
+                            ),
+                          );
+                        },
+                        icon: const Icon(Icons.qr_code_scanner, size: 22),
+                        label: const Text(
+                          'Live Timing (QR)',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: kPulseColor,
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 16,
+                            horizontal: 24,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          side: const BorderSide(color: kPulseColor, width: 2),
                         ),
                       ),
                     ),
