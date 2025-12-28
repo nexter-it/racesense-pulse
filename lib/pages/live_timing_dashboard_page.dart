@@ -40,11 +40,18 @@ class _LiveTimingDashboardPageState extends State<LiveTimingDashboardPage>
   Timer? _uiTimer;
   int _lastLapCount = 0;
 
-  // Animazione per banner bandiera
+  // Animazione per banner bandiera/penalità
   late AnimationController _flagAnimController;
   late Animation<double> _flagAnimation;
   String? _lastStatus;
   bool _showFlagBanner = false;
+
+  // Tracking penalità
+  int _lastPenaltyTimeSec = 0;
+  int _lastPenaltyWarnings = 0;
+  bool _lastPenaltyDq = false;
+  bool _showPenaltyBanner = false;
+  String _penaltyBannerType = ''; // 'time', 'warning', 'dq'
 
   @override
   void initState() {
@@ -128,13 +135,9 @@ class _LiveTimingDashboardPageState extends State<LiveTimingDashboardPage>
 
       _driverSub = _liveService.driverStream.listen(
         (driver) {
-          // print(
-          //     '🟢 [Dashboard] Driver data ricevuti: ${driver?.fullName}, lap: ${driver?.lapCount}');
           if (mounted && driver != null) {
             // Controlla cambio di lap count per resettare il timer
             if (driver.lapCount != _lastLapCount) {
-              // print(
-              //     '🟢 [Dashboard] Lap count cambiato: $_lastLapCount -> ${driver.lapCount}');
               _lastLapCount = driver.lapCount;
               _lapWatch.reset();
               _lapWatch.start();
@@ -142,6 +145,10 @@ class _LiveTimingDashboardPageState extends State<LiveTimingDashboardPage>
               // Avvia il timer se non è già in esecuzione
               _lapWatch.start();
             }
+
+            // Controlla cambio penalità
+            _checkPenaltyChange(driver.penalty);
+
             setState(() {
               _driverData = driver;
               _isLoading = false;
@@ -176,12 +183,16 @@ class _LiveTimingDashboardPageState extends State<LiveTimingDashboardPage>
   }
 
   void _onStatusChanged(String newStatus) {
-    // Mostra banner animato per bandiere
-    if (newStatus == 'YELLOW FLAG' || newStatus == 'RED FLAG') {
+    // Mostra banner animato per tutte le bandiere importanti
+    if (newStatus == 'YELLOW FLAG' ||
+        newStatus == 'RED FLAG' ||
+        newStatus == 'IN CORSO' ||
+        newStatus == 'FINITA') {
       setState(() => _showFlagBanner = true);
       _flagAnimController.forward(from: 0.0);
-      // Nascondi dopo 5 secondi
-      Future.delayed(const Duration(seconds: 5), () {
+      // Nascondi dopo 5 secondi (8 per la bandiera a scacchi)
+      final duration = newStatus == 'FINITA' ? 8 : 5;
+      Future.delayed(Duration(seconds: duration), () {
         if (mounted) {
           _flagAnimController.reverse().then((_) {
             if (mounted) setState(() => _showFlagBanner = false);
@@ -189,6 +200,42 @@ class _LiveTimingDashboardPageState extends State<LiveTimingDashboardPage>
         }
       });
     }
+  }
+
+  void _checkPenaltyChange(PenaltyInfo penalty) {
+    // Controlla squalifica
+    if (penalty.dq && !_lastPenaltyDq) {
+      _showPenaltyNotification('dq');
+    }
+    // Controlla nuovo warning
+    else if (penalty.warnings > _lastPenaltyWarnings) {
+      _showPenaltyNotification('warning');
+    }
+    // Controlla nuova penalità tempo
+    else if (penalty.timeSec > _lastPenaltyTimeSec) {
+      _showPenaltyNotification('time');
+    }
+
+    // Aggiorna i valori tracciati
+    _lastPenaltyTimeSec = penalty.timeSec;
+    _lastPenaltyWarnings = penalty.warnings;
+    _lastPenaltyDq = penalty.dq;
+  }
+
+  void _showPenaltyNotification(String type) {
+    setState(() {
+      _penaltyBannerType = type;
+      _showPenaltyBanner = true;
+    });
+    _flagAnimController.forward(from: 0.0);
+    // Nascondi dopo 6 secondi
+    Future.delayed(const Duration(seconds: 6), () {
+      if (mounted) {
+        _flagAnimController.reverse().then((_) {
+          if (mounted) setState(() => _showPenaltyBanner = false);
+        });
+      }
+    });
   }
 
   String _formatCurrentLapTime() {
@@ -223,6 +270,9 @@ class _LiveTimingDashboardPageState extends State<LiveTimingDashboardPage>
 
             // Banner bandiera animato
             if (_showFlagBanner && _raceData != null) _buildFlagBanner(),
+
+            // Banner penalità animato
+            if (_showPenaltyBanner && _driverData != null) _buildPenaltyBanner(),
           ],
         ),
       ),
@@ -265,6 +315,8 @@ class _LiveTimingDashboardPageState extends State<LiveTimingDashboardPage>
   }
 
   Widget _buildHeader() {
+    final hasPenalty = _driverData?.penalty.hasAny ?? false;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       child: Row(
@@ -282,45 +334,11 @@ class _LiveTimingDashboardPageState extends State<LiveTimingDashboardPage>
             ),
           ),
           const SizedBox(width: 16),
-          // LIVE indicator
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: _liveService.isConnected
-                  ? Colors.green.withAlpha(30)
-                  : Colors.red.withAlpha(30),
-              borderRadius: BorderRadius.circular(6),
-              border: Border.all(
-                color: _liveService.isConnected
-                    ? Colors.green.withAlpha(150)
-                    : Colors.red.withAlpha(150),
-              ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: _liveService.isConnected ? Colors.green : Colors.red,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  _liveService.isConnected ? 'LIVE' : 'OFFLINE',
-                  style: TextStyle(
-                    color:
-                        _liveService.isConnected ? Colors.green : Colors.red,
-                    fontWeight: FontWeight.w900,
-                    fontSize: 12,
-                    letterSpacing: 1,
-                  ),
-                ),
-              ],
-            ),
-          ),
+          // Penalità indicator (se presenti) o LIVE indicator
+          if (hasPenalty)
+            _buildPenaltyIndicator()
+          else
+            _buildLiveIndicator(),
           const Spacer(),
           // Circuit name
           if (_raceData?.circuitName != null)
@@ -332,6 +350,133 @@ class _LiveTimingDashboardPageState extends State<LiveTimingDashboardPage>
                 color: Colors.white.withAlpha(150),
                 letterSpacing: 1,
               ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLiveIndicator() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: _liveService.isConnected
+            ? Colors.green.withAlpha(30)
+            : Colors.red.withAlpha(30),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(
+          color: _liveService.isConnected
+              ? Colors.green.withAlpha(150)
+              : Colors.red.withAlpha(150),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: _liveService.isConnected ? Colors.green : Colors.red,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            _liveService.isConnected ? 'LIVE' : 'OFFLINE',
+            style: TextStyle(
+              color: _liveService.isConnected ? Colors.green : Colors.red,
+              fontWeight: FontWeight.w900,
+              fontSize: 12,
+              letterSpacing: 1,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPenaltyIndicator() {
+    final penalty = _driverData!.penalty;
+
+    // Squalificato
+    if (penalty.dq) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: Colors.black,
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: Colors.white, width: 2),
+        ),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.block, color: Colors.white, size: 16),
+            SizedBox(width: 8),
+            Text(
+              'DSQ',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w900,
+                fontSize: 12,
+                letterSpacing: 1,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Penalità tempo e/o warning
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.orange.withAlpha(30),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: Colors.orange.withAlpha(150)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 16),
+          const SizedBox(width: 8),
+          // Tempo penalità
+          if (penalty.timeSec > 0)
+            Text(
+              '+${penalty.timeSec}s',
+              style: const TextStyle(
+                color: Colors.orange,
+                fontWeight: FontWeight.w900,
+                fontSize: 12,
+                letterSpacing: 0.5,
+              ),
+            ),
+          // Separatore
+          if (penalty.timeSec > 0 && penalty.warnings > 0)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 6),
+              child: Container(
+                width: 1,
+                height: 12,
+                color: Colors.orange.withAlpha(100),
+              ),
+            ),
+          // Warnings
+          if (penalty.warnings > 0)
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '${penalty.warnings}',
+                  style: const TextStyle(
+                    color: Colors.orange,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(width: 2),
+                const Icon(Icons.flag, color: Colors.orange, size: 12),
+              ],
             ),
         ],
       ),
@@ -1007,12 +1152,43 @@ class _LiveTimingDashboardPageState extends State<LiveTimingDashboardPage>
   }
 
   Widget _buildFlagBanner() {
-    final isYellow = _raceData!.status == 'YELLOW FLAG';
-    final color = isYellow ? const Color(0xFFFFD700) : Colors.red;
-    final text = isYellow ? 'YELLOW FLAG' : 'RED FLAG';
-    final subText = isYellow
-        ? 'SLOW DOWN - ${_raceData!.maxYellowFlagSpeed ?? 60} KM/H MAX'
-        : 'SESSION STOPPED';
+    final status = _raceData!.status;
+
+    Color color;
+    String text;
+    String subText;
+    IconData icon;
+
+    switch (status) {
+      case 'YELLOW FLAG':
+        color = const Color(0xFFFFD700);
+        text = 'YELLOW FLAG';
+        subText = 'SLOW DOWN - ${_raceData!.maxYellowFlagSpeed ?? 60} KM/H MAX';
+        icon = Icons.flag_rounded;
+        break;
+      case 'RED FLAG':
+        color = Colors.red;
+        text = 'RED FLAG';
+        subText = 'SESSION STOPPED';
+        icon = Icons.flag_rounded;
+        break;
+      case 'IN CORSO':
+        color = Colors.green;
+        text = 'GREEN FLAG';
+        subText = 'RACE IS ON - GO GO GO!';
+        icon = Icons.flag_rounded;
+        break;
+      case 'FINITA':
+        color = Colors.white;
+        text = 'CHECKERED FLAG';
+        subText = 'SESSION FINISHED';
+        icon = Icons.sports_score;
+        break;
+      default:
+        return const SizedBox.shrink();
+    }
+
+    final isCheckered = status == 'FINITA';
 
     return AnimatedBuilder(
       animation: _flagAnimation,
@@ -1028,12 +1204,15 @@ class _LiveTimingDashboardPageState extends State<LiveTimingDashboardPage>
               child: Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      color.withAlpha(240),
-                      color.withAlpha(200),
-                    ],
-                  ),
+                  gradient: isCheckered
+                      ? null
+                      : LinearGradient(
+                          colors: [
+                            color.withAlpha(240),
+                            color.withAlpha(200),
+                          ],
+                        ),
+                  color: isCheckered ? const Color(0xFF1A1A1A) : null,
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(color: color, width: 3),
                   boxShadow: [
@@ -1049,8 +1228,118 @@ class _LiveTimingDashboardPageState extends State<LiveTimingDashboardPage>
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.flag_rounded,
-                            color: Colors.white, size: 28),
+                        Icon(icon,
+                            color: isCheckered ? Colors.white : Colors.white,
+                            size: 28),
+                        const SizedBox(width: 12),
+                        Text(
+                          text,
+                          style: TextStyle(
+                            color: isCheckered ? Colors.white : Colors.white,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 24,
+                            letterSpacing: 2,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      subText,
+                      style: TextStyle(
+                        color: isCheckered
+                            ? Colors.white.withAlpha(180)
+                            : Colors.white.withAlpha(220),
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                        letterSpacing: 1,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildPenaltyBanner() {
+    final penalty = _driverData!.penalty;
+
+    Color color;
+    String text;
+    String subText;
+    IconData icon;
+
+    switch (_penaltyBannerType) {
+      case 'dq':
+        color = Colors.black;
+        text = 'DISQUALIFIED';
+        subText = 'YOU HAVE BEEN DISQUALIFIED';
+        icon = Icons.block;
+        break;
+      case 'warning':
+        color = Colors.orange;
+        text = 'WARNING';
+        subText = 'Warning ${penalty.warnings} received';
+        icon = Icons.flag;
+        break;
+      case 'time':
+        color = Colors.orange;
+        text = 'TIME PENALTY';
+        subText = '+${penalty.timeSec} seconds added';
+        icon = Icons.timer;
+        break;
+      default:
+        return const SizedBox.shrink();
+    }
+
+    final isDq = _penaltyBannerType == 'dq';
+
+    return AnimatedBuilder(
+      animation: _flagAnimation,
+      builder: (context, child) {
+        return Positioned(
+          top: 80,
+          left: 20,
+          right: 20,
+          child: Transform.scale(
+            scale: _flagAnimation.value,
+            child: Opacity(
+              opacity: _flagAnimation.value,
+              child: Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  gradient: isDq
+                      ? null
+                      : LinearGradient(
+                          colors: [
+                            color.withAlpha(240),
+                            color.withAlpha(200),
+                          ],
+                        ),
+                  color: isDq ? Colors.black : null,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: isDq ? Colors.white : color,
+                    width: 3,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: (isDq ? Colors.white : color).withAlpha(100),
+                      blurRadius: 30,
+                      spreadRadius: 5,
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(icon, color: Colors.white, size: 28),
                         const SizedBox(width: 12),
                         Text(
                           text,
