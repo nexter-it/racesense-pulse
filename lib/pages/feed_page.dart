@@ -1,12 +1,13 @@
 import 'dart:ui' as ui;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:intl/intl.dart';
 import 'dart:math' as math;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../theme.dart';
-import '../widgets/pulse_background.dart';
 import 'activity_detail_page.dart';
 
 import '../services/session_service.dart';
@@ -14,36 +15,30 @@ import '../services/follow_service.dart';
 import '../services/feed_cache_service.dart';
 import '../models/session_model.dart';
 
-class PulseActivity {
-  final String id;
-  final String pilotName;
-  final String pilotTag;
-  final String circuitName;
-  final String city;
-  final String country;
-  final String bestLap;
-  final String sessionType; // es: "Gara", "Practice"
-  final int laps;
-  final DateTime date;
-  final bool isPb; // personal best
-  final double distanceKm;
-  final List<Offset> track2d;
+/// Converte il displayPath salvato nel doc sessione in una path 2D per il painter.
+List<Offset> _buildTrack2dFromSession(SessionModel session) {
+  final raw = session.displayPath;
 
-  const PulseActivity({
-    required this.id,
-    required this.pilotName,
-    required this.pilotTag,
-    required this.circuitName,
-    required this.city,
-    required this.country,
-    required this.bestLap,
-    required this.sessionType,
-    required this.laps,
-    required this.date,
-    required this.isPb,
-    required this.distanceKm,
-    required this.track2d,
-  });
+  if (raw == null || raw.isEmpty) {
+    return _generateFakeTrack(rotationDeg: 0);
+  }
+
+  final points = <Offset>[];
+
+  for (final m in raw) {
+    final lat = m['lat'];
+    final lon = m['lon'];
+
+    if (lat != null && lon != null) {
+      points.add(Offset(lon, lat));
+    }
+  }
+
+  if (points.length < 2) {
+    return _generateFakeTrack(rotationDeg: 0);
+  }
+
+  return points;
 }
 
 List<Offset> _generateFakeTrack({
@@ -54,18 +49,16 @@ List<Offset> _generateFakeTrack({
 }) {
   final List<Offset> result = [];
 
-  // Layout normalizzato del circuito (rettilinei + curve)
-  // coordinate in [-1, 1]
   final List<Offset> base = [
-    const Offset(-1.0, -0.1), // start rettilineo principale
-    const Offset(-0.3, -0.6), // curva 1
-    const Offset(0.3, -0.65), // breve rettilineo alto
-    const Offset(0.9, -0.2), // fine rettilineo alto curva 2
-    const Offset(1.0, 0.2), // discesa lato destro
-    const Offset(0.4, 0.7), // curva bassa destra
-    const Offset(-0.2, 0.6), // rettilineo basso
-    const Offset(-0.9, 0.2), // curva bassa sinistra
-    const Offset(-1.0, -0.1), // chiusura vicino allo start
+    const Offset(-1.0, -0.1),
+    const Offset(-0.3, -0.6),
+    const Offset(0.3, -0.65),
+    const Offset(0.9, -0.2),
+    const Offset(1.0, 0.2),
+    const Offset(0.4, 0.7),
+    const Offset(-0.2, 0.6),
+    const Offset(-0.9, 0.2),
+    const Offset(-1.0, -0.1),
   ];
 
   final rot = rotationDeg * math.pi / 180.0;
@@ -79,20 +72,16 @@ List<Offset> _generateFakeTrack({
     for (int j = 0; j < samplesPerSegment; j++) {
       final t = j / samplesPerSegment;
 
-      // interpolazione lineare tra i due punti (rettilineo/curva spezzata)
       final nx = p0.dx + (p1.dx - p0.dx) * t;
       final ny = p0.dy + (p1.dy - p0.dy) * t;
 
-      // scala
       double x = nx * scaleX;
       double y = ny * scaleY;
 
-      // piccola irregolarità per evitare forme troppo "perfette"
       final noise = (i.isEven ? 1 : -1) * 0.03;
       x += noise * scaleX * (math.sin(t * math.pi));
       y += noise * scaleY * (math.cos(t * math.pi));
 
-      // rotazione globale
       final xr = x * cosR - y * sinR;
       final yr = x * sinR + y * cosR;
 
@@ -101,35 +90,6 @@ List<Offset> _generateFakeTrack({
   }
 
   return result;
-}
-
-/// Converte il displayPath salvato nel doc sessione in una path 2D per il painter.
-/// Usa lat come Y e lon come X, la scala la gestisce già il painter.
-List<Offset> _buildTrack2dFromSession(SessionModel session) {
-  final raw = session.displayPath;
-
-  // se non c'è path o è vuota → fallback estetico
-  if (raw == null || raw.isEmpty) {
-    return _generateFakeTrack(rotationDeg: 0);
-  }
-
-  final points = <Offset>[];
-
-  for (final m in raw) {
-    final lat = m['lat'];
-    final lon = m['lon'];
-
-    if (lat != null && lon != null) {
-      points.add(Offset(lon, lat)); // X = lon, Y = lat
-    }
-  }
-
-  // se per qualche motivo abbiamo meno di 2 punti, facciamo comunque fallback
-  if (points.length < 2) {
-    return _generateFakeTrack(rotationDeg: 0);
-  }
-
-  return points;
 }
 
 class FeedPage extends StatefulWidget {
@@ -151,7 +111,7 @@ class _FeedSessionItem {
   });
 }
 
-class _FeedPageState extends State<FeedPage> {
+class _FeedPageState extends State<FeedPage> with TickerProviderStateMixin {
   final SessionService _sessionService = SessionService();
   final FollowService _followService = FollowService();
   final FeedCacheService _cacheService = FeedCacheService();
@@ -169,17 +129,37 @@ class _FeedPageState extends State<FeedPage> {
   bool _isRefreshing = false;
 
   static const int _pageSize = 10;
-  static const int _fetchBatchSize =
-      25; // batch più ampio per filtrare senza troppe read
+  static const int _fetchBatchSize = 25;
   static const double _nearbyRadiusKm = 80;
 
   bool _showDisclaimer = false;
   bool _dontShowAgain = false;
 
+  // Animation controllers
+  late AnimationController _pulseController;
+  late AnimationController _rotateController;
+  late Animation<double> _pulseAnimation;
+
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+
+    // Setup animations
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat(reverse: true);
+
+    _rotateController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2000),
+    )..repeat();
+
+    _pulseAnimation = Tween<double>(begin: 0.8, end: 1.2).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+
     _loadDisclaimer();
     _bootstrapFeed();
   }
@@ -187,17 +167,16 @@ class _FeedPageState extends State<FeedPage> {
   @override
   void dispose() {
     _scrollController.dispose();
+    _pulseController.dispose();
+    _rotateController.dispose();
     super.dispose();
   }
 
-  /// Bootstrap feed: carica da cache se disponibile, altrimenti da Firebase
   Future<void> _bootstrapFeed() async {
     setState(() => _isLoading = true);
     try {
-      // Ottieni l'ID dell'utente corrente per filtrare le proprie sessioni
       final currentUserId = FirebaseAuth.instance.currentUser?.uid;
 
-      // Prima prova a caricare dalla cache
       if (_cacheService.hasCachedData) {
         print('📦 Caricamento feed da cache locale...');
         _followingIds = _cacheService.getCachedFollowingIds();
@@ -206,7 +185,6 @@ class _FeedPageState extends State<FeedPage> {
         final cachedSessions = _cacheService.getCachedFeed();
         _feedItems.clear();
         for (final session in cachedSessions) {
-          // Salta le proprie sessioni - non devono apparire nel feed
           if (currentUserId != null && session.userId == currentUserId) {
             continue;
           }
@@ -229,7 +207,6 @@ class _FeedPageState extends State<FeedPage> {
         return;
       }
 
-      // Nessuna cache: carica da Firebase
       print('🔄 Nessuna cache, caricamento da Firebase...');
       await _refreshFromFirebase();
     } finally {
@@ -239,14 +216,11 @@ class _FeedPageState extends State<FeedPage> {
     }
   }
 
-  /// Refresh completo da Firebase (pull-to-refresh)
   Future<void> _refreshFromFirebase() async {
     setState(() => _isRefreshing = true);
     try {
-      // Ottieni l'ID dell'utente corrente per filtrare le proprie sessioni
       final currentUserId = FirebaseAuth.instance.currentUser?.uid;
 
-      // Carica following ids e posizione in parallelo
       final results = await Future.wait([
         _cacheService.refreshFollowingIds(limit: 200),
         _getUserLocation(),
@@ -255,7 +229,6 @@ class _FeedPageState extends State<FeedPage> {
       _followingIds = results[0] as Set<String>;
       _userPosition = results[1] as Position?;
 
-      // Refresh feed da Firebase con cache
       final sessions = await _cacheService.refreshFeed(
         followingIds: _followingIds,
         isNearbyFilter: _isNearby,
@@ -265,7 +238,6 @@ class _FeedPageState extends State<FeedPage> {
       _feedItems.clear();
       _lastDoc = null;
       for (final session in sessions) {
-        // Salta le proprie sessioni - non devono apparire nel feed
         if (currentUserId != null && session.userId == currentUserId) {
           continue;
         }
@@ -282,7 +254,6 @@ class _FeedPageState extends State<FeedPage> {
 
       print('✅ Feed refreshed da Firebase: ${_feedItems.length} sessioni');
 
-      // Segna che il primo caricamento è completato
       _cacheService.markFirstLoadComplete();
     } finally {
       if (mounted) {
@@ -371,7 +342,6 @@ class _FeedPageState extends State<FeedPage> {
     int added = 0;
     int attempts = 0;
 
-    // Ottieni l'ID dell'utente corrente per filtrare le proprie sessioni
     final currentUserId = FirebaseAuth.instance.currentUser?.uid;
 
     try {
@@ -392,7 +362,6 @@ class _FeedPageState extends State<FeedPage> {
         for (final doc in snap.docs) {
           final session = SessionModel.fromFirestore(doc.id, doc.data());
 
-          // Salta le proprie sessioni - non devono apparire nel feed
           if (currentUserId != null && session.userId == currentUserId) {
             continue;
           }
@@ -440,145 +409,441 @@ class _FeedPageState extends State<FeedPage> {
 
   @override
   Widget build(BuildContext context) {
-    return PulseBackground(
-      withTopPadding: true,
-      child: Stack(
+    return Scaffold(
+      backgroundColor: const Color(0xFF0A0A0A),
+      body: SafeArea(
+        child: Column(
+          children: [
+            _buildHeader(),
+            Expanded(
+              child: Stack(
+                children: [
+                  _isLoading
+                      ? _buildLoadingState()
+                      : RefreshIndicator(
+                          onRefresh: _refreshFromFirebase,
+                          color: kBrandColor,
+                          backgroundColor: const Color(0xFF1A1A1A),
+                          child: _feedItems.isEmpty
+                              ? _buildEmptyState()
+                              : ListView.builder(
+                                  controller: _scrollController,
+                                  physics: const AlwaysScrollableScrollPhysics(),
+                                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+                                  itemCount: _feedItems.length +
+                                      (_isLoadingMore && _hasMore ? 1 : 0),
+                                  itemBuilder: (context, index) {
+                                    if (index >= _feedItems.length) {
+                                      return _buildLoadMoreIndicator();
+                                    }
+
+                                    final item = _feedItems[index];
+                                    final track2d =
+                                        _buildTrack2dFromSession(item.session);
+                                    return _ActivityCard(
+                                      session: item.session,
+                                      track2d: track2d,
+                                      isFollowed: item.isFollowed,
+                                      isNearby: item.isNearby,
+                                    );
+                                  },
+                                ),
+                        ),
+                  // Disclaimer overlay
+                  if (_showDisclaimer)
+                    Positioned.fill(
+                      child: Container(
+                        color: Colors.black.withAlpha(200),
+                        child: Center(
+                          child: _DisclaimerBanner(
+                            dontShowAgain: _dontShowAgain,
+                            onToggleDontShow: (value) async {
+                              if (value) {
+                                await _hideDisclaimer(forever: true);
+                              } else {
+                                setState(() {
+                                  _dontShowAgain = false;
+                                });
+                              }
+                            },
+                            onClose: () => _hideDisclaimer(forever: _dontShowAgain),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            const Color(0xFF0A0A0A),
+            const Color(0xFF121212),
+          ],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ),
+        border: const Border(
+          bottom: BorderSide(color: Color(0xFF2A2A2A), width: 1),
+        ),
+      ),
+      child: Row(
         children: [
-          Column(
-            children: [
-              const _TopBar(),
-              Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4),
-                child: Row(
-                  children: const [
+          // Logo
+          Container(
+            padding: const EdgeInsets.all(2),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              gradient: LinearGradient(
+                colors: [
+                  kBrandColor.withAlpha(100),
+                  kPulseColor.withAlpha(80),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                gradient: const LinearGradient(
+                  colors: [
+                    Color.fromRGBO(26, 56, 36, 0.8),
+                    Color.fromRGBO(18, 18, 26, 0.9),
+                    Color.fromRGBO(41, 26, 63, 0.8),
+                  ],
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                ),
+              ),
+              child: Image.asset(
+                'assets/icon/allrspulselogoo.png',
+                height: 28,
+                fit: BoxFit.contain,
+              ),
+            ),
+          ),
+          const SizedBox(width: 14),
+          // Title
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Feed',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
+                    color: kFgColor,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: kPulseColor.withAlpha(20),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: kPulseColor.withAlpha(60)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 6,
+                            height: 6,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: kPulseColor,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: kPulseColor.withAlpha(150),
+                                  blurRadius: 6,
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'BETA',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: kPulseColor,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
                     Text(
                       'Attività recenti',
                       style: TextStyle(
-                        fontSize: 13,
-                        color: Color.fromARGB(255, 255, 255, 255),
-                        letterSpacing: 0.4,
+                        fontSize: 12,
+                        color: kMutedColor,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ],
                 ),
-              ),
-              if (_locationError != null)
-                Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                  child: Text(
-                    _locationError!,
-                    style: const TextStyle(color: kMutedColor, fontSize: 12),
-                  ),
-                ),
-              Expanded(
-                child: _isLoading
-                    ? const Center(
-                        child: CircularProgressIndicator(
-                          valueColor:
-                              AlwaysStoppedAnimation<Color>(kBrandColor),
-                        ),
-                      )
-                    : RefreshIndicator(
-                        onRefresh: _refreshFromFirebase,
-                        color: kBrandColor,
-                        backgroundColor: kBgColor,
-                        child: _feedItems.isEmpty
-                            ? ListView(
-                                physics: const AlwaysScrollableScrollPhysics(),
-                                children: [
-                                  SizedBox(
-                                    height: MediaQuery.of(context).size.height * 0.4,
-                                    child: Center(
-                                      child: Padding(
-                                        padding: const EdgeInsets.all(32),
-                                        child: Column(
-                                          mainAxisAlignment: MainAxisAlignment.center,
-                                          children: [
-                                            Text(
-                                              'Nessuna sessione da piloti che segui o vicina a te',
-                                              style: TextStyle(color: kMutedColor),
-                                              textAlign: TextAlign.center,
-                                            ),
-                                            const SizedBox(height: 16),
-                                            Text(
-                                              'Scorri verso il basso per aggiornare',
-                                              style: TextStyle(
-                                                color: kMutedColor.withAlpha(150),
-                                                fontSize: 12,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              )
-                            : ListView.builder(
-                                controller: _scrollController,
-                                physics: const AlwaysScrollableScrollPhysics(),
-                                padding: const EdgeInsets.symmetric(
-                                        horizontal: 16, vertical: 8)
-                                    .copyWith(bottom: 24),
-                                itemCount: _feedItems.length +
-                                    (_isLoadingMore && _hasMore ? 1 : 0),
-                                itemBuilder: (context, index) {
-                                  if (index >= _feedItems.length) {
-                                    return const Padding(
-                                      padding: EdgeInsets.all(16.0),
-                                      child: Center(
-                                        child: CircularProgressIndicator(
-                                          valueColor: AlwaysStoppedAnimation<Color>(
-                                              kBrandColor),
-                                        ),
-                                      ),
-                                    );
-                                  }
-
-                                  final item = _feedItems[index];
-                                  final track2d =
-                                      _buildTrack2dFromSession(item.session);
-                                  return _ActivityCard(
-                                    session: item.session,
-                                    track2d: track2d,
-                                    isFollowed: item.isFollowed,
-                                    isNearby: item.isNearby,
-                                  );
-                                },
-                              ),
-                      ),
-              ),
-            ],
-          ),
-          // Overlay scuro e banner disclaimer centrato
-          if (_showDisclaimer)
-            Positioned.fill(
-              child: Container(
-                color: Colors.black.withAlpha(200),
-                child: Center(
-                  child: _DisclaimerBanner(
-                    dontShowAgain: _dontShowAgain,
-                    onToggleDontShow: (value) async {
-                      if (value) {
-                        await _hideDisclaimer(forever: true);
-                      } else {
-                        setState(() {
-                          _dontShowAgain = false;
-                        });
-                      }
-                    },
-                    onClose: () => _hideDisclaimer(forever: _dontShowAgain),
-                  ),
-                ),
-              ),
+              ],
             ),
+          ),
         ],
       ),
     );
   }
+
+  Widget _buildLoadingState() {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Animated track icon
+          AnimatedBuilder(
+            animation: _rotateController,
+            builder: (context, child) {
+              return Transform.rotate(
+                angle: _rotateController.value * 2 * math.pi,
+                child: child,
+              );
+            },
+            child: AnimatedBuilder(
+              animation: _pulseAnimation,
+              builder: (context, child) {
+                return Transform.scale(
+                  scale: _pulseAnimation.value,
+                  child: Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        colors: [
+                          kBrandColor.withAlpha(60),
+                          kBrandColor.withAlpha(20),
+                          Colors.transparent,
+                        ],
+                        stops: const [0.0, 0.6, 1.0],
+                      ),
+                    ),
+                    child: Container(
+                      margin: const EdgeInsets.all(15),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: const Color(0xFF1A1A1A),
+                        border: Border.all(color: kBrandColor.withAlpha(100), width: 2),
+                        boxShadow: [
+                          BoxShadow(
+                            color: kBrandColor.withAlpha(60),
+                            blurRadius: 20,
+                            spreadRadius: 2,
+                          ),
+                        ],
+                      ),
+                      child: Icon(Icons.flag_rounded, color: kBrandColor, size: 24),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 24),
+          // Loading text with animation
+          AnimatedBuilder(
+            animation: _pulseAnimation,
+            builder: (context, child) {
+              return Opacity(
+                opacity: 0.5 + (_pulseAnimation.value - 0.8) * 1.25,
+                child: child,
+              );
+            },
+            child: const Text(
+              'Caricamento feed...',
+              style: TextStyle(
+                color: kMutedColor,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          // Animated dots
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: List.generate(3, (index) {
+              return AnimatedBuilder(
+                animation: _pulseController,
+                builder: (context, child) {
+                  final delay = index * 0.2;
+                  final value = ((_pulseController.value + delay) % 1.0);
+                  final opacity = (math.sin(value * math.pi)).clamp(0.3, 1.0);
+                  return Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: kBrandColor.withAlpha((opacity * 255).toInt()),
+                    ),
+                  );
+                },
+              );
+            }),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      children: [
+        SizedBox(
+          height: MediaQuery.of(context).size.height * 0.5,
+          child: Center(
+            child: Container(
+              margin: const EdgeInsets.all(24),
+              padding: const EdgeInsets.all(32),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                gradient: LinearGradient(
+                  colors: [
+                    const Color(0xFF1A1A1A),
+                    const Color(0xFF141414),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                border: Border.all(color: const Color(0xFF2A2A2A)),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        colors: [
+                          kBrandColor.withAlpha(30),
+                          kBrandColor.withAlpha(10),
+                          Colors.transparent,
+                        ],
+                        stops: const [0.0, 0.6, 1.0],
+                      ),
+                    ),
+                    child: Container(
+                      margin: const EdgeInsets.all(15),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: const Color(0xFF1A1A1A),
+                        border: Border.all(color: kBrandColor.withAlpha(60), width: 2),
+                      ),
+                      child: Icon(Icons.explore_outlined, color: kBrandColor, size: 24),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  const Text(
+                    'Nessuna sessione',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w900,
+                      color: kFgColor,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Segui altri piloti o aspetta sessioni vicine a te',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: kMutedColor,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      color: kMutedColor.withAlpha(20),
+                      border: Border.all(color: kMutedColor.withAlpha(40)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.swipe_down, color: kMutedColor, size: 16),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Scorri per aggiornare',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: kMutedColor,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLoadMoreIndicator() {
+    return Padding(
+      padding: const EdgeInsets.all(24.0),
+      child: Center(
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation(kBrandColor),
+                strokeWidth: 2,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              'Caricamento...',
+              style: TextStyle(
+                color: kMutedColor,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
+
+/* ============================================================
+    DISCLAIMER BANNER
+============================================================ */
 
 class _DisclaimerBanner extends StatelessWidget {
   final bool dontShowAgain;
@@ -598,18 +863,26 @@ class _DisclaimerBanner extends StatelessWidget {
       constraints: const BoxConstraints(maxWidth: 500),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
+        gradient: LinearGradient(
+          colors: [
+            const Color(0xFF1A1A1A),
+            const Color(0xFF141414),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        border: Border.all(color: kBrandColor.withAlpha(100), width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withAlpha(220),
+            color: Colors.black.withAlpha(200),
             blurRadius: 32,
             spreadRadius: 8,
             offset: const Offset(0, 8),
           ),
           BoxShadow(
-            color: kBrandColor.withAlpha(60),
+            color: kBrandColor.withAlpha(40),
             blurRadius: 24,
             spreadRadius: 0,
-            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -617,23 +890,8 @@ class _DisclaimerBanner extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         child: BackdropFilter(
           filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: Container(
-            padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
-              gradient: LinearGradient(
-                colors: [
-                  const Color(0xFF1A1A1A).withAlpha(250),
-                  const Color(0xFF0F0F0F).withAlpha(250),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              border: Border.all(
-                color: kBrandColor.withAlpha(100),
-                width: 1.5,
-              ),
-            ),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -641,16 +899,20 @@ class _DisclaimerBanner extends StatelessWidget {
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(8),
+                      width: 44,
+                      height: 44,
                       decoration: BoxDecoration(
-                        color: kBrandColor.withAlpha(30),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: kBrandColor.withAlpha(100)),
+                        borderRadius: BorderRadius.circular(12),
+                        gradient: LinearGradient(
+                          colors: [
+                            kBrandColor.withAlpha(40),
+                            kBrandColor.withAlpha(20),
+                          ],
+                        ),
+                        border: Border.all(color: kBrandColor.withAlpha(80)),
                       ),
-                      child: const Icon(
-                        Icons.shield_outlined,
-                        color: kBrandColor,
-                        size: 20,
+                      child: const Center(
+                        child: Icon(Icons.shield_outlined, color: kBrandColor, size: 22),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -659,30 +921,33 @@ class _DisclaimerBanner extends StatelessWidget {
                         'Avviso responsabilità',
                         style: TextStyle(
                           fontWeight: FontWeight.w900,
-                          fontSize: 16,
+                          fontSize: 17,
                           color: kFgColor,
-                          letterSpacing: 0.3,
+                          letterSpacing: -0.3,
                         ),
                       ),
                     ),
-                    IconButton(
-                      icon:
-                          const Icon(Icons.close, color: kMutedColor, size: 20),
-                      onPressed: onClose,
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
+                    GestureDetector(
+                      onTap: onClose,
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withAlpha(10),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: Colors.white.withAlpha(20)),
+                        ),
+                        child: const Icon(Icons.close, color: kMutedColor, size: 18),
+                      ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
                 Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: Colors.black.withAlpha(80),
+                    color: Colors.white.withAlpha(6),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: kLineColor.withAlpha(100),
-                    ),
+                    border: Border.all(color: const Color(0xFF2A2A2A)),
                   ),
                   child: const Text(
                     'RaceSense non è progettata per gare illecite. '
@@ -691,37 +956,33 @@ class _DisclaimerBanner extends StatelessWidget {
                     style: TextStyle(
                       color: kMutedColor,
                       fontSize: 13,
-                      height: 1.4,
+                      height: 1.5,
                     ),
                   ),
                 ),
-                const SizedBox(height: 12),
-                InkWell(
+                const SizedBox(height: 14),
+                GestureDetector(
                   onTap: () => onToggleDontShow(!dontShowAgain),
-                  borderRadius: BorderRadius.circular(12),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 10),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                     decoration: BoxDecoration(
                       color: dontShowAgain
-                          ? kBrandColor.withAlpha(20)
+                          ? kBrandColor.withAlpha(15)
                           : Colors.transparent,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: dontShowAgain
-                            ? kBrandColor.withAlpha(100)
-                            : kLineColor.withAlpha(80),
+                            ? kBrandColor.withAlpha(80)
+                            : const Color(0xFF2A2A2A),
                       ),
                     ),
                     child: Row(
                       children: [
                         Container(
-                          width: 20,
-                          height: 20,
+                          width: 22,
+                          height: 22,
                           decoration: BoxDecoration(
-                            color: dontShowAgain
-                                ? kBrandColor
-                                : Colors.transparent,
+                            color: dontShowAgain ? kBrandColor : Colors.transparent,
                             borderRadius: BorderRadius.circular(6),
                             border: Border.all(
                               color: dontShowAgain ? kBrandColor : kMutedColor,
@@ -729,11 +990,7 @@ class _DisclaimerBanner extends StatelessWidget {
                             ),
                           ),
                           child: dontShowAgain
-                              ? const Icon(
-                                  Icons.check,
-                                  size: 14,
-                                  color: Colors.black,
-                                )
+                              ? const Icon(Icons.check, size: 14, color: Colors.black)
                               : null,
                         ),
                         const SizedBox(width: 12),
@@ -761,161 +1018,7 @@ class _DisclaimerBanner extends StatelessWidget {
 }
 
 /* ============================================================
-    TOP BAR
-============================================================ */
-
-class _TopBar extends StatelessWidget {
-  const _TopBar();
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
-      child: Row(
-        children: [
-          const _PremiumLogoTitle(),
-          const Spacer(),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: const Color.fromRGBO(142, 133, 255, 0.18),
-              borderRadius: BorderRadius.circular(999),
-              // border: Border.all(
-              //   color: kPulseColor.withOpacity(0.9),
-              //   width: 1.2,
-              // ),
-              boxShadow: [
-                BoxShadow(
-                  color: kPulseColor.withOpacity(0.2),
-                  blurRadius: 10,
-                  spreadRadius: 1,
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: kPulseColor,
-                    boxShadow: [
-                      BoxShadow(
-                        color: kPulseColor.withOpacity(0.8),
-                        blurRadius: 10,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 6),
-                const Text(
-                  'BETA',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0.9,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _PremiumLogoTitle extends StatelessWidget {
-  const _PremiumLogoTitle();
-
-  @override
-  Widget build(BuildContext context) {
-    const neon = Color(0xFFCCFF00);
-    const lilac = Color(0xFFB6B0F5);
-
-    return Expanded(
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final isNarrow = constraints.maxWidth < 260;
-          return Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(14),
-              gradient: const LinearGradient(
-                colors: [
-                  Color.fromRGBO(26, 56, 36, 0.5),
-                  Color.fromRGBO(18, 18, 26, 0.7),
-                  Color.fromRGBO(41, 26, 63, 0.5),
-                ],
-                begin: Alignment.centerLeft,
-                end: Alignment.centerRight,
-              ),
-              border: Border.all(color: kLineColor.withOpacity(0.7)),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.35),
-                  blurRadius: 18,
-                  offset: const Offset(0, 10),
-                ),
-              ],
-            ),
-            child: Image.asset(
-              'assets/icon/allrspulselogoo.png',
-              height: 32,
-              fit: BoxFit.contain,
-            ),
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _GradientText extends StatelessWidget {
-  final String text;
-  final LinearGradient gradient;
-  final Color shadowColor;
-
-  const _GradientText({
-    required this.text,
-    required this.gradient,
-    required this.shadowColor,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ShaderMask(
-      shaderCallback: (bounds) => gradient.createShader(
-        Rect.fromLTWH(0, 0, bounds.width, bounds.height),
-      ),
-      child: Text(
-        text,
-        style: TextStyle(
-          fontSize: 22,
-          fontWeight: FontWeight.w900,
-          letterSpacing: 1.2,
-          color: Colors.white,
-          shadows: [
-            Shadow(
-              color: shadowColor,
-              blurRadius: 14,
-              offset: const Offset(0, 0),
-            ),
-            Shadow(
-              color: shadowColor.withOpacity(0.35),
-              blurRadius: 28,
-              offset: const Offset(0, 0),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/* ============================================================
-    ACTIVITY CARD
+    ACTIVITY CARD - Premium Style
 ============================================================ */
 
 class _ActivityCard extends StatelessWidget {
@@ -945,456 +1048,429 @@ class _ActivityCard extends StatelessWidget {
     }
   }
 
+  String _formatLap(Duration d) {
+    final m = d.inMinutes;
+    final s = d.inSeconds % 60;
+    final ms = (d.inMilliseconds % 1000) ~/ 10;
+    return '$m:${s.toString().padLeft(2, '0')}.${ms.toString().padLeft(2, '0')}';
+  }
+
   @override
   Widget build(BuildContext context) {
-    final sessionType = 'Sessione';
     final pilotName = session.driverFullName;
     final pilotTag = session.driverUsername;
-
     final circuitName = session.trackName;
     final city = session.location;
-    final bestLapText =
-        session.bestLap != null ? _formatLap(session.bestLap!) : '--:--';
+    final bestLapText = session.bestLap != null ? _formatLap(session.bestLap!) : '--:--';
     final laps = session.lapCount;
     final distanceKm = session.distanceKm;
-    final isPb = false; // se un domani salvi isPb nella sessione, cambialo qui.
+    final formattedDate = DateFormat('dd MMM yyyy').format(session.dateTime);
+    final formattedTime = DateFormat('HH:mm').format(session.dateTime);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(24),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(24),
-          onTap: () {
-            Navigator.of(context).pushNamed(
-              ActivityDetailPage.routeName,
-              arguments: session,
-            );
-          },
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(24),
-              gradient: LinearGradient(
-                colors: [
-                  const Color(0xFF1A1A20).withAlpha(255),
-                  const Color(0xFF0F0F15).withAlpha(255),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              border: Border.all(
-                color: kLineColor,
-                width: 1,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withAlpha(160),
-                  blurRadius: 20,
-                  spreadRadius: -4,
-                  offset: const Offset(0, 10),
-                ),
+      child: GestureDetector(
+        onTap: () {
+          HapticFeedback.lightImpact();
+          Navigator.of(context).pushNamed(
+            ActivityDetailPage.routeName,
+            arguments: session,
+          );
+        },
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            gradient: LinearGradient(
+              colors: [
+                const Color(0xFF1A1A1A),
+                const Color(0xFF141414),
               ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // ----- HEADER PILOTA -----
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Row(
-                    children: [
-                      _AvatarUser(userId: session.userId),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              pilotName,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w900,
-                                fontSize: 16,
-                                color: kFgColor,
-                              ),
-                            ),
-                            const SizedBox(height: 3),
-                            Row(
-                              children: [
-                                Text(
-                                  '@$pilotTag',
-                                  style: const TextStyle(
-                                    color: kMutedColor,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  '• ${_timeAgo()}',
-                                  style: const TextStyle(
-                                    color: kMutedColor,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        mainAxisSize: MainAxisSize.min,
+            border: Border.all(color: const Color(0xFF2A2A2A)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withAlpha(80),
+                blurRadius: 20,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ----- HEADER PILOTA -----
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Row(
+                  children: [
+                    _AvatarUser(userId: session.userId),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          if (isFollowed)
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(8),
-                                color: kBrandColor.withAlpha(30),
-                                border:
-                                    Border.all(color: kBrandColor, width: 1),
+                          Text(
+                            pilotName,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w900,
+                              fontSize: 15,
+                              color: kFgColor,
+                              letterSpacing: -0.3,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Text(
+                                '@$pilotTag',
+                                style: TextStyle(
+                                  color: kMutedColor,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: const [
-                                  Icon(Icons.star,
-                                      color: kBrandColor, size: 12),
-                                  SizedBox(width: 4),
-                                  Text(
-                                    'Seguito',
-                                    style: TextStyle(
-                                      color: kBrandColor,
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w800,
-                                    ),
-                                  ),
+                              Container(
+                                margin: const EdgeInsets.symmetric(horizontal: 6),
+                                width: 3,
+                                height: 3,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: kMutedColor.withAlpha(100),
+                                ),
+                              ),
+                              Text(
+                                _timeAgo(),
+                                style: TextStyle(
+                                  color: kMutedColor.withAlpha(180),
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Badges column
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (isFollowed)
+                          _buildBadge('Seguito', Icons.star, kBrandColor),
+                        if (isNearby)
+                          Padding(
+                            padding: EdgeInsets.only(top: isFollowed ? 6 : 0),
+                            child: _buildBadge('Vicino', Icons.location_on, kPulseColor),
+                          ),
+                        if (session.usedBleDevice)
+                          Padding(
+                            padding: EdgeInsets.only(top: (isFollowed || isNearby) ? 6 : 0),
+                            child: _buildBadge('BLE', Icons.bluetooth_connected, const Color(0xFFFF9500)),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              // ----- TRACK VISUAL - Premium Style -----
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFF2A2A2A), width: 1.5),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withAlpha(100),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: Container(
+                    height: 200,
+                    decoration: BoxDecoration(
+                      gradient: RadialGradient(
+                        center: Alignment.center,
+                        radius: 1.2,
+                        colors: [
+                          const Color(0xFF0F1015),
+                          const Color(0xFF080A0E),
+                        ],
+                      ),
+                    ),
+                    child: Stack(
+                      children: [
+                        // Track visualization
+                        CustomPaint(
+                          painter: _PremiumTrackPainter(path: track2d),
+                          child: const SizedBox.expand(),
+                        ),
+                        // Gradient overlay bottom
+                        Positioned(
+                          bottom: 0,
+                          left: 0,
+                          right: 0,
+                          child: Container(
+                            height: 100,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  Colors.transparent,
+                                  const Color(0xFF080A0E).withAlpha(250),
                                 ],
                               ),
                             ),
-                          if (isNearby)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 6.0),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(8),
-                                  color: kPulseColor.withAlpha(30),
-                                  border:
-                                      Border.all(color: kPulseColor, width: 1),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: const [
-                                    Icon(Icons.location_on,
-                                        color: kPulseColor, size: 12),
-                                    SizedBox(width: 4),
+                          ),
+                        ),
+                        // Circuit info overlay
+                        Positioned(
+                          bottom: 14,
+                          left: 14,
+                          right: 14,
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
                                     Text(
-                                      'Vicino',
-                                      style: TextStyle(
-                                        color: kPulseColor,
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w800,
+                                      circuitName,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w900,
+                                        fontSize: 16,
+                                        color: kFgColor,
+                                        letterSpacing: -0.3,
                                       ),
                                     ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          if (session.usedBleDevice)
-                            Padding(
-                              padding: EdgeInsets.only(
-                                  top: (isFollowed || isNearby) ? 6.0 : 0),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(8),
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      const Color(0xFFFF9500).withAlpha(40),
-                                      const Color(0xFFFF6B00).withAlpha(40),
-                                    ],
-                                  ),
-                                  border: Border.all(
-                                      color: const Color(0xFFFF9500), width: 1),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: const [
-                                    Icon(Icons.bluetooth_connected,
-                                        color: Color(0xFFFF9500), size: 12),
-                                    SizedBox(width: 4),
-                                    Text(
-                                      'BLE',
-                                      style: TextStyle(
-                                        color: Color(0xFFFF9500),
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w800,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-
-                // ----- TRACK VISUAL -----
-                Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 16),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                        color: kLineColor.withAlpha(180), width: 1.5),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withAlpha(100),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(20),
-                    child: Container(
-                      height: 180,
-                      color: const Color.fromRGBO(6, 7, 12, 1),
-                      child: Stack(
-                        children: [
-                          // Track visualization
-                          CustomPaint(
-                            painter: _MiniTrackPainter(
-                              isPb: isPb,
-                              path: track2d,
-                            ),
-                            child: const SizedBox.expand(),
-                          ),
-                          // Gradient overlay bottom
-                          Positioned(
-                            bottom: 0,
-                            left: 0,
-                            right: 0,
-                            child: Container(
-                              height: 80,
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  begin: Alignment.topCenter,
-                                  end: Alignment.bottomCenter,
-                                  colors: [
-                                    Colors.transparent,
-                                    const Color.fromRGBO(6, 7, 12, 1)
-                                        .withAlpha(240),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                          // Circuit info overlay
-                          Positioned(
-                            bottom: 12,
-                            left: 12,
-                            right: 12,
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        circuitName,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.w900,
-                                          fontSize: 17,
-                                          color: kFgColor,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Row(
-                                        children: [
-                                          const Icon(
-                                            Icons.location_on,
-                                            color: kMutedColor,
-                                            size: 13,
-                                          ),
-                                          const SizedBox(width: 4),
-                                          Expanded(
-                                            child: Text(
-                                              city,
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: const TextStyle(
-                                                color: kMutedColor,
-                                                fontSize: 13,
-                                                fontWeight: FontWeight.w600,
-                                              ),
+                                    const SizedBox(height: 4),
+                                    Row(
+                                      children: [
+                                        Icon(Icons.location_on, color: kMutedColor, size: 12),
+                                        const SizedBox(width: 4),
+                                        Expanded(
+                                          child: Text(
+                                            city,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              color: kMutedColor,
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w600,
                                             ),
                                           ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Container(
-                                  padding: const EdgeInsets.all(12),
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(14),
-                                    gradient: LinearGradient(
-                                      colors: [
-                                        kPulseColor.withAlpha(40),
-                                        kPulseColor.withAlpha(20),
+                                        ),
                                       ],
                                     ),
-                                    border: Border.all(
-                                        color: kPulseColor, width: 1.5),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: kPulseColor.withAlpha(80),
-                                        blurRadius: 12,
-                                        spreadRadius: 0,
-                                      ),
-                                    ],
-                                  ),
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      const Icon(
-                                        Icons.timer,
-                                        color: kPulseColor,
-                                        size: 18,
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        bestLapText,
-                                        style: const TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w900,
-                                          color: kPulseColor,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 2),
-                                      const Text(
-                                        'BEST',
-                                        style: TextStyle(
-                                          fontSize: 9,
-                                          letterSpacing: 0.8,
-                                          color: kPulseColor,
-                                          fontWeight: FontWeight.w700,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
+                                  ],
                                 ),
-                              ],
-                            ),
+                              ),
+                              const SizedBox(width: 12),
+                              // Best lap badge
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(14),
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      kPulseColor.withAlpha(40),
+                                      kPulseColor.withAlpha(20),
+                                    ],
+                                  ),
+                                  border: Border.all(color: kPulseColor.withAlpha(120), width: 1.5),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: kPulseColor.withAlpha(50),
+                                      blurRadius: 16,
+                                      spreadRadius: 0,
+                                    ),
+                                  ],
+                                ),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.timer, color: kPulseColor, size: 16),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      bestLapText,
+                                      style: TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w900,
+                                        color: kPulseColor,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      'BEST',
+                                      style: TextStyle(
+                                        fontSize: 8,
+                                        letterSpacing: 0.8,
+                                        color: kPulseColor.withAlpha(180),
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 16),
-
-                // ----- STATS ROW -----
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(14),
-                      color: const Color.fromRGBO(255, 255, 255, 0.03),
-                      border: Border.all(color: kLineColor.withAlpha(80)),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        _StatItem(
-                          icon: Icons.flag_outlined,
-                          label: 'Giri',
-                          value: laps.toString(),
-                        ),
-                        Container(width: 1, height: 40, color: kLineColor),
-                        _StatItem(
-                          icon: Icons.route,
-                          label: 'Distanza',
-                          value: '${distanceKm.toStringAsFixed(1)} km',
-                        ),
-                        Container(width: 1, height: 40, color: kLineColor),
-                        _StatItem(
-                          icon: Icons.favorite_border,
-                          label: 'Like',
-                          value: session.likesCount.toString(),
                         ),
                       ],
                     ),
                   ),
                 ),
+              ),
 
-                const SizedBox(height: 16),
-              ],
-            ),
+              const SizedBox(height: 14),
+
+              // ----- STATS ROW -----
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Row(
+                  children: [
+                    Expanded(child: _buildStatChip(Icons.loop, '${laps}', 'Giri', const Color(0xFF29B6F6))),
+                    const SizedBox(width: 10),
+                    Expanded(child: _buildStatChip(Icons.route, '${distanceKm.toStringAsFixed(1)} km', 'Distanza', const Color(0xFF00E676))),
+                    const SizedBox(width: 10),
+                    Expanded(child: _buildStatChip(Icons.favorite, '${session.likesCount}', 'Like', const Color(0xFFFF6B6B))),
+                  ],
+                ),
+              ),
+
+              // ----- FOOTER -----
+              Container(
+                margin: const EdgeInsets.only(top: 14),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: Colors.white.withAlpha(4),
+                  borderRadius: const BorderRadius.only(
+                    bottomLeft: Radius.circular(20),
+                    bottomRight: Radius.circular(20),
+                  ),
+                  border: const Border(
+                    top: BorderSide(color: Color(0xFF2A2A2A)),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.calendar_today_rounded, color: kMutedColor, size: 12),
+                    const SizedBox(width: 6),
+                    Text(
+                      formattedDate,
+                      style: TextStyle(
+                        color: kMutedColor,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 8),
+                      width: 4,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: kMutedColor.withAlpha(100),
+                      ),
+                    ),
+                    Icon(Icons.access_time_rounded, color: kMutedColor, size: 12),
+                    const SizedBox(width: 4),
+                    Text(
+                      formattedTime,
+                      style: TextStyle(
+                        color: kMutedColor,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      'Dettagli',
+                      style: TextStyle(
+                        color: kBrandColor,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Icon(Icons.arrow_forward_rounded, color: kBrandColor, size: 14),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       ),
     );
   }
-}
 
-class _StatItem extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String value;
-
-  const _StatItem({
-    required this.icon,
-    required this.label,
-    required this.value,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, color: kBrandColor, size: 18),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: const TextStyle(
-            color: kMutedColor,
-            fontSize: 10,
-            fontWeight: FontWeight.w600,
+  Widget _buildBadge(String text, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        color: color.withAlpha(20),
+        border: Border.all(color: color.withAlpha(100)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: color, size: 11),
+          const SizedBox(width: 4),
+          Text(
+            text,
+            style: TextStyle(
+              color: color,
+              fontSize: 10,
+              fontWeight: FontWeight.w800,
+            ),
           ),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          value,
-          style: const TextStyle(
-            color: kFgColor,
-            fontSize: 13,
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
-}
 
-String _formatLap(Duration d) {
-  final m = d.inMinutes;
-  final s = d.inSeconds % 60;
-  final ms = (d.inMilliseconds % 1000) ~/ 10;
-  return '$m:${s.toString().padLeft(2, '0')}.${ms.toString().padLeft(2, '0')}';
+  Widget _buildStatChip(IconData icon, String value, String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        color: color.withAlpha(12),
+        border: Border.all(color: color.withAlpha(50)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: color, size: 16),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: TextStyle(
+              color: color,
+              fontSize: 13,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: TextStyle(
+              color: color.withAlpha(180),
+              fontSize: 9,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 /* ============================================================
@@ -1415,81 +1491,103 @@ class _AvatarUser extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 44,
-      height: 44,
+      padding: const EdgeInsets.all(2),
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: const Color.fromRGBO(10, 12, 18, 1),
-        border: Border.all(color: kLineColor.withOpacity(0.5), width: 1.2),
+        gradient: LinearGradient(
+          colors: [
+            kBrandColor.withAlpha(100),
+            kPulseColor.withAlpha(80),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
       ),
-      clipBehavior: Clip.antiAlias,
-      child: Image.asset(
-        _assetForUser(),
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) {
-          return const Icon(Icons.person, color: kMutedColor);
-        },
+      child: Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: const Color(0xFF1A1A1A),
+          border: Border.all(color: const Color(0xFF2A2A2A), width: 2),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Image.asset(
+          _assetForUser(),
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) {
+            return const Icon(Icons.person, color: kMutedColor, size: 22);
+          },
+        ),
       ),
     );
   }
 }
 
 /* ============================================================
-    MINI TRACK PAINTER (placeholder estetico)
+    PREMIUM TRACK PAINTER
 ============================================================ */
 
-class _MiniTrackPainter extends CustomPainter {
-  final bool isPb;
+class _PremiumTrackPainter extends CustomPainter {
   final List<Offset> path;
 
-  _MiniTrackPainter({
-    required this.isPb,
-    required this.path,
-  });
+  _PremiumTrackPainter({required this.path});
 
   @override
   void paint(Canvas canvas, Size size) {
     final w = size.width;
     final h = size.height;
-    // background grid-ish
-    final bgPaint = Paint()..color = const Color.fromRGBO(12, 14, 22, 1);
+
+    // Background with subtle grid
+    final bgPaint = Paint()..color = const Color(0xFF080A0E);
     canvas.drawRect(Offset.zero & size, bgPaint);
 
+    // Grid
     final gridPaint = Paint()
-      ..color = Colors.white.withOpacity(0.05)
+      ..color = Colors.white.withAlpha(8)
       ..strokeWidth = 1;
-    const gridCount = 7;
+    const gridCount = 8;
     final dx = size.width / gridCount;
     final dy = size.height / gridCount;
     for (int i = 1; i < gridCount; i++) {
-      canvas.drawLine(
-          Offset(dx * i, 0), Offset(dx * i, size.height), gridPaint);
+      canvas.drawLine(Offset(dx * i, 0), Offset(dx * i, size.height), gridPaint);
       canvas.drawLine(Offset(0, dy * i), Offset(size.width, dy * i), gridPaint);
     }
 
-    // outer glow
-    // final glowPaint = Paint()
-    //   ..color = kBrandColor.withOpacity(0.45)
-    //   ..style = PaintingStyle.stroke
-    //   ..strokeWidth = 10
-    //   ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 16);
+    // Outer glow paint
+    final glowPaint = Paint()
+      ..color = kBrandColor.withAlpha(30)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 12
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12);
 
+    // Track shadow
+    final shadowPaint = Paint()
+      ..color = Colors.black.withAlpha(150)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 6
+      ..strokeCap = StrokeCap.round;
+
+    // Main track paint
     final trackPaint = Paint()
-      ..color = Colors.white
+      ..color = Colors.white.withAlpha(230)
       ..strokeWidth = 3.5
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
 
+    // Accent paint
     final accentPaint = Paint()
-      ..color = isPb ? kPulseColor : kBrandColor
-      ..strokeWidth = 4.5
+      ..shader = ui.Gradient.linear(
+        Offset(0, 0),
+        Offset(w, h),
+        [kBrandColor, kPulseColor],
+      )
+      ..strokeWidth = 2.5
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
 
-    // circuito fittizio
-    // se abbiamo una path, usiamola; altrimenti fallback minimale
     if (path.isNotEmpty) {
-      // calcola bounding box
+      // Calculate bounding box
       double minX = path.first.dx;
       double maxX = path.first.dx;
       double minY = path.first.dy;
@@ -1502,15 +1600,13 @@ class _MiniTrackPainter extends CustomPainter {
         if (p.dy > maxY) maxY = p.dy;
       }
 
-      // differenza reale in coordinate "mondo" (lat/lon)
       final width = (maxX - minX).abs();
       final height = (maxY - minY).abs();
 
-      const padding = 18.0;
+      const padding = 24.0;
       final usableW = w - 2 * padding;
       final usableH = h - 2 * padding;
 
-      // evita solo il caso patologico "tutti i punti identici"
       final safeWidth = width == 0 ? 1.0 : width;
       final safeHeight = height == 0 ? 1.0 : height;
 
@@ -1526,7 +1622,7 @@ class _MiniTrackPainter extends CustomPainter {
         final p = path[i];
 
         final cx = w / 2 + (p.dx - centerX) * scale;
-        final cy = h / 2 - (p.dy - centerY) * scale; // inverti Y per lo schermo
+        final cy = h / 2 - (p.dy - centerY) * scale;
 
         final c = Offset(cx, cy);
         canvasPoints.add(c);
@@ -1538,31 +1634,37 @@ class _MiniTrackPainter extends CustomPainter {
         }
       }
 
+      // Draw layers
+      canvas.drawPath(trackPath, glowPaint);
+      canvas.drawPath(trackPath, shadowPaint);
       canvas.drawPath(trackPath, trackPaint);
       canvas.drawPath(trackPath, accentPaint);
 
-      // start/finish line approssimata sui primi punti
-      if (canvasPoints.length >= 2) {
-        final s = canvasPoints.first;
-        final e = canvasPoints[1];
-        final startPaint = Paint()
-          ..color = Colors.white
-          ..strokeWidth = 3;
-        canvas.drawLine(s, e, startPaint);
-      }
+      // Start/finish marker
+      if (canvasPoints.isNotEmpty) {
+        final startPoint = canvasPoints.first;
 
-      // PB marker glow (punto circa a 1/3 del giro)
-      // if (isPb && canvasPoints.length > 5) {
-      //   final idx = (canvasPoints.length / 3).floor();
-      //   final p = canvasPoints[idx];
-      //   final pbPaint = Paint()
-      //     ..color = kPulseColor.withOpacity(0.7)
-      //     ..style = PaintingStyle.fill
-      //     ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 14);
-      //   canvas.drawCircle(p, 12, pbPaint);
-      // }
+        // Outer glow
+        final startGlowPaint = Paint()
+          ..color = kBrandColor.withAlpha(80)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10);
+        canvas.drawCircle(startPoint, 10, startGlowPaint);
+
+        // Inner circle
+        final startPaint = Paint()
+          ..color = kBrandColor
+          ..style = PaintingStyle.fill;
+        canvas.drawCircle(startPoint, 5, startPaint);
+
+        // White border
+        final startBorderPaint = Paint()
+          ..color = Colors.white
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2;
+        canvas.drawCircle(startPoint, 5, startBorderPaint);
+      }
     } else {
-      // fallback: piccola curva standard se la path è vuota
+      // Fallback track
       final basePath = Path();
       basePath.moveTo(w * 0.18, h * 0.80);
       basePath.quadraticBezierTo(w * 0.05, h * 0.40, w * 0.32, h * 0.18);
@@ -1570,32 +1672,15 @@ class _MiniTrackPainter extends CustomPainter {
       basePath.quadraticBezierTo(w * 0.98, h * 0.58, w * 0.56, h * 0.86);
       basePath.quadraticBezierTo(w * 0.34, h * 0.97, w * 0.18, h * 0.80);
 
+      canvas.drawPath(basePath, glowPaint);
+      canvas.drawPath(basePath, shadowPaint);
       canvas.drawPath(basePath, trackPaint);
       canvas.drawPath(basePath, accentPaint);
-    }
-
-    // start/finish line
-    // final startPaint = Paint()
-    //   ..color = Colors.white
-    //   ..strokeWidth = 3;
-    // canvas.drawLine(
-    //   Offset(w * 0.20, h * 0.78),
-    //   Offset(w * 0.24, h * 0.83),
-    //   startPaint,
-    // );
-
-    // PB marker glow
-    if (isPb) {
-      final pbPaint = Paint()
-        ..color = kPulseColor.withOpacity(0.7)
-        ..style = PaintingStyle.fill
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 14);
-      canvas.drawCircle(Offset(w * 0.55, h * 0.32), 12, pbPaint);
     }
   }
 
   @override
-  bool shouldRepaint(covariant _MiniTrackPainter oldDelegate) {
-    return oldDelegate.isPb != isPb;
+  bool shouldRepaint(covariant _PremiumTrackPainter oldDelegate) {
+    return oldDelegate.path != path;
   }
 }
