@@ -8,6 +8,7 @@ import 'track_service.dart';
 ///
 /// Solo GPS grezzo + linea S/F. Niente microsettori.
 class CustomCircuitInfo {
+  final String? trackId; // Firebase document ID for updates
   final String name;
   final String city;
   final String country;
@@ -28,6 +29,7 @@ class CustomCircuitInfo {
   final List<MicroSector> microSectors;
 
   CustomCircuitInfo({
+    this.trackId,
     required this.name,
     required this.city,
     required this.country,
@@ -172,6 +174,7 @@ class CustomCircuitInfo {
     final trackDef = track.trackDefinition;
 
     return CustomCircuitInfo(
+      trackId: track.trackId,
       name: trackDef.name,
       city: trackDef.location.split(',').first.trim(),
       country: trackDef.location.contains(',')

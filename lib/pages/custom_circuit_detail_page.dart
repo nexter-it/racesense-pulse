@@ -1,127 +1,128 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart';
 import 'dart:math' as math;
 
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../services/custom_circuit_service.dart';
 import '../theme.dart';
 
-class CustomCircuitDetailPage extends StatelessWidget {
+class CustomCircuitDetailPage extends StatefulWidget {
   final CustomCircuitInfo circuit;
+  final String? trackId;
+  final Function(CustomCircuitInfo)? onCircuitUpdated;
 
-  const CustomCircuitDetailPage({super.key, required this.circuit});
+  const CustomCircuitDetailPage({
+    super.key,
+    required this.circuit,
+    this.trackId,
+    this.onCircuitUpdated,
+  });
+
+  @override
+  State<CustomCircuitDetailPage> createState() => _CustomCircuitDetailPageState();
+}
+
+class _CustomCircuitDetailPageState extends State<CustomCircuitDetailPage>
+    with SingleTickerProviderStateMixin {
+  late LatLng? _finishLineStart;
+  late LatLng? _finishLineEnd;
+  bool _isEditingFinishLine = false;
+  bool _isDragging = false;
+  bool? _draggingStart; // true = start marker, false = end marker, null = nessuno
+  bool _isSaving = false;
+
+  late AnimationController _pulseController;
+  late Animation<double> _pulseAnimation;
+
+  final MapController _mapController = MapController();
+
+  // Chiave per ottenere la posizione della mappa
+  final GlobalKey _mapKey = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    _finishLineStart = widget.circuit.finishLineStart;
+    _finishLineEnd = widget.circuit.finishLineEnd;
+
+    // Se non ha finish line, calcola dalla traccia
+    if (_finishLineStart == null || _finishLineEnd == null) {
+      _calculateDefaultFinishLine();
+    }
+
+    _pulseController = AnimationController(
+      duration: const Duration(milliseconds: 1500),
+      vsync: this,
+    )..repeat(reverse: true);
+
+    _pulseAnimation = Tween<double>(begin: 0.5, end: 1.0).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
+  }
+
+  void _calculateDefaultFinishLine() {
+    final path = widget.circuit.points;
+    if (path.length < 2) return;
+
+    final p0 = path.first;
+    final p1 = path[1];
+
+    // Calcola direzione perpendicolare
+    final dx = p1.longitude - p0.longitude;
+    final dy = p1.latitude - p0.latitude;
+
+    if (dx == 0 && dy == 0) return;
+
+    final nx = -dy;
+    final ny = dx;
+
+    const latScale = 1 / 111111.0;
+    final lonScale = 1 / (111111.0 * math.cos(p0.latitude * math.pi / 180));
+    const halfWidth = 6.0; // 6 metri per lato
+
+    _finishLineStart = LatLng(
+      p0.latitude + ny * latScale * halfWidth,
+      p0.longitude + nx * lonScale * halfWidth,
+    );
+    _finishLineEnd = LatLng(
+      p0.latitude - ny * latScale * halfWidth,
+      p0.longitude - nx * lonScale * halfWidth,
+    );
+  }
 
   List<LatLng> _closedPath() {
-    if (circuit.points.length < 2) return circuit.points;
+    if (widget.circuit.points.length < 2) return widget.circuit.points;
     final dist = const Distance();
-    final first = circuit.points.first;
-    final last = circuit.points.last;
+    final first = widget.circuit.points.first;
+    final last = widget.circuit.points.last;
     final meters = dist(first, last);
     if (meters < 20) {
-      // se il giro non è chiuso, aggancia start/finish
-      final pts = List<LatLng>.from(circuit.points);
+      final pts = List<LatLng>.from(widget.circuit.points);
       if (meters > 2) {
         pts.add(first);
       }
       return pts;
     }
-    return circuit.points;
+    return widget.circuit.points;
   }
 
-  // Crea i bordi sinistro e destro del circuito con direzione smoothed
-  List<LatLng> _createBorder(List<LatLng> path, double offsetMeters, {bool isLeft = true}) {
-    if (path.length < 2) return [];
-
-    const latMetersPerDegree = 111111.0;
-    final List<LatLng> border = [];
-
-    for (int i = 0; i < path.length; i++) {
-      final p = path[i];
-
-      // Calcola la direzione del tracciato in questo punto usando media delle direzioni
-      double dx, dy;
-
-      if (i == 0) {
-        // Primo punto: usa direzione verso il prossimo
-        dx = path[1].longitude - p.longitude;
-        dy = path[1].latitude - p.latitude;
-      } else if (i == path.length - 1) {
-        // Ultimo punto: usa direzione dal precedente
-        dx = p.longitude - path[i - 1].longitude;
-        dy = p.latitude - path[i - 1].latitude;
-      } else {
-        // Punto intermedio: usa la direzione media (smoothing)
-        final dxIn = p.longitude - path[i - 1].longitude;
-        final dyIn = p.latitude - path[i - 1].latitude;
-        final dxOut = path[i + 1].longitude - p.longitude;
-        final dyOut = path[i + 1].latitude - p.latitude;
-
-        // Media delle due direzioni
-        dx = (dxIn + dxOut) / 2;
-        dy = (dyIn + dyOut) / 2;
-      }
-
-      if (dx == 0 && dy == 0) {
-        border.add(p);
-        continue;
-      }
-
-      // Vettore perpendicolare (ruotato 90°)
-      final perpX = -dy;
-      final perpY = dx;
-
-      // Normalizza
-      final length = math.sqrt(perpX * perpX + perpY * perpY);
-      if (length == 0) {
-        border.add(p);
-        continue;
-      }
-
-      final normX = perpX / length;
-      final normY = perpY / length;
-
-      // Applica offset
-      final lonMetersPerDegree = latMetersPerDegree * math.cos(p.latitude * math.pi / 180);
-      final sign = isLeft ? 1.0 : -1.0;
-
-      border.add(LatLng(
-        p.latitude + sign * normY * (offsetMeters / latMetersPerDegree),
-        p.longitude + sign * normX * (offsetMeters / lonMetersPerDegree),
-      ));
-    }
-
-    return border;
-  }
-
-  List<Polyline> _startFinishLines(List<LatLng> path) {
-    if (path.length < 2) {
+  List<Polyline> _buildFinishLine() {
+    if (_finishLineStart == null || _finishLineEnd == null) {
       return const [];
     }
-    final p0 = path.first;
-    final p1 = path[1];
-    final widthMeters = circuit.widthMeters;
-    final dx = p1.longitude - p0.longitude;
-    final dy = p1.latitude - p0.latitude;
-    if (dx == 0 && dy == 0) {
-      return const [];
-    }
-    // vettore perpendicolare per disegnare la linea di arrivo
-    final nx = -dy;
-    final ny = dx;
-    // approssimazione metri->gradi (piccolo segmento)
-    final latScale = 1 / 111111.0;
-    final lonScale = 1 / (111111.0 * math.cos(p0.latitude * math.pi / 180));
-    final half = widthMeters / 2;
-    final a = LatLng(
-      p0.latitude + ny * latScale * half,
-      p0.longitude + nx * lonScale * half,
-    );
-    final b = LatLng(
-      p0.latitude - ny * latScale * half,
-      p0.longitude - nx * lonScale * half,
-    );
-    // linea a scacchi: spezza in segmenti alternati
+
+    final a = _finishLineStart!;
+    final b = _finishLineEnd!;
+
+    // Linea a scacchi: spezza in segmenti alternati
     final segments = <LatLng>[];
     const dashCount = 12;
     for (int i = 0; i <= dashCount; i++) {
@@ -131,14 +132,14 @@ class CustomCircuitDetailPage extends StatelessWidget {
         a.longitude + (b.longitude - a.longitude) * t,
       ));
     }
-    // polyline layer non supporta isDotted: disegniamo segmenti alternati manualmente
+
     final dashed = <Polyline>[];
     for (int i = 0; i < segments.length - 1; i++) {
       if (i.isEven) {
         dashed.add(
           Polyline(
             points: [segments[i], segments[i + 1]],
-            strokeWidth: 4,
+            strokeWidth: 5,
             color: Colors.white,
           ),
         );
@@ -146,7 +147,7 @@ class CustomCircuitDetailPage extends StatelessWidget {
         dashed.add(
           Polyline(
             points: [segments[i], segments[i + 1]],
-            strokeWidth: 4,
+            strokeWidth: 5,
             color: Colors.black,
           ),
         );
@@ -155,19 +156,164 @@ class CustomCircuitDetailPage extends StatelessWidget {
     return dashed;
   }
 
-  // Crea microsettori usando esattamente i punti dei bordi
-  List<MicroSector> _buildMicroSectorsFromBorders(List<LatLng> leftBorder, List<LatLng> rightBorder) {
-    final sectors = <MicroSector>[];
-    final minLength = leftBorder.length < rightBorder.length ? leftBorder.length : rightBorder.length;
+  void _toggleEditMode() {
+    HapticFeedback.mediumImpact();
+    setState(() {
+      _isEditingFinishLine = !_isEditingFinishLine;
+    });
+  }
 
-    for (int i = 0; i < minLength; i++) {
-      sectors.add(MicroSector(
-        start: leftBorder[i],
-        end: rightBorder[i],
-      ));
+  Future<void> _saveFinishLine() async {
+    if (_finishLineStart == null || _finishLineEnd == null) return;
+
+    setState(() {
+      _isSaving = true;
+    });
+
+    try {
+      final updatedCircuit = CustomCircuitInfo(
+        trackId: widget.trackId,
+        name: widget.circuit.name,
+        city: widget.circuit.city,
+        country: widget.circuit.country,
+        lengthMeters: widget.circuit.lengthMeters,
+        createdAt: widget.circuit.createdAt,
+        points: widget.circuit.points,
+        usedBleDevice: widget.circuit.usedBleDevice,
+        finishLineStart: _finishLineStart,
+        finishLineEnd: _finishLineEnd,
+        gpsFrequencyHz: widget.circuit.gpsFrequencyHz,
+      );
+
+      if (widget.trackId != null) {
+        final service = CustomCircuitService();
+        await service.updateCircuit(
+          trackId: widget.trackId!,
+          circuit: updatedCircuit,
+        );
+      }
+
+      widget.onCircuitUpdated?.call(updatedCircuit);
+
+      setState(() {
+        _isEditingFinishLine = false;
+        _isSaving = false;
+      });
+
+      HapticFeedback.heavyImpact();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle, color: Colors.white, size: 20),
+                const SizedBox(width: 12),
+                const Text(
+                  'Linea del traguardo salvata',
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
+              ],
+            ),
+            backgroundColor: const Color(0xFF00C853),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            margin: const EdgeInsets.all(16),
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _isSaving = false;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.error_outline, color: Colors.white, size: 20),
+                const SizedBox(width: 12),
+                Text('Errore: $e'),
+              ],
+            ),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            margin: const EdgeInsets.all(16),
+          ),
+        );
+      }
+    }
+  }
+
+  /// Calcola la distanza in pixel tra un punto sullo schermo e un marker
+  double _distanceToMarker(Offset screenPoint, LatLng markerPosition) {
+    final markerScreenPoint = _mapController.camera.latLngToScreenPoint(markerPosition);
+    final dx = screenPoint.dx - markerScreenPoint.x;
+    final dy = screenPoint.dy - markerScreenPoint.y;
+    return math.sqrt(dx * dx + dy * dy);
+  }
+
+  /// Trova quale marker è più vicino al tocco (entro una soglia)
+  bool? _findClosestMarker(Offset localPosition) {
+    if (_finishLineStart == null || _finishLineEnd == null) return null;
+
+    const double touchThreshold = 60.0; // Raggio di tocco in pixel
+
+    final distToStart = _distanceToMarker(localPosition, _finishLineStart!);
+    final distToEnd = _distanceToMarker(localPosition, _finishLineEnd!);
+
+    // Se entrambi sono fuori soglia, nessun marker selezionato
+    if (distToStart > touchThreshold && distToEnd > touchThreshold) {
+      return null;
     }
 
-    return sectors;
+    // Ritorna il marker più vicino
+    return distToStart <= distToEnd;
+  }
+
+  void _onMapPanStart(DragStartDetails details) {
+    if (!_isEditingFinishLine) return;
+
+    // Trova il marker più vicino al punto di tocco
+    final closestMarker = _findClosestMarker(details.localPosition);
+
+    if (closestMarker != null) {
+      HapticFeedback.mediumImpact();
+      setState(() {
+        _isDragging = true;
+        _draggingStart = closestMarker;
+      });
+    }
+  }
+
+  void _onMapPanUpdate(DragUpdateDetails details) {
+    if (!_isDragging || _draggingStart == null) return;
+
+    // Converti la posizione dello schermo in coordinate geografiche
+    final point = _mapController.camera.pointToLatLng(
+      math.Point(details.localPosition.dx, details.localPosition.dy),
+    );
+
+    HapticFeedback.selectionClick();
+    setState(() {
+      if (_draggingStart!) {
+        _finishLineStart = point;
+      } else {
+        _finishLineEnd = point;
+      }
+    });
+  }
+
+  void _onMapPanEnd(DragEndDetails details) {
+    if (_isDragging) {
+      HapticFeedback.lightImpact();
+    }
+    setState(() {
+      _isDragging = false;
+      _draggingStart = null;
+    });
   }
 
   @override
@@ -177,258 +323,711 @@ class CustomCircuitDetailPage extends StatelessWidget {
         ? path.first
         : const LatLng(45.0, 9.0);
 
-    final halfWidth = circuit.widthMeters / 2;
-    final leftBorder = _createBorder(path, halfWidth, isLeft: true);
-    final rightBorder = _createBorder(path, halfWidth, isLeft: false);
-    final startFinish = _startFinishLines(path);
-
-    // Crea microsettori che vanno esattamente da bordo a bordo
-    final microSectors = _buildMicroSectorsFromBorders(leftBorder, rightBorder);
+    final finishLines = _buildFinishLine();
 
     return Scaffold(
-      backgroundColor: kBgColor,
+      backgroundColor: const Color(0xFF0A0A0A),
       body: SafeArea(
         child: Column(
           children: [
-            // Header con info circuito
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    const Color(0xFF0A0A0A),
-                    kBgColor,
-                  ],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                ),
-                border: Border(
-                  bottom: BorderSide(color: kLineColor, width: 1),
-                ),
-              ),
-              child: Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back, color: kFgColor),
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          circuit.name,
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w900,
-                            color: kFgColor,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 2),
-                        Row(
-                          children: [
-                            Icon(Icons.location_on, size: 12, color: kMutedColor),
-                            const SizedBox(width: 4),
-                            Expanded(
-                              child: Text(
-                                '${circuit.city} ${circuit.country}'.trim(),
-                                style: const TextStyle(
-                                  color: kMutedColor,
-                                  fontSize: 12,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(12),
-                          gradient: LinearGradient(
-                            colors: [
-                              kBrandColor.withAlpha(30),
-                              kBrandColor.withAlpha(20),
-                            ],
-                          ),
-                          border: Border.all(color: kBrandColor, width: 1.5),
-                        ),
-                        child: Text(
-                          '${circuit.lengthMeters.toStringAsFixed(0)} m',
-                          style: const TextStyle(
-                            color: kBrandColor,
-                            fontWeight: FontWeight.w900,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Larghezza: ${circuit.widthMeters.toStringAsFixed(1)} m',
-                        style: const TextStyle(
-                          color: kMutedColor,
-                          fontSize: 11,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
+            // Header Premium
+            _buildHeader(context),
+            // Stats Bar
+            _buildStatsBar(),
             // Mappa con circuito
             Expanded(
-              child: FlutterMap(
-                options: MapOptions(
-                  initialCenter: center,
-                  initialZoom: 17.5,
-                  minZoom: 15,
-                  maxZoom: 20,
-                  backgroundColor: const Color(0xFF0A0A0A),
-                ),
+              child: Stack(
                 children: [
-                  TileLayer(
-                    urlTemplate:
-                        'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-                    userAgentPackageName: 'racesense_pulse',
-                  ),
-                  if (path.isNotEmpty)
-                    PolylineLayer(
-                      polylines: [
-                        // Bordo sinistro (premium style)
-                        if (leftBorder.isNotEmpty)
-                          Polyline(
-                            points: leftBorder,
-                            strokeWidth: 3,
-                            color: const Color(0xFFFF4D4F),
-                            borderStrokeWidth: 1,
-                            borderColor: Colors.white.withAlpha(100),
-                          ),
-                        // Bordo destro (premium style)
-                        if (rightBorder.isNotEmpty)
-                          Polyline(
-                            points: rightBorder,
-                            strokeWidth: 3,
-                            color: const Color(0xFFFF4D4F),
-                            borderStrokeWidth: 1,
-                            borderColor: Colors.white.withAlpha(100),
-                          ),
-                        // Linea centrale tracciata (percorso originale)
-                        Polyline(
-                          points: path,
-                          strokeWidth: 2,
-                          color: kBrandColor,
-                          borderStrokeWidth: 1,
-                          borderColor: Colors.black.withAlpha(150),
+                  // Mappa
+                  GestureDetector(
+                    key: _mapKey,
+                    onPanStart: _isEditingFinishLine ? _onMapPanStart : null,
+                    onPanUpdate: _isEditingFinishLine ? _onMapPanUpdate : null,
+                    onPanEnd: _isEditingFinishLine ? _onMapPanEnd : null,
+                    child: FlutterMap(
+                      mapController: _mapController,
+                      options: MapOptions(
+                        initialCenter: center,
+                        initialZoom: 17.5,
+                        minZoom: 14,
+                        maxZoom: 20,
+                        backgroundColor: const Color(0xFF0A0A0A),
+                        interactionOptions: InteractionOptions(
+                          // Disabilita pan/drag quando si sta trascinando un marker
+                          flags: _isDragging
+                              ? InteractiveFlag.pinchZoom | InteractiveFlag.doubleTapZoom
+                              : InteractiveFlag.all,
                         ),
-                        // Linea start/finish a scacchi
-                        ...startFinish,
-                        // Microsettori perpendicolari (ogni metro, da bordo a bordo)
-                        ...microSectors.map(
-                          (s) => Polyline(
-                            points: [s.start, s.end],
-                            strokeWidth: 2,
-                            color: const Color(0xFF8E85FF).withAlpha(200),
-                          ),
+                      ),
+                      children: [
+                        TileLayer(
+                          urlTemplate:
+                              'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+                          userAgentPackageName: 'racesense_pulse',
                         ),
+                        if (path.isNotEmpty)
+                          PolylineLayer(
+                            polylines: [
+                              // Tracciato principale con glow effect
+                              Polyline(
+                                points: path,
+                                strokeWidth: 8,
+                                color: kBrandColor.withAlpha(60),
+                              ),
+                              Polyline(
+                                points: path,
+                                strokeWidth: 4,
+                                color: kBrandColor,
+                                borderStrokeWidth: 1,
+                                borderColor: Colors.black.withAlpha(150),
+                              ),
+                              // Linea start/finish a scacchi
+                              ...finishLines,
+                            ],
+                          ),
+                        // Marker per editing (non draggabili - gestiti dal GestureDetector padre)
+                        if (_isEditingFinishLine && _finishLineStart != null && _finishLineEnd != null)
+                          MarkerLayer(
+                            markers: [
+                              _buildEditMarker(_finishLineStart!, true),
+                              _buildEditMarker(_finishLineEnd!, false),
+                            ],
+                          ),
                       ],
                     ),
-                  if (path.isNotEmpty)
-                    MarkerLayer(
-                      markers: [
-                        // Marker start
-                        Marker(
-                          point: path.first,
-                          width: 20,
-                          height: 20,
-                          child: Container(
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: kBrandColor,
-                              border: Border.all(color: Colors.black, width: 2),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: kBrandColor.withAlpha(128),
-                                  blurRadius: 8,
-                                  spreadRadius: 2,
-                                ),
-                              ],
-                            ),
-                            child: const Icon(
-                              Icons.flag,
-                              color: Colors.black,
-                              size: 12,
-                            ),
-                          ),
-                        ),
-                      ],
+                  ),
+                  // Edit mode overlay
+                  if (_isEditingFinishLine)
+                    Positioned(
+                      top: 16,
+                      left: 16,
+                      right: 16,
+                      child: _buildEditModeOverlay(),
                     ),
-                ],
-              ),
-            ),
-            // Legenda
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    kBgColor,
-                    const Color(0xFF0A0A0A),
-                  ],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                ),
-                border: Border(
-                  top: BorderSide(color: kLineColor, width: 1),
-                ),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _buildLegendItem(
-                    color: kBrandColor,
-                    label: 'Tracciato',
-                    icon: Icons.timeline,
-                  ),
-                  _buildLegendItem(
-                    color: const Color(0xFFFF4D4F),
-                    label: 'Bordi pista',
-                    icon: Icons.border_outer,
-                  ),
-                  _buildLegendItem(
-                    color: const Color(0xFF8E85FF),
-                    label: 'Microsettori',
-                    icon: Icons.grid_on,
+                  // Zoom controls
+                  Positioned(
+                    right: 16,
+                    bottom: 100,
+                    child: _buildZoomControls(),
                   ),
                 ],
               ),
             ),
+            // Bottom bar con azioni
+            _buildBottomBar(),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildLegendItem({required Color color, required String label, required IconData icon}) {
+  Widget _buildHeader(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            const Color(0xFF0A0A0A),
+            const Color(0xFF121212),
+          ],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ),
+        border: const Border(
+          bottom: BorderSide(color: Color(0xFF2A2A2A), width: 1),
+        ),
+      ),
+      child: Row(
+        children: [
+          // Back button
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white.withAlpha(10),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.white.withAlpha(20)),
+            ),
+            child: IconButton(
+              icon: const Icon(Icons.arrow_back, color: kFgColor, size: 22),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.circuit.name,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
+                    color: kFgColor,
+                    letterSpacing: -0.5,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Icon(Icons.location_on, size: 12, color: kMutedColor),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        '${widget.circuit.city} ${widget.circuit.country}'.trim(),
+                        style: const TextStyle(
+                          color: kMutedColor,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          // Premium badge
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              gradient: LinearGradient(
+                colors: [
+                  kBrandColor.withAlpha(30),
+                  kBrandColor.withAlpha(15),
+                ],
+              ),
+              border: Border.all(color: kBrandColor, width: 1.5),
+              boxShadow: [
+                BoxShadow(
+                  color: kBrandColor.withAlpha(30),
+                  blurRadius: 12,
+                  spreadRadius: 0,
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.route, color: kBrandColor, size: 16),
+                const SizedBox(width: 6),
+                Text(
+                  '${widget.circuit.lengthMeters.toStringAsFixed(0)} m',
+                  style: const TextStyle(
+                    color: kBrandColor,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatsBar() {
+    final hasGpsInfo = widget.circuit.gpsFrequencyHz != null;
+    final usedBle = widget.circuit.usedBleDevice;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF121212),
+        border: const Border(
+          bottom: BorderSide(color: Color(0xFF2A2A2A), width: 1),
+        ),
+      ),
+      child: Row(
+        children: [
+          _buildStatItem(
+            icon: Icons.gps_fixed,
+            label: 'Punti GPS',
+            value: '${widget.circuit.points.length}',
+            color: const Color(0xFF00E676),
+          ),
+          const SizedBox(width: 24),
+          if (hasGpsInfo) ...[
+            _buildStatItem(
+              icon: Icons.speed,
+              label: 'Frequenza',
+              value: '${widget.circuit.gpsFrequencyHz!.toStringAsFixed(0)} Hz',
+              color: const Color(0xFF29B6F6),
+            ),
+            const SizedBox(width: 24),
+          ],
+          _buildStatItem(
+            icon: usedBle ? Icons.bluetooth : Icons.phone_android,
+            label: 'Registrato con',
+            value: usedBle ? 'GPS Pro' : 'Telefono',
+            color: usedBle ? const Color(0xFF7C4DFF) : const Color(0xFFFFB74D),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatItem({
+    required IconData icon,
+    required String label,
+    required String value,
+    required Color color,
+  }) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          padding: const EdgeInsets.all(6),
+          padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: color.withAlpha(40),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: color.withAlpha(128), width: 1),
+            color: color.withAlpha(25),
+            borderRadius: BorderRadius.circular(10),
           ),
-          child: Icon(icon, color: color, size: 14),
+          child: Icon(icon, color: color, size: 16),
+        ),
+        const SizedBox(width: 10),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                color: kMutedColor,
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.5,
+              ),
+            ),
+            Text(
+              value,
+              style: const TextStyle(
+                color: kFgColor,
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEditModeOverlay() {
+    return AnimatedBuilder(
+      animation: _pulseAnimation,
+      builder: (context, child) {
+        return Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.black.withAlpha(240),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: kBrandColor.withAlpha((200 * _pulseAnimation.value).toInt()),
+              width: 2,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: kBrandColor.withAlpha((60 * _pulseAnimation.value).toInt()),
+                blurRadius: 20,
+                spreadRadius: 2,
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: kBrandColor.withAlpha(30),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(Icons.open_with, color: kBrandColor, size: 24),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text(
+                          'Modalità Modifica',
+                          style: TextStyle(
+                            color: kFgColor,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Tocca e trascina i cerchi colorati per spostare il traguardo',
+                          style: TextStyle(
+                            color: kMutedColor,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              // Legenda marker
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _buildMarkerLegend(
+                    color: const Color(0xFF00E676),
+                    label: 'Inizio linea',
+                    icon: Icons.flag,
+                  ),
+                  const SizedBox(width: 24),
+                  _buildMarkerLegend(
+                    color: const Color(0xFFFF5252),
+                    label: 'Fine linea',
+                    icon: Icons.sports_score,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildMarkerLegend({
+    required Color color,
+    required String label,
+    required IconData icon,
+  }) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 24,
+          height: 24,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: color,
+            border: Border.all(color: Colors.white, width: 2),
+          ),
+          child: Icon(icon, color: Colors.white, size: 12),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          label,
+          style: const TextStyle(
+            color: kMutedColor,
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Marker visuale per l'editing (il drag è gestito dal GestureDetector sulla mappa)
+  Marker _buildEditMarker(LatLng position, bool isStart) {
+    final isDragging = _isDragging && _draggingStart == isStart;
+    final color = isStart ? const Color(0xFF00E676) : const Color(0xFFFF5252);
+
+    const double markerSize = 52;
+
+    return Marker(
+      point: position,
+      width: markerSize,
+      height: markerSize,
+      child: IgnorePointer(
+        // Ignora i tocchi - gestiti dal GestureDetector padre
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          width: isDragging ? markerSize + 12 : markerSize,
+          height: isDragging ? markerSize + 12 : markerSize,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: isDragging ? color : color.withAlpha(230),
+            border: Border.all(
+              color: Colors.white,
+              width: isDragging ? 5 : 4,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: color.withAlpha(isDragging ? 200 : 150),
+                blurRadius: isDragging ? 30 : 20,
+                spreadRadius: isDragging ? 8 : 4,
+              ),
+              // Glow pulsante per indicare che è trascinabile
+              BoxShadow(
+                color: color.withAlpha(60),
+                blurRadius: 40,
+                spreadRadius: 20,
+              ),
+            ],
+          ),
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  isStart ? Icons.flag : Icons.sports_score,
+                  color: Colors.white,
+                  size: isDragging ? 24 : 20,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildZoomControls() {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A1A1A),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFF2A2A2A)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(100),
+            blurRadius: 10,
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            icon: const Icon(Icons.add, color: kFgColor),
+            onPressed: () {
+              final currentZoom = _mapController.camera.zoom;
+              _mapController.move(
+                _mapController.camera.center,
+                currentZoom + 0.5,
+              );
+            },
+          ),
+          Container(
+            height: 1,
+            width: 24,
+            color: const Color(0xFF2A2A2A),
+          ),
+          IconButton(
+            icon: const Icon(Icons.remove, color: kFgColor),
+            onPressed: () {
+              final currentZoom = _mapController.camera.zoom;
+              _mapController.move(
+                _mapController.camera.center,
+                currentZoom - 0.5,
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBottomBar() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            const Color(0xFF121212),
+            const Color(0xFF0A0A0A),
+          ],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ),
+        border: const Border(
+          top: BorderSide(color: Color(0xFF2A2A2A), width: 1),
+        ),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Legenda
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _buildLegendChip(
+                  color: kBrandColor,
+                  label: 'Tracciato',
+                ),
+                const SizedBox(width: 24),
+                _buildLegendChip(
+                  color: Colors.white,
+                  label: 'Traguardo',
+                  isCheckered: true,
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            // Bottone a tutta larghezza
+            if (_isEditingFinishLine)
+              Row(
+                children: [
+                  // Cancel button
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white.withAlpha(10),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.white.withAlpha(30)),
+                    ),
+                    child: IconButton(
+                      icon: const Icon(Icons.close, color: kFgColor),
+                      onPressed: () {
+                        setState(() {
+                          _finishLineStart = widget.circuit.finishLineStart;
+                          _finishLineEnd = widget.circuit.finishLineEnd;
+                          if (_finishLineStart == null || _finishLineEnd == null) {
+                            _calculateDefaultFinishLine();
+                          }
+                          _isEditingFinishLine = false;
+                        });
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  // Save button a tutta larghezza
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: _isSaving ? null : _saveFinishLine,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              const Color(0xFF00E676),
+                              const Color(0xFF00C853),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF00E676).withAlpha(60),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: _isSaving
+                            ? const Center(
+                                child: SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation(Colors.white),
+                                  ),
+                                ),
+                              )
+                            : Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(Icons.check, color: Colors.white, size: 20),
+                                  const SizedBox(width: 8),
+                                  const Text(
+                                    'Salva Traguardo',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 15,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                      ),
+                    ),
+                  ),
+                ],
+              )
+            else
+              SizedBox(
+                width: double.infinity,
+                child: GestureDetector(
+                  onTap: _toggleEditMode,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          kBrandColor,
+                          kBrandColor.withAlpha(200),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: kBrandColor.withAlpha(60),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.edit_location_alt, color: Colors.white, size: 20),
+                        const SizedBox(width: 8),
+                        const Text(
+                          'Modifica Traguardo',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 15,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLegendChip({
+    required Color color,
+    required String label,
+    bool isCheckered = false,
+  }) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 24,
+          height: 12,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(3),
+            color: isCheckered ? null : color,
+            gradient: isCheckered
+                ? LinearGradient(
+                    colors: [
+                      Colors.white,
+                      Colors.black,
+                      Colors.white,
+                      Colors.black,
+                    ],
+                    stops: const [0.0, 0.25, 0.5, 0.75],
+                  )
+                : null,
+            border: Border.all(color: Colors.white.withAlpha(50)),
+            boxShadow: [
+              BoxShadow(
+                color: color.withAlpha(80),
+                blurRadius: 6,
+              ),
+            ],
+          ),
         ),
         const SizedBox(width: 8),
         Text(

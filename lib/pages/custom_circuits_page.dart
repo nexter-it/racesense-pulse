@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
 import '../services/custom_circuit_service.dart';
 import '../theme.dart';
-import '../widgets/pulse_background.dart';
 import 'custom_circuit_builder_page.dart';
 import 'custom_circuit_detail_page.dart';
 
@@ -39,74 +39,142 @@ class _CustomCircuitsPageState extends State<CustomCircuitsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: PulseBackground(
-        withTopPadding: false,
-        child: SafeArea(
-          child: Column(
-            children: [
-              _buildHeader(),
-              Expanded(
-                child: _loading
-                    ? const Center(
-                        child: CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation(kBrandColor),
-                        ),
-                      )
-                    : _circuits.isEmpty
-                        ? _buildEmptyState()
-                        : _buildCircuitsList(),
-              ),
-              _buildBottomButton(),
-            ],
-          ),
+      backgroundColor: const Color(0xFF0A0A0A),
+      body: SafeArea(
+        child: Column(
+          children: [
+            _buildHeader(),
+            Expanded(
+              child: _loading
+                  ? _buildLoadingState()
+                  : _circuits.isEmpty
+                      ? _buildEmptyState()
+                      : _buildCircuitsList(),
+            ),
+          ],
         ),
       ),
+      floatingActionButton: _buildFAB(),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
   }
 
   Widget _buildHeader() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12),
-      decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: kLineColor, width: 1)),
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            const Color(0xFF0A0A0A),
+            const Color(0xFF121212),
+          ],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ),
+        border: const Border(
+          bottom: BorderSide(color: Color(0xFF2A2A2A), width: 1),
+        ),
       ),
       child: Row(
         children: [
-          IconButton(
-            icon: const Icon(Icons.arrow_back, color: kFgColor),
-            onPressed: () => Navigator.of(context).pop(),
+          // Back button
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white.withAlpha(10),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.white.withAlpha(20)),
+            ),
+            child: IconButton(
+              icon: const Icon(Icons.arrow_back, color: kFgColor, size: 22),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
           ),
-          const SizedBox(width: 6),
+          const SizedBox(width: 16),
+          // Title and count
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Circuiti Custom',
+                  'I Miei Circuiti',
                   style: TextStyle(
-                    fontSize: 18,
+                    fontSize: 22,
                     fontWeight: FontWeight.w900,
                     color: kFgColor,
+                    letterSpacing: -0.5,
                   ),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  _circuits.isEmpty
-                      ? 'Nessun circuito salvato'
-                      : '${_circuits.length} ${_circuits.length == 1 ? 'circuito' : 'circuiti'}',
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: kMutedColor,
-                    fontWeight: FontWeight.w600,
-                  ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: kBrandColor.withAlpha(20),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: kBrandColor.withAlpha(60)),
+                      ),
+                      child: Text(
+                        _loading
+                            ? '...'
+                            : '${_circuits.length} ${_circuits.length == 1 ? 'tracciato' : 'tracciati'}',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: kBrandColor,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
-          IconButton(
-            icon: const Icon(Icons.refresh, color: kBrandColor),
-            onPressed: _loadCircuits,
-            tooltip: 'Ricarica',
+          // Refresh button
+          Container(
+            decoration: BoxDecoration(
+              color: kBrandColor.withAlpha(15),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: kBrandColor.withAlpha(40)),
+            ),
+            child: IconButton(
+              icon: Icon(
+                Icons.refresh_rounded,
+                color: kBrandColor,
+                size: 22,
+              ),
+              onPressed: () {
+                HapticFeedback.lightImpact();
+                _loadCircuits();
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLoadingState() {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            width: 48,
+            height: 48,
+            child: CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation(kBrandColor),
+              strokeWidth: 3,
+            ),
+          ),
+          const SizedBox(height: 20),
+          Text(
+            'Caricamento circuiti...',
+            style: TextStyle(
+              color: kMutedColor,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ],
       ),
@@ -116,43 +184,112 @@ class _CustomCircuitsPageState extends State<CustomCircuitsPage> {
   Widget _buildEmptyState() {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32.0),
+        padding: const EdgeInsets.all(40.0),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            // Animated icon container
             Container(
-              padding: const EdgeInsets.all(24),
+              width: 120,
+              height: 120,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                gradient: LinearGradient(
+                gradient: RadialGradient(
                   colors: [
-                    kBrandColor.withAlpha(40),
-                    kBrandColor.withAlpha(20),
+                    kBrandColor.withAlpha(30),
+                    kBrandColor.withAlpha(10),
+                    Colors.transparent,
+                  ],
+                  stops: const [0.0, 0.6, 1.0],
+                ),
+              ),
+              child: Container(
+                margin: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: const Color(0xFF1A1A1A),
+                  border: Border.all(color: kBrandColor.withAlpha(80), width: 2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: kBrandColor.withAlpha(40),
+                      blurRadius: 30,
+                      spreadRadius: 5,
+                    ),
                   ],
                 ),
-                border: Border.all(color: kBrandColor.withAlpha(100), width: 2),
-              ),
-              child: const Icon(
-                Icons.route,
-                size: 48,
-                color: kBrandColor,
+                child: Icon(
+                  Icons.add_road_rounded,
+                  size: 40,
+                  color: kBrandColor,
+                ),
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 32),
             const Text(
               'Nessun circuito salvato',
               style: TextStyle(
                 color: kFgColor,
-                fontSize: 18,
+                fontSize: 20,
                 fontWeight: FontWeight.w900,
+                letterSpacing: -0.5,
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 8),
-            const Text(
-              'Inizia a tracciare il tuo primo circuito custom.\nPotrai usarlo per le tue sessioni live!',
+            const SizedBox(height: 12),
+            Text(
+              'Crea il tuo primo circuito personalizzato\ntracciando il percorso con il GPS',
               textAlign: TextAlign.center,
-              style: TextStyle(color: kMutedColor, fontSize: 14, height: 1.4),
+              style: TextStyle(
+                color: kMutedColor,
+                fontSize: 14,
+                height: 1.5,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 40),
+            // Quick start hint
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                color: const Color(0xFF151515),
+                border: Border.all(color: const Color(0xFF2A2A2A)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: kBrandColor.withAlpha(20),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(Icons.touch_app, color: kBrandColor, size: 20),
+                  ),
+                  const SizedBox(width: 14),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Premi il pulsante in basso',
+                        style: TextStyle(
+                          color: kFgColor,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'per iniziare a tracciare',
+                        style: TextStyle(
+                          color: kMutedColor,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -161,187 +298,249 @@ class _CustomCircuitsPageState extends State<CustomCircuitsPage> {
   }
 
   Widget _buildCircuitsList() {
-    return ListView.separated(
-      padding: const EdgeInsets.all(16),
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
       itemCount: _circuits.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
       itemBuilder: (context, i) {
         final c = _circuits[i];
-        return _buildCircuitCard(c);
+        return Padding(
+          padding: EdgeInsets.only(bottom: i < _circuits.length - 1 ? 16 : 0),
+          child: _buildCircuitCard(c, i),
+        );
       },
     );
   }
 
-  Widget _buildCircuitCard(CustomCircuitInfo circuit) {
-    final formattedDate = DateFormat('dd MMM yyyy, HH:mm').format(circuit.createdAt);
+  Widget _buildCircuitCard(CustomCircuitInfo circuit, int index) {
+    final formattedDate = DateFormat('dd MMM yyyy').format(circuit.createdAt);
+    final formattedTime = DateFormat('HH:mm').format(circuit.createdAt);
+    final lengthKm = (circuit.lengthMeters / 1000).toStringAsFixed(2);
 
-    return InkWell(
-      onTap: () {
-        Navigator.of(context).push(
+    return GestureDetector(
+      onTap: () async {
+        HapticFeedback.lightImpact();
+        await Navigator.of(context).push(
           MaterialPageRoute(
-            builder: (_) => CustomCircuitDetailPage(circuit: circuit),
+            builder: (_) => CustomCircuitDetailPage(
+              circuit: circuit,
+              trackId: circuit.trackId,
+              onCircuitUpdated: (updatedCircuit) {
+                setState(() {
+                  final idx = _circuits.indexWhere((c) => c.trackId == circuit.trackId);
+                  if (idx != -1) {
+                    _circuits[idx] = updatedCircuit;
+                  }
+                });
+              },
+            ),
           ),
         );
       },
-      borderRadius: BorderRadius.circular(16),
       child: Container(
-        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          gradient: const LinearGradient(
+          borderRadius: BorderRadius.circular(20),
+          gradient: LinearGradient(
             colors: [
-              Color.fromRGBO(255, 255, 255, 0.08),
-              Color.fromRGBO(255, 255, 255, 0.04),
+              const Color(0xFF1A1A1A),
+              const Color(0xFF141414),
             ],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
-          border: Border.all(color: kLineColor),
+          border: Border.all(color: const Color(0xFF2A2A2A)),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.2),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
+              color: Colors.black.withAlpha(80),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
             ),
           ],
         ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header with icon and name
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: kBrandColor.withAlpha(40),
-                    border: Border.all(color: kBrandColor, width: 1.5),
-                  ),
-                  child: const Icon(Icons.track_changes, color: kBrandColor, size: 20),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
+            // Main content
+            Padding(
+              padding: const EdgeInsets.all(18),
+              child: Column(
+                children: [
+                  // Header row
+                  Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              circuit.name,
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w900,
-                                color: kFgColor,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
+                      // Circuit icon with number
+                      Container(
+                        width: 52,
+                        height: 52,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(14),
+                          gradient: LinearGradient(
+                            colors: [
+                              kBrandColor.withAlpha(40),
+                              kBrandColor.withAlpha(20),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
                           ),
-                          if (circuit.usedBleDevice) ...[
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(6),
-                                color: kBrandColor.withAlpha(30),
-                                border: Border.all(color: kBrandColor, width: 1),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: const [
-                                  Icon(Icons.bluetooth_connected, color: kBrandColor, size: 10),
-                                  SizedBox(width: 3),
-                                  Text(
-                                    'BLE',
-                                    style: TextStyle(
-                                      color: kBrandColor,
-                                      fontSize: 9,
+                          border: Border.all(color: kBrandColor.withAlpha(60), width: 1.5),
+                        ),
+                        child: Center(
+                          child: Icon(
+                            Icons.route_rounded,
+                            color: kBrandColor,
+                            size: 26,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      // Name and location
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    circuit.name,
+                                    style: const TextStyle(
+                                      fontSize: 17,
                                       fontWeight: FontWeight.w800,
+                                      color: kFgColor,
+                                      letterSpacing: -0.3,
                                     ),
+                                    overflow: TextOverflow.ellipsis,
                                   ),
+                                ),
+                                if (circuit.usedBleDevice) ...[
+                                  const SizedBox(width: 10),
+                                  _buildBleChip(),
                                 ],
-                              ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            Row(
+                              children: [
+                                Icon(Icons.location_on_outlined,
+                                    color: kMutedColor, size: 14),
+                                const SizedBox(width: 4),
+                                Expanded(
+                                  child: Text(
+                                    '${circuit.city} ${circuit.country}'.trim().isEmpty
+                                        ? 'Posizione non specificata'
+                                        : '${circuit.city}, ${circuit.country}'.trim(),
+                                    style: TextStyle(
+                                      color: kMutedColor,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
-                        ],
+                        ),
                       ),
-                      const SizedBox(height: 3),
-                      Row(
-                        children: [
-                          const Icon(Icons.location_on, color: kMutedColor, size: 12),
-                          const SizedBox(width: 4),
-                          Expanded(
-                            child: Text(
-                              '${circuit.city} ${circuit.country}'.trim().isEmpty
-                                  ? 'Posizione sconosciuta'
-                                  : '${circuit.city} ${circuit.country}'.trim(),
-                              style: const TextStyle(
-                                color: kMutedColor,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
+                      // Arrow
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withAlpha(8),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(
+                          Icons.arrow_forward_ios_rounded,
+                          color: kMutedColor,
+                          size: 16,
+                        ),
                       ),
                     ],
                   ),
-                ),
-                const SizedBox(width: 8),
-                const Icon(Icons.chevron_right, color: kMutedColor, size: 20),
-              ],
-            ),
-            const SizedBox(height: 14),
-            // Stats row
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                color: const Color.fromRGBO(255, 255, 255, 0.03),
-                border: Border.all(color: kLineColor.withAlpha(80)),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _buildStat(
-                    icon: Icons.straighten,
-                    label: 'Lunghezza',
-                    value: '${(circuit.lengthMeters / 1000).toStringAsFixed(2)} km',
-                  ),
-                  Container(width: 1, height: 30, color: kLineColor),
-                  _buildStat(
-                    icon: Icons.gps_fixed,
-                    label: 'Punti GPS',
-                    value: circuit.points.length.toString(),
-                  ),
-                  Container(width: 1, height: 30, color: kLineColor),
-                  _buildStat(
-                    icon: Icons.speed,
-                    label: 'Frequenza',
-                    value: circuit.gpsFrequencyHz != null
-                        ? '${circuit.gpsFrequencyHz!.toStringAsFixed(0)} Hz'
-                        : '1 Hz',
+                  const SizedBox(height: 18),
+                  // Stats row
+                  Row(
+                    children: [
+                      _buildStatChip(
+                        icon: Icons.straighten_rounded,
+                        value: '$lengthKm km',
+                        color: const Color(0xFF00E676),
+                      ),
+                      const SizedBox(width: 10),
+                      _buildStatChip(
+                        icon: Icons.gps_fixed_rounded,
+                        value: '${circuit.points.length} pts',
+                        color: const Color(0xFF29B6F6),
+                      ),
+                      const SizedBox(width: 10),
+                      _buildStatChip(
+                        icon: Icons.speed_rounded,
+                        value: circuit.gpsFrequencyHz != null
+                            ? '${circuit.gpsFrequencyHz!.toStringAsFixed(0)} Hz'
+                            : '1 Hz',
+                        color: const Color(0xFFFFB74D),
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 10),
-            // Date
-            Row(
-              children: [
-                const Icon(Icons.access_time, color: kMutedColor, size: 12),
-                const SizedBox(width: 6),
-                Text(
-                  'Creato il $formattedDate',
-                  style: const TextStyle(
-                    color: kMutedColor,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                  ),
+            // Footer with date
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+              decoration: BoxDecoration(
+                color: Colors.white.withAlpha(4),
+                borderRadius: const BorderRadius.only(
+                  bottomLeft: Radius.circular(20),
+                  bottomRight: Radius.circular(20),
                 ),
-              ],
+                border: Border(
+                  top: BorderSide(color: const Color(0xFF2A2A2A)),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.calendar_today_rounded, color: kMutedColor, size: 13),
+                  const SizedBox(width: 6),
+                  Text(
+                    formattedDate,
+                    style: TextStyle(
+                      color: kMutedColor,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 8),
+                    width: 4,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: kMutedColor.withAlpha(100),
+                    ),
+                  ),
+                  Icon(Icons.access_time_rounded, color: kMutedColor, size: 13),
+                  const SizedBox(width: 4),
+                  Text(
+                    formattedTime,
+                    style: TextStyle(
+                      color: kMutedColor,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const Spacer(),
+                  Text(
+                    'Visualizza',
+                    style: TextStyle(
+                      color: kBrandColor,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Icon(Icons.arrow_forward_rounded, color: kBrandColor, size: 14),
+                ],
+              ),
             ),
           ],
         ),
@@ -349,82 +548,123 @@ class _CustomCircuitsPageState extends State<CustomCircuitsPage> {
     );
   }
 
-  Widget _buildStat({
-    required IconData icon,
-    required String label,
-    required String value,
-  }) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, color: kBrandColor, size: 16),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: const TextStyle(
-            color: kMutedColor,
-            fontSize: 9,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          value,
-          style: const TextStyle(
-            color: kFgColor,
-            fontSize: 11,
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildBottomButton() {
+  Widget _buildBleChip() {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        border: Border(top: BorderSide(color: kLineColor)),
+        borderRadius: BorderRadius.circular(8),
         gradient: LinearGradient(
           colors: [
-            Colors.transparent,
-            kBgColor.withAlpha(250),
+            const Color(0xFF7C4DFF).withAlpha(30),
+            const Color(0xFF7C4DFF).withAlpha(15),
           ],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
         ),
+        border: Border.all(color: const Color(0xFF7C4DFF).withAlpha(80)),
       ),
-      child: SafeArea(
-        top: false,
-        child: SizedBox(
-          width: double.infinity,
-          child: ElevatedButton.icon(
-            onPressed: () async {
-              await Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const CustomCircuitBuilderPage(),
-                ),
-              );
-              _loadCircuits();
-            },
-            icon: const Icon(Icons.add_location_alt, size: 20),
-            label: const Text(
-              'Traccia nuovo circuito',
-              style: TextStyle(
-                fontWeight: FontWeight.w900,
-                fontSize: 15,
-              ),
-            ),
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              backgroundColor: kBrandColor,
-              foregroundColor: Colors.black,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              elevation: 0,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.bluetooth, color: const Color(0xFF7C4DFF), size: 12),
+          const SizedBox(width: 4),
+          Text(
+            'GPS Pro',
+            style: TextStyle(
+              color: const Color(0xFF7C4DFF),
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatChip({
+    required IconData icon,
+    required String value,
+    required Color color,
+  }) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          color: color.withAlpha(12),
+          border: Border.all(color: color.withAlpha(40)),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: color, size: 15),
+            const SizedBox(width: 6),
+            Text(
+              value,
+              style: TextStyle(
+                color: color,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFAB() {
+    return GestureDetector(
+      onTap: () async {
+        HapticFeedback.mediumImpact();
+        await Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => const CustomCircuitBuilderPage(),
+          ),
+        );
+        _loadCircuits();
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 10),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          color: const Color(0xFF1E1E1E),
+          border: Border.all(
+            color: Colors.white.withAlpha(25),
+            width: 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withAlpha(80),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: kBrandColor.withAlpha(30),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                Icons.add_location_alt_rounded,
+                color: kBrandColor,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Text(
+              'Nuovo Tracciato',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+                fontSize: 15,
+                letterSpacing: -0.2,
+              ),
+            ),
+          ],
         ),
       ),
     );
