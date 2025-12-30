@@ -37,6 +37,9 @@ class LiveDriverModel {
   final double? speedKmh;
   final GForceData? gforce;
 
+  // Delta live rispetto al best lap (negativo = più veloce)
+  final double? liveDelta;
+
   final int? updatedAt;
 
   LiveDriverModel({
@@ -65,6 +68,7 @@ class LiveDriverModel {
     this.lon,
     this.speedKmh,
     this.gforce,
+    this.liveDelta,
     this.updatedAt,
   });
 
@@ -117,6 +121,7 @@ class LiveDriverModel {
       gforce: map['gforce'] != null
           ? GForceData.fromMap(map['gforce'] as Map<dynamic, dynamic>)
           : null,
+      liveDelta: (map['liveDelta'] as num?)?.toDouble(),
       updatedAt: map['updatedAt'] as int?,
     );
   }
@@ -153,6 +158,13 @@ class LiveDriverModel {
 
   /// Verifica se e' squalificato
   bool get isDisqualified => penalty.dq;
+
+  /// Formatta il delta live
+  String get formattedLiveDelta {
+    if (liveDelta == null) return '---';
+    final sign = liveDelta! >= 0 ? '+' : '';
+    return '$sign${liveDelta!.toStringAsFixed(2)}';
+  }
 
   static String _formatLapTime(double seconds) {
     final mins = seconds ~/ 60;

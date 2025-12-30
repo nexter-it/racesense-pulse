@@ -2,13 +2,15 @@ import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../models/live_driver_model.dart';
 import '../models/live_race_model.dart';
 import '../services/live_timing_service.dart';
 import '../theme.dart';
 
-/// Dashboard per visualizzare i dati live della gara - RaceChrono Pro Style
+/// Dashboard per visualizzare i dati live della gara - AIM MXS Style
+/// Layout orizzontale ottimizzato per uso in pista
 class LiveTimingDashboardPage extends StatefulWidget {
   final String deviceId;
 
@@ -56,6 +58,13 @@ class _LiveTimingDashboardPageState extends State<LiveTimingDashboardPage>
   @override
   void initState() {
     super.initState();
+    // Forza orientamento landscape
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+
     _flagAnimController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 500),
@@ -68,6 +77,15 @@ class _LiveTimingDashboardPageState extends State<LiveTimingDashboardPage>
 
   @override
   void dispose() {
+    // Ripristina orientamento normale
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+
     _raceSub?.cancel();
     _driverSub?.cancel();
     _uiTimer?.cancel();
@@ -78,15 +96,10 @@ class _LiveTimingDashboardPageState extends State<LiveTimingDashboardPage>
   }
 
   Future<void> _initLiveData() async {
-    // print('🟢 [Dashboard] Inizializzazione per device: ${widget.deviceId}');
     try {
-      // Verifica se esiste una gara attiva
-      // print('🟢 [Dashboard] Verifica esistenza gara...');
       final raceExists = await _liveService.checkRaceExists();
-      // print('🟢 [Dashboard] Gara esiste: $raceExists');
 
       if (!raceExists) {
-        // print('🟢 [Dashboard] Nessuna gara attiva, mostro schermata attesa');
         setState(() {
           _isLoading = false;
           _noRaceActive = true;
@@ -94,23 +107,18 @@ class _LiveTimingDashboardPageState extends State<LiveTimingDashboardPage>
         return;
       }
 
-      // Inizia ad ascoltare i dati
-      // print('🟢 [Dashboard] Avvio ascolto streams...');
       await _liveService.startListening(widget.deviceId);
 
-      // Timer UI (aggiorna ogni 100ms per il lap timer)
-      _uiTimer = Timer.periodic(const Duration(milliseconds: 100), (_) {
+      // Timer UI (aggiorna ogni 50ms per precisione timer)
+      _uiTimer = Timer.periodic(const Duration(milliseconds: 50), (_) {
         if (mounted && _lapWatch.isRunning) {
           setState(() {});
         }
       });
 
-      // Sottoscrivi agli stream
       _raceSub = _liveService.raceStream.listen(
         (race) {
-          // print('🟢 [Dashboard] Race data ricevuti: ${race?.status}');
           if (mounted) {
-            // Controlla cambio di status per banner bandiera
             if (race != null && _lastStatus != race.status) {
               _onStatusChanged(race.status);
               _lastStatus = race.status;
@@ -123,7 +131,6 @@ class _LiveTimingDashboardPageState extends State<LiveTimingDashboardPage>
           }
         },
         onError: (e) {
-          // print('🟢 [Dashboard] ERRORE race stream: $e');
           if (mounted) {
             setState(() {
               _errorMessage = 'Errore connessione: $e';
@@ -136,17 +143,14 @@ class _LiveTimingDashboardPageState extends State<LiveTimingDashboardPage>
       _driverSub = _liveService.driverStream.listen(
         (driver) {
           if (mounted && driver != null) {
-            // Controlla cambio di lap count per resettare il timer
             if (driver.lapCount != _lastLapCount) {
               _lastLapCount = driver.lapCount;
               _lapWatch.reset();
               _lapWatch.start();
             } else if (!_lapWatch.isRunning && driver.lapCount > 0) {
-              // Avvia il timer se non è già in esecuzione
               _lapWatch.start();
             }
 
-            // Controlla cambio penalità
             _checkPenaltyChange(driver.penalty);
 
             setState(() {
@@ -161,7 +165,6 @@ class _LiveTimingDashboardPageState extends State<LiveTimingDashboardPage>
           }
         },
         onError: (e) {
-          // print('🟢 [Dashboard] ERRORE driver stream: $e');
           if (mounted) {
             setState(() {
               _errorMessage = 'Errore dati driver: $e';
@@ -169,10 +172,7 @@ class _LiveTimingDashboardPageState extends State<LiveTimingDashboardPage>
           }
         },
       );
-      // print('🟢 [Dashboard] Streams sottoscritti');
-    } catch (e, stackTrace) {
-      // print('🟢 [Dashboard] ERRORE inizializzazione: $e');
-      // print('🟢 [Dashboard] StackTrace: $stackTrace');
+    } catch (e) {
       if (mounted) {
         setState(() {
           _errorMessage = 'Errore inizializzazione: $e';
@@ -183,14 +183,12 @@ class _LiveTimingDashboardPageState extends State<LiveTimingDashboardPage>
   }
 
   void _onStatusChanged(String newStatus) {
-    // Mostra banner animato per tutte le bandiere importanti
     if (newStatus == 'YELLOW FLAG' ||
         newStatus == 'RED FLAG' ||
         newStatus == 'IN CORSO' ||
         newStatus == 'FINITA') {
       setState(() => _showFlagBanner = true);
       _flagAnimController.forward(from: 0.0);
-      // Nascondi dopo 5 secondi (8 per la bandiera a scacchi)
       final duration = newStatus == 'FINITA' ? 8 : 5;
       Future.delayed(Duration(seconds: duration), () {
         if (mounted) {
@@ -203,20 +201,14 @@ class _LiveTimingDashboardPageState extends State<LiveTimingDashboardPage>
   }
 
   void _checkPenaltyChange(PenaltyInfo penalty) {
-    // Controlla squalifica
     if (penalty.dq && !_lastPenaltyDq) {
       _showPenaltyNotification('dq');
-    }
-    // Controlla nuovo warning
-    else if (penalty.warnings > _lastPenaltyWarnings) {
+    } else if (penalty.warnings > _lastPenaltyWarnings) {
       _showPenaltyNotification('warning');
-    }
-    // Controlla nuova penalità tempo
-    else if (penalty.timeSec > _lastPenaltyTimeSec) {
+    } else if (penalty.timeSec > _lastPenaltyTimeSec) {
       _showPenaltyNotification('time');
     }
 
-    // Aggiorna i valori tracciati
     _lastPenaltyTimeSec = penalty.timeSec;
     _lastPenaltyWarnings = penalty.warnings;
     _lastPenaltyDq = penalty.dq;
@@ -228,7 +220,6 @@ class _LiveTimingDashboardPageState extends State<LiveTimingDashboardPage>
       _showPenaltyBanner = true;
     });
     _flagAnimController.forward(from: 0.0);
-    // Nascondi dopo 6 secondi
     Future.delayed(const Duration(seconds: 6), () {
       if (mounted) {
         _flagAnimController.reverse().then((_) {
@@ -246,35 +237,32 @@ class _LiveTimingDashboardPageState extends State<LiveTimingDashboardPage>
     return '$minutes:${seconds.toString().padLeft(2, '0')}.${hundredths.toString().padLeft(2, '0')}';
   }
 
-  String _formatDelta() {
-    if (_driverData == null ||
-        _driverData!.bestLapTime == null ||
-        _driverData!.lastLapTime == null) {
-      return '---';
-    }
-
-    final diff = _driverData!.lastLapTime! - _driverData!.bestLapTime!;
-    final sign = diff > 0 ? '+' : '';
-    return '$sign${diff.toStringAsFixed(2)}';
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0A0A),
-      body: SafeArea(
-        child: Stack(
-          children: [
-            // Main content
-            _buildBody(),
-
-            // Banner bandiera animato
-            if (_showFlagBanner && _raceData != null) _buildFlagBanner(),
-
-            // Banner penalità animato
-            if (_showPenaltyBanner && _driverData != null) _buildPenaltyBanner(),
-          ],
-        ),
+      backgroundColor: const Color(0xFF000000),
+      body: Stack(
+        children: [
+          _buildBody(),
+          if (_showFlagBanner && _raceData != null) _buildFlagBanner(),
+          if (_showPenaltyBanner && _driverData != null) _buildPenaltyBanner(),
+          // Exit button
+          Positioned(
+            top: 12,
+            left: 12,
+            child: GestureDetector(
+              onTap: () => Navigator.of(context).pop(),
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withAlpha(15),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.close, color: Colors.white54, size: 20),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -285,11 +273,16 @@ class _LiveTimingDashboardPageState extends State<LiveTimingDashboardPage>
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            CircularProgressIndicator(color: kBrandColor),
+            CircularProgressIndicator(color: kBrandColor, strokeWidth: 3),
             SizedBox(height: 16),
             Text(
-              'Connessione in corso...',
-              style: TextStyle(color: kMutedColor),
+              'CONNECTING...',
+              style: TextStyle(
+                color: Colors.white54,
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 2,
+              ),
             ),
           ],
         ),
@@ -304,41 +297,135 @@ class _LiveTimingDashboardPageState extends State<LiveTimingDashboardPage>
       return _buildErrorScreen();
     }
 
-    return Column(
-      children: [
-        _buildHeader(),
-        Expanded(child: _buildMainDisplay()),
-        if (_driverData != null) _buildGForceBar(),
-        // _buildBottomInfo(),
-      ],
+    return _buildAIMDisplay();
+  }
+
+  /// Layout principale stile AIM MXS - 4 quadranti
+  Widget _buildAIMDisplay() {
+    final hasDriver = _driverData != null;
+
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Color(0xFF0A0A0A),
+            Color(0xFF000000),
+          ],
+        ),
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+          child: Column(
+            children: [
+              // Top bar - Status e info gara
+              _buildTopBar(),
+              const SizedBox(height: 8),
+              // Main display - 4 quadranti
+              Expanded(
+                child: hasDriver
+                    ? Row(
+                        children: [
+                          // LEFT - Current Lap Time (GIGANTE)
+                          Expanded(
+                            flex: 5,
+                            child: _buildCurrentLapPanel(),
+                          ),
+                          const SizedBox(width: 12),
+                          // RIGHT - Delta, Best, Last
+                          Expanded(
+                            flex: 4,
+                            child: Column(
+                              children: [
+                                // DELTA LIVE - Prominente
+                                Expanded(
+                                  flex: 5,
+                                  child: _buildDeltaPanel(),
+                                ),
+                                const SizedBox(height: 8),
+                                // BEST e LAST
+                                Expanded(
+                                  flex: 4,
+                                  child: Row(
+                                    children: [
+                                      Expanded(child: _buildBestLapPanel()),
+                                      const SizedBox(width: 8),
+                                      Expanded(child: _buildLastLapPanel()),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      )
+                    : _buildWaitingForDriver(),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
-  Widget _buildHeader() {
-    final hasPenalty = _driverData?.penalty.hasAny ?? false;
-
+  Widget _buildTopBar() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white.withAlpha(8),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.white.withAlpha(15)),
+      ),
       child: Row(
         children: [
-          // Back button
-          GestureDetector(
-            onTap: () => Navigator.of(context).pop(),
-            child: Container(
-              padding: const EdgeInsets.all(8),
+          // Status indicator
+          _buildStatusIndicator(),
+          const SizedBox(width: 16),
+          // Lap counter
+          if (_driverData != null) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               decoration: BoxDecoration(
                 color: Colors.white.withAlpha(10),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(6),
               ),
-              child: const Icon(Icons.arrow_back, color: Colors.white, size: 20),
+              child: Row(
+                children: [
+                  Text(
+                    'LAP',
+                    style: TextStyle(
+                      color: Colors.white.withAlpha(120),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    '${_driverData!.lapCount}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w900,
+                      fontFeatures: [FontFeature.tabularFigures()],
+                    ),
+                  ),
+                  if (_raceData?.totalLaps != null)
+                    Text(
+                      '/${_raceData!.totalLaps}',
+                      style: TextStyle(
+                        color: Colors.white.withAlpha(80),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(width: 16),
-          // Penalità indicator (se presenti) o LIVE indicator
-          if (hasPenalty)
-            _buildPenaltyIndicator()
-          else
-            _buildLiveIndicator(),
+            const SizedBox(width: 16),
+          ],
           const Spacer(),
           // Circuit name
           if (_raceData?.circuitName != null)
@@ -347,8 +434,32 @@ class _LiveTimingDashboardPageState extends State<LiveTimingDashboardPage>
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
-                color: Colors.white.withAlpha(150),
+                color: Colors.white.withAlpha(100),
                 letterSpacing: 1,
+              ),
+            ),
+          const SizedBox(width: 16),
+          // Position
+          if (_driverData != null)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    kBrandColor.withAlpha(40),
+                    kBrandColor.withAlpha(20),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: kBrandColor.withAlpha(60)),
+              ),
+              child: Text(
+                'P${_driverData!.position}',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                ),
               ),
             ),
         ],
@@ -356,38 +467,98 @@ class _LiveTimingDashboardPageState extends State<LiveTimingDashboardPage>
     );
   }
 
-  Widget _buildLiveIndicator() {
+  Widget _buildStatusIndicator() {
+    final isConnected = _liveService.isConnected;
+    final hasPenalty = _driverData?.penalty.hasAny ?? false;
+
+    if (hasPenalty) {
+      final penalty = _driverData!.penalty;
+      if (penalty.dq) {
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: Colors.black,
+            borderRadius: BorderRadius.circular(4),
+            border: Border.all(color: Colors.white, width: 2),
+          ),
+          child: const Text(
+            'DSQ',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        );
+      }
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          color: Colors.orange.withAlpha(30),
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(color: Colors.orange),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (penalty.timeSec > 0)
+              Text(
+                '+${penalty.timeSec}s',
+                style: const TextStyle(
+                  color: Colors.orange,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            if (penalty.timeSec > 0 && penalty.warnings > 0)
+              const SizedBox(width: 6),
+            if (penalty.warnings > 0)
+              Text(
+                '${penalty.warnings}W',
+                style: const TextStyle(
+                  color: Colors.orange,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+          ],
+        ),
+      );
+    }
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: _liveService.isConnected
-            ? Colors.green.withAlpha(30)
-            : Colors.red.withAlpha(30),
-        borderRadius: BorderRadius.circular(6),
+        color: isConnected ? Colors.green.withAlpha(30) : Colors.red.withAlpha(30),
+        borderRadius: BorderRadius.circular(4),
         border: Border.all(
-          color: _liveService.isConnected
-              ? Colors.green.withAlpha(150)
-              : Colors.red.withAlpha(150),
+          color: isConnected ? Colors.green : Colors.red,
         ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 8,
-            height: 8,
+            width: 6,
+            height: 6,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: _liveService.isConnected ? Colors.green : Colors.red,
+              color: isConnected ? Colors.green : Colors.red,
+              boxShadow: [
+                BoxShadow(
+                  color: (isConnected ? Colors.green : Colors.red).withAlpha(150),
+                  blurRadius: 6,
+                ),
+              ],
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 6),
           Text(
-            _liveService.isConnected ? 'LIVE' : 'OFFLINE',
+            isConnected ? 'LIVE' : 'OFFLINE',
             style: TextStyle(
-              color: _liveService.isConnected ? Colors.green : Colors.red,
+              color: isConnected ? Colors.green : Colors.red,
+              fontSize: 11,
               fontWeight: FontWeight.w900,
-              fontSize: 12,
               letterSpacing: 1,
             ),
           ),
@@ -396,756 +567,341 @@ class _LiveTimingDashboardPageState extends State<LiveTimingDashboardPage>
     );
   }
 
-  Widget _buildPenaltyIndicator() {
-    final penalty = _driverData!.penalty;
-
-    // Squalificato
-    if (penalty.dq) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: Colors.black,
-          borderRadius: BorderRadius.circular(6),
-          border: Border.all(color: Colors.white, width: 2),
-        ),
-        child: const Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.block, color: Colors.white, size: 16),
-            SizedBox(width: 8),
-            Text(
-              'DSQ',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w900,
-                fontSize: 12,
-                letterSpacing: 1,
-              ),
-            ),
+  /// Panel CURRENT LAP - Il più grande, stile AIM
+  Widget _buildCurrentLapPanel() {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Colors.white.withAlpha(8),
+            Colors.white.withAlpha(4),
           ],
         ),
-      );
-    }
-
-    // Penalità tempo e/o warning
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.orange.withAlpha(30),
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: Colors.orange.withAlpha(150)),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withAlpha(20)),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
+      child: Stack(
         children: [
-          const Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 16),
-          const SizedBox(width: 8),
-          // Tempo penalità
-          if (penalty.timeSec > 0)
-            Text(
-              '+${penalty.timeSec}s',
-              style: const TextStyle(
-                color: Colors.orange,
-                fontWeight: FontWeight.w900,
-                fontSize: 12,
-                letterSpacing: 0.5,
+          // Background pattern (grid effect like AIM)
+          Positioned.fill(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: CustomPaint(
+                painter: _GridPatternPainter(),
               ),
             ),
-          // Separatore
-          if (penalty.timeSec > 0 && penalty.warnings > 0)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 6),
-              child: Container(
-                width: 1,
-                height: 12,
-                color: Colors.orange.withAlpha(100),
-              ),
-            ),
-          // Warnings
-          if (penalty.warnings > 0)
-            Row(
-              mainAxisSize: MainAxisSize.min,
+          ),
+          // Content
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
+                // Label
                 Text(
-                  '${penalty.warnings}',
-                  style: const TextStyle(
-                    color: Colors.orange,
-                    fontWeight: FontWeight.w900,
-                    fontSize: 12,
+                  'CURRENT LAP',
+                  style: TextStyle(
+                    color: Colors.white.withAlpha(120),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 4,
                   ),
                 ),
-                const SizedBox(width: 2),
-                const Icon(Icons.flag, color: Colors.orange, size: 12),
-              ],
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMainDisplay() {
-    final hasDriver = _driverData != null;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Column(
-        children: [
-          // Status banner compatto
-          if (_raceData != null) _buildStatusBanner(),
-
-          const SizedBox(height: 16),
-
-          // LAP NUMBER
-          if (hasDriver)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.white.withAlpha(8),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'LAP',
-                    style: TextStyle(
-                      color: Colors.white.withAlpha(100),
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 3,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    '${_driverData!.lapCount}',
+                const Spacer(),
+                // TEMPO GIGANTE
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    _formatCurrentLapTime(),
                     style: const TextStyle(
                       color: Colors.white,
-                      fontSize: 32,
+                      fontSize: 120,
                       fontWeight: FontWeight.w900,
+                      height: 1.0,
+                      letterSpacing: -4,
+                      fontFeatures: [FontFeature.tabularFigures()],
                     ),
                   ),
-                  if (_raceData?.totalLaps != null) ...[
-                    Text(
-                      '/${_raceData!.totalLaps}',
-                      style: TextStyle(
-                        color: Colors.white.withAlpha(100),
-                        fontSize: 24,
-                        fontWeight: FontWeight.w700,
+                ),
+                const Spacer(),
+                // Speed
+                if (_driverData?.speedKmh != null)
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        '${_driverData!.speedKmh!.toInt()}',
+                        style: TextStyle(
+                          color: Colors.white.withAlpha(180),
+                          fontSize: 28,
+                          fontWeight: FontWeight.w900,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
                       ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-
-          const Spacer(flex: 1),
-
-          // CURRENT LAP TIME - MASSIVE
-          if (hasDriver) ...[
-            Text(
-              _formatCurrentLapTime(),
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 72,
-                fontWeight: FontWeight.w900,
-                height: 1.0,
-                letterSpacing: -2,
-                fontFeatures: [FontFeature.tabularFigures()],
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'CURRENT LAP',
-              style: TextStyle(
-                color: Colors.white.withAlpha(80),
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 3,
-              ),
-            ),
-          ],
-
-          const Spacer(flex: 1),
-
-          // DELTA TIME
-          if (hasDriver &&
-              _driverData!.bestLapTime != null &&
-              _driverData!.lastLapTime != null)
-            _buildDeltaDisplay(),
-
-          if (hasDriver) const SizedBox(height: 24),
-
-          // LAST LAP & BEST LAP
-          if (hasDriver) _buildLapComparison(),
-
-          const Spacer(flex: 1),
-
-          // Position and Gap
-          if (hasDriver) _buildPositionRow(),
-
-          const SizedBox(height: 16),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatusBanner() {
-    final race = _raceData!;
-    Color bannerColor;
-    String bannerText;
-
-    switch (race.status) {
-      case 'YELLOW FLAG':
-        bannerColor = const Color(0xFFFFD700);
-        bannerText = 'YELLOW FLAG';
-        break;
-      case 'RED FLAG':
-        bannerColor = Colors.red;
-        bannerText = 'RED FLAG';
-        break;
-      case 'FORMATION LAP':
-        bannerColor = Colors.orange;
-        bannerText = 'FORMATION LAP';
-        break;
-      case 'FINITA':
-        bannerColor = kMutedColor;
-        bannerText = 'FINISHED';
-        break;
-      default:
-        bannerColor = kBrandColor;
-        bannerText = 'RACING';
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: bannerColor.withAlpha(20),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: bannerColor.withAlpha(100)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: bannerColor,
-            ),
-          ),
-          const SizedBox(width: 10),
-          Text(
-            bannerText,
-            style: TextStyle(
-              color: bannerColor,
-              fontSize: 13,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 2,
-            ),
-          ),
-          if (race.remainingSeconds != null) ...[
-            const SizedBox(width: 16),
-            Text(
-              race.formattedRemainingTime,
-              style: TextStyle(
-                color: bannerColor,
-                fontSize: 15,
-                fontWeight: FontWeight.w900,
-                fontFamily: 'monospace',
-                fontFeatures: const [FontFeature.tabularFigures()],
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDeltaDisplay() {
-    final deltaStr = _formatDelta();
-    final isPositive = deltaStr.startsWith('+');
-    final isNegative = deltaStr.startsWith('-');
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-      decoration: BoxDecoration(
-        color: isNegative
-            ? Colors.green.withAlpha(25)
-            : isPositive
-                ? Colors.red.withAlpha(25)
-                : Colors.white.withAlpha(10),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isNegative
-              ? Colors.green.withAlpha(80)
-              : isPositive
-                  ? Colors.red.withAlpha(80)
-                  : Colors.white.withAlpha(30),
-          width: 1.5,
-        ),
-      ),
-      child: Column(
-        children: [
-          Text(
-            'DELTA',
-            style: TextStyle(
-              color: (isNegative
-                      ? Colors.green
-                      : isPositive
-                          ? Colors.red
-                          : Colors.white)
-                  .withAlpha(180),
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 2,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            deltaStr,
-            style: TextStyle(
-              color: isNegative
-                  ? Colors.green
-                  : isPositive
-                      ? Colors.red
-                      : Colors.white,
-              fontSize: 36,
-              fontWeight: FontWeight.w900,
-              height: 1.0,
-              fontFeatures: const [FontFeature.tabularFigures()],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildLapComparison() {
-    return Row(
-      children: [
-        // LAST LAP
-        Expanded(
-          child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            decoration: BoxDecoration(
-              color: Colors.white.withAlpha(6),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.white.withAlpha(15)),
-            ),
-            child: Column(
-              children: [
-                Text(
-                  'LAST LAP',
-                  style: TextStyle(
-                    color: Colors.white.withAlpha(100),
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 2,
+                      const SizedBox(width: 4),
+                      Text(
+                        'km/h',
+                        style: TextStyle(
+                          color: Colors.white.withAlpha(80),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  _driverData!.formattedLastLapTime,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 28,
-                    fontWeight: FontWeight.w900,
-                    height: 1.0,
-                    fontFeatures: [FontFeature.tabularFigures()],
-                  ),
-                ),
               ],
             ),
           ),
-        ),
+        ],
+      ),
+    );
+  }
 
-        const SizedBox(width: 12),
+  /// Panel DELTA LIVE - Colorato in base a performance
+  Widget _buildDeltaPanel() {
+    final liveDelta = _driverData?.liveDelta;
+    final isPositive = liveDelta != null && liveDelta > 0;
+    final isNegative = liveDelta != null && liveDelta < 0;
 
-        // BEST LAP
-        Expanded(
-          child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Colors.purple.withAlpha(20),
-                  Colors.purple.withAlpha(10),
-                ],
-              ),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.purple.withAlpha(60)),
+    // Colori AIM style
+    final Color bgColor;
+    final Color textColor;
+    final Color borderColor;
+
+    if (isNegative) {
+      // Più veloce - Verde
+      bgColor = const Color(0xFF00C853);
+      textColor = Colors.white;
+      borderColor = const Color(0xFF00E676);
+    } else if (isPositive) {
+      // Più lento - Rosso
+      bgColor = const Color(0xFFD50000);
+      textColor = Colors.white;
+      borderColor = const Color(0xFFFF1744);
+    } else {
+      // Neutro
+      bgColor = const Color(0xFF1A1A1A);
+      textColor = Colors.white;
+      borderColor = Colors.white.withAlpha(40);
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: borderColor, width: 2),
+        boxShadow: [
+          if (isNegative || isPositive)
+            BoxShadow(
+              color: bgColor.withAlpha(100),
+              blurRadius: 20,
+              spreadRadius: 2,
             ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          // Glow effect per delta attivo
+          if (isNegative || isPositive)
+            Positioned.fill(
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  gradient: RadialGradient(
+                    colors: [
+                      bgColor.withAlpha(40),
+                      Colors.transparent,
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          // Content
+          Padding(
+            padding: const EdgeInsets.all(12),
             child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(
-                      Icons.emoji_events,
-                      color: Colors.purple.withAlpha(180),
-                      size: 14,
-                    ),
-                    const SizedBox(width: 6),
+                    if (isNegative)
+                      Icon(Icons.arrow_drop_down, color: textColor, size: 24),
+                    if (isPositive)
+                      Icon(Icons.arrow_drop_up, color: textColor, size: 24),
                     Text(
-                      'BEST LAP',
+                      'DELTA',
                       style: TextStyle(
-                        color: Colors.purple.withAlpha(200),
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 2,
+                        color: textColor.withAlpha(200),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 3,
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
+                const Spacer(),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    _driverData?.formattedLiveDelta ?? '---',
+                    style: TextStyle(
+                      color: textColor,
+                      fontSize: 72,
+                      fontWeight: FontWeight.w900,
+                      height: 1.0,
+                      letterSpacing: -2,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
+                  ),
+                ),
+                const Spacer(),
                 Text(
-                  _driverData!.formattedBestLapTime,
+                  isNegative
+                      ? 'FASTER'
+                      : isPositive
+                          ? 'SLOWER'
+                          : 'ON PACE',
                   style: TextStyle(
-                    color: Colors.purple.shade200,
-                    fontSize: 28,
+                    color: textColor.withAlpha(180),
+                    fontSize: 11,
                     fontWeight: FontWeight.w900,
-                    height: 1.0,
-                    fontFeatures: const [FontFeature.tabularFigures()],
+                    letterSpacing: 2,
                   ),
                 ),
               ],
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
-  Widget _buildPositionRow() {
-    final driver = _driverData!;
-
+  /// Panel BEST LAP
+  Widget _buildBestLapPanel() {
     return Container(
-      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-            kBrandColor.withAlpha(20),
-            kBrandColor.withAlpha(10),
-          ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
+          colors: [
+            Colors.purple.withAlpha(30),
+            Colors.purple.withAlpha(15),
+          ],
         ),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: kBrandColor.withAlpha(60)),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.purple.withAlpha(80)),
       ),
-      child: Row(
-        children: [
-          // Position
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'POS',
-                style: TextStyle(
-                  color: Colors.white.withAlpha(100),
-                  fontSize: 10,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.emoji_events,
+                  color: Colors.purple.withAlpha(200),
+                  size: 14,
                 ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'P${driver.position}',
+                const SizedBox(width: 6),
+                Text(
+                  'BEST',
+                  style: TextStyle(
+                    color: Colors.purple.withAlpha(200),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 2,
+                  ),
+                ),
+              ],
+            ),
+            const Spacer(),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                _driverData?.formattedBestLapTime ?? '--:--.---',
                 style: TextStyle(
-                  color: driver.isLeader ? kBrandColor : Colors.white,
+                  color: Colors.purple.shade200,
                   fontSize: 32,
                   fontWeight: FontWeight.w900,
+                  height: 1.0,
+                  fontFeatures: const [FontFeature.tabularFigures()],
                 ),
               ),
-            ],
-          ),
-          const SizedBox(width: 24),
-          // Gap
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'GAP',
-                  style: TextStyle(
-                    color: Colors.white.withAlpha(100),
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  driver.isLeader ? 'LEADER' : driver.gapToLeader,
-                  style: TextStyle(
-                    color: driver.isLeader ? kBrandColor : Colors.white,
-                    fontSize: driver.isLeader ? 20 : 24,
-                    fontWeight: FontWeight.w900,
-                    fontFeatures: const [FontFeature.tabularFigures()],
-                  ),
-                ),
-              ],
             ),
-          ),
-          // Driver info
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              if (driver.tag != null)
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: kBrandColor,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    driver.tag!,
-                    style: const TextStyle(
-                      color: Colors.black,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 1,
-                    ),
-                  ),
-                ),
-              const SizedBox(height: 4),
-              Text(
-                driver.fullName,
-                style: TextStyle(
-                  color: Colors.white.withAlpha(200),
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
-          ),
-        ],
+            const Spacer(),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildGForceBar() {
-    final gforce = _driverData!.gforce;
-    final gLong = gforce?.long?.abs() ?? 0.0;
-    final isAccel = (gforce?.long ?? 0.0) > 0;
-
+  /// Panel LAST LAP
+  Widget _buildLastLapPanel() {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 0),
-      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withAlpha(6),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withAlpha(15)),
+        color: Colors.white.withAlpha(8),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.white.withAlpha(25)),
       ),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'G-FORCE',
-                style: TextStyle(
-                  color: Colors.white.withAlpha(100),
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              'LAST',
+              style: TextStyle(
+                color: Colors.white.withAlpha(120),
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 2,
+              ),
+            ),
+            const Spacer(),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                _driverData?.formattedLastLapTime ?? '--:--.---',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 32,
+                  fontWeight: FontWeight.w900,
+                  height: 1.0,
+                  fontFeatures: [FontFeature.tabularFigures()],
                 ),
               ),
-              Row(
-                children: [
-                  // Speed
-                  if (_driverData!.speedKmh != null)
-                    Text(
-                      '${_driverData!.speedKmh!.toInt()} km/h',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white.withAlpha(150),
-                        fontFeatures: const [FontFeature.tabularFigures()],
-                      ),
-                    ),
-                  const SizedBox(width: 16),
-                  Text(
-                    gforce?.total?.toStringAsFixed(2) ?? '-.-',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.white,
-                      fontFeatures: [FontFeature.tabularFigures()],
-                    ),
-                  ),
-                  const Text(
-                    ' G',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: kMutedColor,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              // BRAKE indicator
-              Text(
-                'BRAKE',
-                style: TextStyle(
-                  color: Colors.red.withAlpha(150),
-                  fontSize: 9,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 1,
-                ),
-              ),
-              const SizedBox(width: 8),
-              // Decel bar
-              Expanded(
-                child: Container(
-                  height: 10,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(5),
-                    color: Colors.white.withAlpha(15),
-                  ),
-                  child: Align(
-                    alignment: Alignment.centerRight,
-                    child: FractionallySizedBox(
-                      widthFactor: isAccel ? 0.0 : (gLong / 2.5).clamp(0.0, 1.0),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(5),
-                          gradient: LinearGradient(
-                            colors: [
-                              Colors.red.withAlpha(180),
-                              Colors.red,
-                            ],
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.red.withAlpha(100),
-                              blurRadius: 8,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              // Accel bar
-              Expanded(
-                child: Container(
-                  height: 10,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(5),
-                    color: Colors.white.withAlpha(15),
-                  ),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: FractionallySizedBox(
-                      widthFactor: isAccel ? (gLong / 2.5).clamp(0.0, 1.0) : 0.0,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(5),
-                          gradient: LinearGradient(
-                            colors: [
-                              Colors.green,
-                              Colors.green.withAlpha(180),
-                            ],
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.green.withAlpha(100),
-                              blurRadius: 8,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              // ACCEL indicator
-              Text(
-                'ACCEL',
-                style: TextStyle(
-                  color: Colors.green.withAlpha(150),
-                  fontSize: 9,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 1,
-                ),
-              ),
-            ],
-          ),
-        ],
+            ),
+            const Spacer(),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildBottomInfo() {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-      child: Row(
+  Widget _buildWaitingForDriver() {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          // Device ID
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: Colors.white.withAlpha(6),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.white.withAlpha(15)),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.bluetooth, color: kBrandColor.withAlpha(180), size: 14),
-                const SizedBox(width: 8),
-                Text(
-                  widget.deviceId,
-                  style: TextStyle(
-                    color: Colors.white.withAlpha(150),
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    fontFamily: 'monospace',
-                  ),
-                ),
-              ],
+          const CircularProgressIndicator(
+            color: kBrandColor,
+            strokeWidth: 2,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'WAITING FOR DATA',
+            style: TextStyle(
+              color: Colors.white.withAlpha(100),
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 2,
             ),
           ),
-          const Spacer(),
-          // Global best lap
-          if (_raceData?.globalBestLap != null)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: kPulseColor.withAlpha(15),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: kPulseColor.withAlpha(60)),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.star, color: kPulseColor.withAlpha(180), size: 14),
-                  const SizedBox(width: 8),
-                  Text(
-                    _raceData!.formattedGlobalBestLap,
-                    style: TextStyle(
-                      color: kPulseColor.withAlpha(200),
-                      fontSize: 13,
-                      fontWeight: FontWeight.w900,
-                      fontFamily: 'monospace',
-                    ),
-                  ),
-                ],
-              ),
-            ),
         ],
       ),
     );
@@ -1175,12 +931,12 @@ class _LiveTimingDashboardPageState extends State<LiveTimingDashboardPage>
       case 'IN CORSO':
         color = Colors.green;
         text = 'GREEN FLAG';
-        subText = 'RACE IS ON - GO GO GO!';
+        subText = 'GO GO GO!';
         icon = Icons.flag_rounded;
         break;
       case 'FINITA':
         color = Colors.white;
-        text = 'CHECKERED FLAG';
+        text = 'CHECKERED';
         subText = 'SESSION FINISHED';
         icon = Icons.sports_score;
         break;
@@ -1193,69 +949,63 @@ class _LiveTimingDashboardPageState extends State<LiveTimingDashboardPage>
     return AnimatedBuilder(
       animation: _flagAnimation,
       builder: (context, child) {
-        return Positioned(
-          top: 80,
-          left: 20,
-          right: 20,
-          child: Transform.scale(
-            scale: _flagAnimation.value,
-            child: Opacity(
-              opacity: _flagAnimation.value,
-              child: Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  gradient: isCheckered
-                      ? null
-                      : LinearGradient(
-                          colors: [
-                            color.withAlpha(240),
-                            color.withAlpha(200),
-                          ],
-                        ),
-                  color: isCheckered ? const Color(0xFF1A1A1A) : null,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: color, width: 3),
-                  boxShadow: [
-                    BoxShadow(
-                      color: color.withAlpha(100),
-                      blurRadius: 30,
-                      spreadRadius: 5,
+        return Positioned.fill(
+          child: Container(
+            color: Colors.black.withAlpha((200 * _flagAnimation.value).toInt()),
+            child: Center(
+              child: Transform.scale(
+                scale: 0.8 + (0.2 * _flagAnimation.value),
+                child: Opacity(
+                  opacity: _flagAnimation.value,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 48,
+                      vertical: 32,
                     ),
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                    decoration: BoxDecoration(
+                      gradient: isCheckered
+                          ? null
+                          : LinearGradient(
+                              colors: [color, color.withAlpha(220)],
+                            ),
+                      color: isCheckered ? const Color(0xFF1A1A1A) : null,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: color, width: 4),
+                      boxShadow: [
+                        BoxShadow(
+                          color: color.withAlpha(150),
+                          blurRadius: 40,
+                          spreadRadius: 10,
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(icon,
-                            color: isCheckered ? Colors.white : Colors.white,
-                            size: 28),
-                        const SizedBox(width: 12),
+                        Icon(icon, color: Colors.white, size: 48),
+                        const SizedBox(height: 16),
                         Text(
                           text,
-                          style: TextStyle(
-                            color: isCheckered ? Colors.white : Colors.white,
+                          style: const TextStyle(
+                            color: Colors.white,
                             fontWeight: FontWeight.w900,
-                            fontSize: 24,
+                            fontSize: 48,
+                            letterSpacing: 4,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          subText,
+                          style: TextStyle(
+                            color: Colors.white.withAlpha(220),
+                            fontWeight: FontWeight.w700,
+                            fontSize: 18,
                             letterSpacing: 2,
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      subText,
-                      style: TextStyle(
-                        color: isCheckered
-                            ? Colors.white.withAlpha(180)
-                            : Colors.white.withAlpha(220),
-                        fontWeight: FontWeight.w700,
-                        fontSize: 14,
-                        letterSpacing: 1,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),
@@ -1301,68 +1051,66 @@ class _LiveTimingDashboardPageState extends State<LiveTimingDashboardPage>
     return AnimatedBuilder(
       animation: _flagAnimation,
       builder: (context, child) {
-        return Positioned(
-          top: 80,
-          left: 20,
-          right: 20,
-          child: Transform.scale(
-            scale: _flagAnimation.value,
-            child: Opacity(
-              opacity: _flagAnimation.value,
-              child: Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  gradient: isDq
-                      ? null
-                      : LinearGradient(
-                          colors: [
-                            color.withAlpha(240),
-                            color.withAlpha(200),
-                          ],
-                        ),
-                  color: isDq ? Colors.black : null,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: isDq ? Colors.white : color,
-                    width: 3,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: (isDq ? Colors.white : color).withAlpha(100),
-                      blurRadius: 30,
-                      spreadRadius: 5,
+        return Positioned.fill(
+          child: Container(
+            color: Colors.black.withAlpha((200 * _flagAnimation.value).toInt()),
+            child: Center(
+              child: Transform.scale(
+                scale: 0.8 + (0.2 * _flagAnimation.value),
+                child: Opacity(
+                  opacity: _flagAnimation.value,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 48,
+                      vertical: 32,
                     ),
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                    decoration: BoxDecoration(
+                      gradient: isDq
+                          ? null
+                          : LinearGradient(
+                              colors: [color, color.withAlpha(220)],
+                            ),
+                      color: isDq ? Colors.black : null,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: isDq ? Colors.white : color,
+                        width: 4,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: (isDq ? Colors.white : color).withAlpha(150),
+                          blurRadius: 40,
+                          spreadRadius: 10,
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(icon, color: Colors.white, size: 28),
-                        const SizedBox(width: 12),
+                        Icon(icon, color: Colors.white, size: 48),
+                        const SizedBox(height: 16),
                         Text(
                           text,
                           style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.w900,
-                            fontSize: 24,
-                            letterSpacing: 2,
+                            fontSize: 36,
+                            letterSpacing: 4,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          subText,
+                          style: TextStyle(
+                            color: Colors.white.withAlpha(220),
+                            fontWeight: FontWeight.w700,
+                            fontSize: 16,
+                            letterSpacing: 1,
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      subText,
-                      style: TextStyle(
-                        color: Colors.white.withAlpha(220),
-                        fontWeight: FontWeight.w700,
-                        fontSize: 14,
-                        letterSpacing: 1,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),
@@ -1374,148 +1122,140 @@ class _LiveTimingDashboardPageState extends State<LiveTimingDashboardPage>
 
   Widget _buildNoRaceScreen() {
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white.withAlpha(8),
+              border: Border.all(color: Colors.white.withAlpha(20)),
+            ),
+            child: Icon(
+              Icons.timer_off_outlined,
+              color: Colors.white.withAlpha(100),
+              size: 48,
+            ),
+          ),
+          const SizedBox(height: 24),
+          const Text(
+            'NO ACTIVE SESSION',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 24,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 3,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Waiting for race session to start',
+            style: TextStyle(
+              color: Colors.white.withAlpha(100),
+              fontSize: 14,
+            ),
+          ),
+          const SizedBox(height: 32),
+          GestureDetector(
+            onTap: () => Navigator.of(context).pop(),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
               decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withAlpha(6),
-                border: Border.all(color: Colors.white.withAlpha(15)),
+                color: Colors.white.withAlpha(10),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.white.withAlpha(30)),
               ),
-              child: Icon(
-                Icons.timer_off_outlined,
-                color: Colors.white.withAlpha(100),
-                size: 48,
-              ),
-            ),
-            const SizedBox(height: 24),
-            const Text(
-              'NO ACTIVE RACE',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 20,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 2,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Waiting for race session to start.\nThis page will update automatically.',
-              style: TextStyle(
-                color: Colors.white.withAlpha(100),
-                fontSize: 14,
-                height: 1.5,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 32),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                color: kBrandColor.withAlpha(15),
-                border: Border.all(color: kBrandColor.withAlpha(50)),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.bluetooth, color: kBrandColor.withAlpha(180), size: 18),
-                  const SizedBox(width: 10),
-                  Text(
-                    widget.deviceId,
-                    style: TextStyle(
-                      color: kBrandColor.withAlpha(200),
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      fontFamily: 'monospace',
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 32),
-            GestureDetector(
-              onTap: () => Navigator.of(context).pop(),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                decoration: BoxDecoration(
-                  color: Colors.white.withAlpha(10),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.white.withAlpha(30)),
-                ),
-                child: Text(
-                  'GO BACK',
-                  style: TextStyle(
-                    color: Colors.white.withAlpha(180),
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1,
-                  ),
+              child: Text(
+                'GO BACK',
+                style: TextStyle(
+                  color: Colors.white.withAlpha(180),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 2,
                 ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildErrorScreen() {
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.red.withAlpha(20),
+              border: Border.all(color: Colors.red.withAlpha(60)),
+            ),
+            child: const Icon(Icons.error_outline, color: Colors.red, size: 48),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            _errorMessage!,
+            style: TextStyle(color: Colors.red.withAlpha(200), fontSize: 14),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 24),
+          GestureDetector(
+            onTap: () {
+              setState(() {
+                _isLoading = true;
+                _errorMessage = null;
+              });
+              _initLiveData();
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
               decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.red.withAlpha(20),
-                border: Border.all(color: Colors.red.withAlpha(60)),
+                color: kBrandColor.withAlpha(20),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: kBrandColor.withAlpha(80)),
               ),
-              child: const Icon(Icons.error_outline, color: Colors.red, size: 48),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              _errorMessage!,
-              style: TextStyle(color: Colors.red.withAlpha(200), fontSize: 14),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            GestureDetector(
-              onTap: () {
-                setState(() {
-                  _isLoading = true;
-                  _errorMessage = null;
-                });
-                _initLiveData();
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                decoration: BoxDecoration(
-                  color: kBrandColor.withAlpha(20),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: kBrandColor.withAlpha(80)),
-                ),
-                child: const Text(
-                  'RETRY',
-                  style: TextStyle(
-                    color: kBrandColor,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1,
-                  ),
+              child: const Text(
+                'RETRY',
+                style: TextStyle(
+                  color: kBrandColor,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 2,
                 ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
+}
+
+/// Painter per effetto griglia stile AIM
+class _GridPatternPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.white.withAlpha(8)
+      ..strokeWidth = 1;
+
+    const spacing = 30.0;
+
+    // Linee verticali
+    for (double x = 0; x < size.width; x += spacing) {
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
+    }
+
+    // Linee orizzontali
+    for (double y = 0; y < size.height; y += spacing) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
