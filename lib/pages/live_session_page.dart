@@ -50,6 +50,14 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
   Duration? _bestLap;
   Duration? _previousLap;
 
+  // Delta live GPS-based (stile AIM)
+  // Salva i punti GPS con il tempo per il best lap
+  List<_LapGpsPoint> _bestLapGpsPoints = [];
+  // Punti GPS del giro corrente
+  final List<_LapGpsPoint> _currentLapGpsPoints = [];
+  // Delta live calcolato (in secondi, negativo = più veloce)
+  double? _liveDelta;
+
   // Telemetria real-time
   double _currentSpeedKmh = 0.0;
   double _gForceX = 0.0;
@@ -294,13 +302,32 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
     // Lap detection live (best-effort)
     if (widget.trackDefinition != null) {
       final wasInFormationLap = _lapDetection.inFormationLap;
-      final crossed = _lapDetection.processGpsPoint(pos);
+      _lapDetection.processGpsPoint(pos);
 
       // Se abbiamo completato il formation lap, avvia timer
       if (wasInFormationLap && !_lapDetection.inFormationLap && !_timerStarted) {
         _sessionWatch.start();
         _timerStarted = true;
         print('✓ Timer avviato dopo formation lap');
+      }
+
+      // Salva punto GPS per delta live (solo se il timer è partito e non siamo in formation lap)
+      if (_timerStarted && !_lapDetection.inFormationLap) {
+        final currentLapTime = _lapDetection.currentLapTime;
+        if (currentLapTime != null) {
+          _currentLapGpsPoints.add(_LapGpsPoint(
+            position: LatLng(pos.latitude, pos.longitude),
+            lapTime: currentLapTime,
+          ));
+
+          // Calcola delta live se abbiamo un best lap con punti GPS
+          if (_bestLapGpsPoints.isNotEmpty) {
+            _liveDelta = _calculateLiveDelta(
+              LatLng(pos.latitude, pos.longitude),
+              currentLapTime,
+            );
+          }
+        }
       }
     } else {
       // Nessun circuito: avvia timer subito
@@ -358,13 +385,55 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
     _laps.add(lapTime);
     _previousLap = lapTime;
 
-    // Aggiorna best lap
-    if (_bestLap == null || lapTime < _bestLap!) {
+    // Aggiorna best lap e salva i punti GPS se è il nuovo best
+    final isNewBest = _bestLap == null || lapTime < _bestLap!;
+    if (isNewBest) {
       _bestLap = lapTime;
+      // Salva i punti GPS del giro appena completato come riferimento per il delta
+      _bestLapGpsPoints = List.from(_currentLapGpsPoints);
+      print('✓ Nuovo best lap! Salvati ${_bestLapGpsPoints.length} punti GPS per delta');
     }
+
+    // Reset punti GPS per il prossimo giro
+    _currentLapGpsPoints.clear();
+    _liveDelta = null;
 
     print('✓ Lap completato: ${_formatLap(lapTime)} (best: ${_formatLap(_bestLap!)})');
     setState(() {});
+  }
+
+  /// Calcola il delta live basato sulla posizione GPS
+  /// Trova il punto più vicino nel best lap e confronta i tempi
+  double? _calculateLiveDelta(LatLng currentPosition, Duration currentLapTime) {
+    if (_bestLapGpsPoints.isEmpty) return null;
+
+    // Trova il punto nel best lap più vicino alla posizione attuale
+    double minDistance = double.infinity;
+    _LapGpsPoint? closestPoint;
+
+    final currentPoint = _LapGpsPoint(
+      position: currentPosition,
+      lapTime: currentLapTime,
+    );
+
+    for (final bestPoint in _bestLapGpsPoints) {
+      final dist = currentPoint.distanceTo(bestPoint);
+      if (dist < minDistance) {
+        minDistance = dist;
+        closestPoint = bestPoint;
+      }
+    }
+
+    // Se il punto più vicino è troppo lontano (>50m), non calcolare delta
+    // Questo può succedere se il pilota taglia o sbaglia percorso
+    if (closestPoint == null || minDistance > 50) {
+      return null;
+    }
+
+    // Delta = tempo corrente - tempo del best lap allo stesso punto
+    // Negativo = più veloce, Positivo = più lento
+    final deltaMs = currentLapTime.inMilliseconds - closestPoint.lapTime.inMilliseconds;
+    return deltaMs / 1000.0;
   }
 
   // ============================================================
@@ -872,7 +941,8 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
     }
 
     final currentLap = _lapDetection.currentLapTime;
-    if (currentLap == null) {
+    // Usa il delta GPS-based se disponibile, altrimenti mostra placeholder
+    if (currentLap == null || _liveDelta == null) {
       return Container(
         decoration: BoxDecoration(
           color: const Color(0xFF1A1A1A),
@@ -911,11 +981,10 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
       );
     }
 
-    // Calculate live delta
-    final deltaMs = currentLap.inMilliseconds - _bestLap!.inMilliseconds;
-    final deltaSeconds = deltaMs / 1000.0;
-    final isNegative = deltaMs < 0; // Ahead of best (faster)
-    final isPositive = deltaMs > 0; // Behind best (slower)
+    // Usa il delta live GPS-based (calcolato in _onGpsData)
+    final deltaSeconds = _liveDelta!;
+    final isNegative = deltaSeconds < 0; // Ahead of best (faster)
+    final isPositive = deltaSeconds > 0; // Behind best (slower)
 
     // Colore del valore numerico
     final Color valueColor;
@@ -1323,6 +1392,23 @@ class _ImuSample {
     required this.y,
     required this.z,
   });
+}
+
+/// Punto GPS con tempo del giro per calcolo delta live
+class _LapGpsPoint {
+  final LatLng position;
+  final Duration lapTime; // Tempo dall'inizio del giro
+
+  _LapGpsPoint({
+    required this.position,
+    required this.lapTime,
+  });
+
+  /// Calcola la distanza in metri da un altro punto
+  double distanceTo(_LapGpsPoint other) {
+    const distance = Distance();
+    return distance.as(LengthUnit.Meter, position, other.position);
+  }
 }
 
 /// Painter per effetto griglia stile AIM

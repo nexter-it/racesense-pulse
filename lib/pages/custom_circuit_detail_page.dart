@@ -31,6 +31,7 @@ class _CustomCircuitDetailPageState extends State<CustomCircuitDetailPage>
   bool _isEditingFinishLine = false;
   bool _isDragging = false;
   bool? _draggingStart; // true = start marker, false = end marker, null = nessuno
+  bool? _selectedMarker; // Marker attualmente selezionato (tap per selezionare)
   bool _isSaving = false;
 
   late AnimationController _pulseController;
@@ -160,6 +161,12 @@ class _CustomCircuitDetailPageState extends State<CustomCircuitDetailPage>
     HapticFeedback.mediumImpact();
     setState(() {
       _isEditingFinishLine = !_isEditingFinishLine;
+      // Reset selezione quando si esce dalla modalità modifica
+      if (!_isEditingFinishLine) {
+        _selectedMarker = null;
+        _isDragging = false;
+        _draggingStart = null;
+      }
     });
   }
 
@@ -259,7 +266,7 @@ class _CustomCircuitDetailPageState extends State<CustomCircuitDetailPage>
   bool? _findClosestMarker(Offset localPosition) {
     if (_finishLineStart == null || _finishLineEnd == null) return null;
 
-    const double touchThreshold = 60.0; // Raggio di tocco in pixel
+    const double touchThreshold = 80.0; // Raggio di tocco aumentato
 
     final distToStart = _distanceToMarker(localPosition, _finishLineStart!);
     final distToEnd = _distanceToMarker(localPosition, _finishLineEnd!);
@@ -273,17 +280,92 @@ class _CustomCircuitDetailPageState extends State<CustomCircuitDetailPage>
     return distToStart <= distToEnd;
   }
 
+  /// Seleziona un marker con un tap
+  void _onMarkerTap(bool isStart) {
+    HapticFeedback.mediumImpact();
+    setState(() {
+      // Se clicco sullo stesso marker già selezionato, deseleziono
+      if (_selectedMarker == isStart) {
+        _selectedMarker = null;
+      } else {
+        _selectedMarker = isStart;
+      }
+    });
+  }
+
+  /// Deseleziona il marker corrente
+  void _deselectMarker() {
+    if (_selectedMarker != null) {
+      setState(() {
+        _selectedMarker = null;
+      });
+    }
+  }
+
+  void _onMapTap(TapPosition tapPosition, LatLng point) {
+    if (!_isEditingFinishLine) return;
+
+    // Se c'è un marker selezionato, spostalo nella nuova posizione
+    if (_selectedMarker != null) {
+      HapticFeedback.heavyImpact();
+      setState(() {
+        if (_selectedMarker!) {
+          _finishLineStart = point;
+        } else {
+          _finishLineEnd = point;
+        }
+        // Mantieni la selezione per ulteriori spostamenti
+      });
+      return;
+    }
+
+    // Altrimenti controlla se ho tappato su un marker per selezionarlo
+    final screenPoint = tapPosition.relative;
+    if (screenPoint != null) {
+      final closestMarker = _findClosestMarker(screenPoint);
+      if (closestMarker != null) {
+        _onMarkerTap(closestMarker);
+      }
+    }
+  }
+
+  void _onMapLongPress(TapPosition tapPosition, LatLng point) {
+    if (!_isEditingFinishLine) return;
+
+    // Long press su un punto: se c'è un marker selezionato, spostalo
+    if (_selectedMarker != null) {
+      HapticFeedback.heavyImpact();
+      setState(() {
+        if (_selectedMarker!) {
+          _finishLineStart = point;
+        } else {
+          _finishLineEnd = point;
+        }
+      });
+    }
+  }
+
   void _onMapPanStart(DragStartDetails details) {
     if (!_isEditingFinishLine) return;
 
-    // Trova il marker più vicino al punto di tocco
-    final closestMarker = _findClosestMarker(details.localPosition);
+    // Se c'è un marker selezionato, inizia il drag da lì
+    if (_selectedMarker != null) {
+      HapticFeedback.mediumImpact();
+      setState(() {
+        _isDragging = true;
+        _draggingStart = _selectedMarker;
+      });
+      return;
+    }
 
+    // Altrimenti prova a trovare un marker vicino
+    final closestMarker = _findClosestMarker(details.localPosition);
     if (closestMarker != null) {
       HapticFeedback.mediumImpact();
       setState(() {
         _isDragging = true;
         _draggingStart = closestMarker;
+        _selectedMarker = closestMarker;
       });
     }
   }
@@ -296,7 +378,6 @@ class _CustomCircuitDetailPageState extends State<CustomCircuitDetailPage>
       math.Point(details.localPosition.dx, details.localPosition.dy),
     );
 
-    HapticFeedback.selectionClick();
     setState(() {
       if (_draggingStart!) {
         _finishLineStart = point;
@@ -313,6 +394,7 @@ class _CustomCircuitDetailPageState extends State<CustomCircuitDetailPage>
     setState(() {
       _isDragging = false;
       _draggingStart = null;
+      // Mantieni la selezione del marker dopo il drag
     });
   }
 
@@ -352,9 +434,11 @@ class _CustomCircuitDetailPageState extends State<CustomCircuitDetailPage>
                         minZoom: 14,
                         maxZoom: 20,
                         backgroundColor: const Color(0xFF0A0A0A),
+                        onTap: _isEditingFinishLine ? _onMapTap : null,
+                        onLongPress: _isEditingFinishLine ? _onMapLongPress : null,
                         interactionOptions: InteractionOptions(
-                          // Disabilita pan/drag quando si sta trascinando un marker
-                          flags: _isDragging
+                          // Disabilita pan/drag quando si sta trascinando un marker o c'è una selezione
+                          flags: (_isDragging || _selectedMarker != null)
                               ? InteractiveFlag.pinchZoom | InteractiveFlag.doubleTapZoom
                               : InteractiveFlag.all,
                         ),
@@ -614,6 +698,9 @@ class _CustomCircuitDetailPageState extends State<CustomCircuitDetailPage>
   }
 
   Widget _buildEditModeOverlay() {
+    final hasSelection = _selectedMarker != null;
+    final selectedName = _selectedMarker == true ? 'INIZIO' : (_selectedMarker == false ? 'FINE' : '');
+
     return AnimatedBuilder(
       animation: _pulseAnimation,
       builder: (context, child) {
@@ -623,12 +710,16 @@ class _CustomCircuitDetailPageState extends State<CustomCircuitDetailPage>
             color: Colors.black.withAlpha(240),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: kBrandColor.withAlpha((200 * _pulseAnimation.value).toInt()),
+              color: hasSelection
+                  ? const Color(0xFFFFD600).withAlpha((200 * _pulseAnimation.value).toInt())
+                  : kBrandColor.withAlpha((200 * _pulseAnimation.value).toInt()),
               width: 2,
             ),
             boxShadow: [
               BoxShadow(
-                color: kBrandColor.withAlpha((60 * _pulseAnimation.value).toInt()),
+                color: hasSelection
+                    ? const Color(0xFFFFD600).withAlpha((60 * _pulseAnimation.value).toInt())
+                    : kBrandColor.withAlpha((60 * _pulseAnimation.value).toInt()),
                 blurRadius: 20,
                 spreadRadius: 2,
               ),
@@ -637,61 +728,116 @@ class _CustomCircuitDetailPageState extends State<CustomCircuitDetailPage>
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: kBrandColor.withAlpha(30),
-                      borderRadius: BorderRadius.circular(12),
+              if (hasSelection) ...[
+                // Mostra istruzioni per spostamento
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFD600).withAlpha(30),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.touch_app, color: Color(0xFFFFD600), size: 24),
                     ),
-                    child: Icon(Icons.open_with, color: kBrandColor, size: 24),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Text(
-                          'Modalità Modifica',
-                          style: TextStyle(
-                            color: kFgColor,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w800,
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Punto $selectedName selezionato',
+                            style: const TextStyle(
+                              color: Color(0xFFFFD600),
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Tocca e trascina i cerchi colorati per spostare il traguardo',
-                          style: TextStyle(
-                            color: kMutedColor,
-                            fontSize: 12,
+                          const SizedBox(height: 4),
+                          const Text(
+                            'Tocca la mappa per spostarlo nella nuova posizione',
+                            style: TextStyle(
+                              color: kMutedColor,
+                              fontSize: 12,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              // Legenda marker
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _buildMarkerLegend(
-                    color: const Color(0xFF00E676),
-                    label: 'Inizio linea',
-                    icon: Icons.flag,
-                  ),
-                  const SizedBox(width: 24),
-                  _buildMarkerLegend(
-                    color: const Color(0xFFFF5252),
-                    label: 'Fine linea',
-                    icon: Icons.sports_score,
-                  ),
-                ],
-              ),
+                    // Bottone deseleziona
+                    GestureDetector(
+                      onTap: _deselectMarker,
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withAlpha(15),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.white.withAlpha(30)),
+                        ),
+                        child: const Icon(Icons.close, color: kMutedColor, size: 20),
+                      ),
+                    ),
+                  ],
+                ),
+              ] else ...[
+                // Istruzioni iniziali
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: kBrandColor.withAlpha(30),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(Icons.ads_click, color: kBrandColor, size: 24),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text(
+                            'Modalità Modifica',
+                            style: TextStyle(
+                              color: kFgColor,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Tocca un cerchio per selezionarlo, poi tocca la mappa per spostarlo',
+                            style: TextStyle(
+                              color: kMutedColor,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                // Legenda marker
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _buildMarkerLegend(
+                      color: const Color(0xFF00E676),
+                      label: 'Inizio linea',
+                      icon: Icons.flag,
+                    ),
+                    const SizedBox(width: 24),
+                    _buildMarkerLegend(
+                      color: const Color(0xFFFF5252),
+                      label: 'Fine linea',
+                      icon: Icons.sports_score,
+                    ),
+                  ],
+                ),
+              ],
             ],
           ),
         );
@@ -730,54 +876,82 @@ class _CustomCircuitDetailPageState extends State<CustomCircuitDetailPage>
     );
   }
 
-  /// Marker visuale per l'editing (il drag è gestito dal GestureDetector sulla mappa)
+  /// Marker visuale per l'editing
+  /// - Non selezionato: grigio/normale
+  /// - Selezionato: bordo giallo pulsante, pronto per essere spostato
+  /// - Dragging: più grande con glow intenso
   Marker _buildEditMarker(LatLng position, bool isStart) {
+    final isSelected = _selectedMarker == isStart;
     final isDragging = _isDragging && _draggingStart == isStart;
     final color = isStart ? const Color(0xFF00E676) : const Color(0xFFFF5252);
 
-    const double markerSize = 52;
+    const double markerSize = 60; // Più grande per tocco più facile
+    final double currentSize = isDragging ? markerSize + 16 : (isSelected ? markerSize + 8 : markerSize);
 
     return Marker(
       point: position,
-      width: markerSize,
-      height: markerSize,
-      child: IgnorePointer(
-        // Ignora i tocchi - gestiti dal GestureDetector padre
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          width: isDragging ? markerSize + 12 : markerSize,
-          height: isDragging ? markerSize + 12 : markerSize,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: isDragging ? color : color.withAlpha(230),
-            border: Border.all(
-              color: Colors.white,
-              width: isDragging ? 5 : 4,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: color.withAlpha(isDragging ? 200 : 150),
-                blurRadius: isDragging ? 30 : 20,
-                spreadRadius: isDragging ? 8 : 4,
+      width: currentSize + 20, // Area extra per tocco
+      height: currentSize + 20,
+      child: GestureDetector(
+        onTap: () => _onMarkerTap(isStart),
+        behavior: HitTestBehavior.opaque,
+        child: Center(
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            width: currentSize,
+            height: currentSize,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: isDragging ? color : (isSelected ? color : color.withAlpha(200)),
+              border: Border.all(
+                color: isSelected ? const Color(0xFFFFD600) : Colors.white, // Giallo quando selezionato
+                width: isSelected ? 6 : 4,
               ),
-              // Glow pulsante per indicare che è trascinabile
-              BoxShadow(
-                color: color.withAlpha(60),
-                blurRadius: 40,
-                spreadRadius: 20,
-              ),
-            ],
-          ),
-          child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  isStart ? Icons.flag : Icons.sports_score,
-                  color: Colors.white,
-                  size: isDragging ? 24 : 20,
+              boxShadow: [
+                // Glow principale
+                BoxShadow(
+                  color: color.withAlpha(isDragging ? 220 : (isSelected ? 180 : 120)),
+                  blurRadius: isDragging ? 35 : (isSelected ? 25 : 15),
+                  spreadRadius: isDragging ? 10 : (isSelected ? 6 : 2),
                 ),
+                // Glow giallo quando selezionato
+                if (isSelected)
+                  BoxShadow(
+                    color: const Color(0xFFFFD600).withAlpha(100),
+                    blurRadius: 30,
+                    spreadRadius: 8,
+                  ),
               ],
+            ),
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    isStart ? Icons.flag : Icons.sports_score,
+                    color: Colors.white,
+                    size: isDragging ? 28 : (isSelected ? 26 : 24),
+                  ),
+                  if (isSelected && !isDragging) ...[
+                    const SizedBox(height: 2),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withAlpha(150),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: const Text(
+                        'TAP',
+                        style: TextStyle(
+                          color: Color(0xFFFFD600),
+                          fontSize: 8,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
             ),
           ),
         ),
@@ -890,6 +1064,9 @@ class _CustomCircuitDetailPageState extends State<CustomCircuitDetailPage>
                             _calculateDefaultFinishLine();
                           }
                           _isEditingFinishLine = false;
+                          _selectedMarker = null;
+                          _isDragging = false;
+                          _draggingStart = null;
                         });
                       },
                     ),

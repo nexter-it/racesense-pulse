@@ -240,26 +240,13 @@ class _StoryComposerPageState extends State<StoryComposerPage> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    // Branding
+                                    // Branding - Logo RaceSense Pulse
                                     Row(
                                       children: [
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 12, vertical: 6),
-                                          decoration: BoxDecoration(
-                                            color: _accentColor,
-                                            borderRadius:
-                                                BorderRadius.circular(20),
-                                          ),
-                                          child: const Text(
-                                            'RACESENSE PULSE',
-                                            style: TextStyle(
-                                              color: Colors.white,
-                                              fontWeight: FontWeight.w900,
-                                              fontSize: 12,
-                                              letterSpacing: 1.5,
-                                            ),
-                                          ),
+                                        Image.asset(
+                                          'assets/icon/allrspulselogoo.png',
+                                          height: 40,
+                                          fit: BoxFit.contain,
                                         ),
                                       ],
                                     ),
