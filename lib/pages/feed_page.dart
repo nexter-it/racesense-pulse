@@ -194,6 +194,9 @@ class _FeedPageState extends State<FeedPage> {
   Future<void> _bootstrapFeed() async {
     setState(() => _isLoading = true);
     try {
+      // Ottieni l'ID dell'utente corrente per filtrare le proprie sessioni
+      final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+
       // Prima prova a caricare dalla cache
       if (_cacheService.hasCachedData) {
         print('📦 Caricamento feed da cache locale...');
@@ -203,6 +206,11 @@ class _FeedPageState extends State<FeedPage> {
         final cachedSessions = _cacheService.getCachedFeed();
         _feedItems.clear();
         for (final session in cachedSessions) {
+          // Salta le proprie sessioni - non devono apparire nel feed
+          if (currentUserId != null && session.userId == currentUserId) {
+            continue;
+          }
+
           final isFollowed = _followingIds.contains(session.userId);
           final isNearby = _isNearby(session);
           _feedItems.add(_FeedSessionItem(
@@ -235,6 +243,9 @@ class _FeedPageState extends State<FeedPage> {
   Future<void> _refreshFromFirebase() async {
     setState(() => _isRefreshing = true);
     try {
+      // Ottieni l'ID dell'utente corrente per filtrare le proprie sessioni
+      final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+
       // Carica following ids e posizione in parallelo
       final results = await Future.wait([
         _cacheService.refreshFollowingIds(limit: 200),
@@ -254,6 +265,11 @@ class _FeedPageState extends State<FeedPage> {
       _feedItems.clear();
       _lastDoc = null;
       for (final session in sessions) {
+        // Salta le proprie sessioni - non devono apparire nel feed
+        if (currentUserId != null && session.userId == currentUserId) {
+          continue;
+        }
+
         final isFollowed = _followingIds.contains(session.userId);
         final isNearby = _isNearby(session);
         _feedItems.add(_FeedSessionItem(
@@ -265,6 +281,9 @@ class _FeedPageState extends State<FeedPage> {
       _hasMore = sessions.length >= _pageSize;
 
       print('✅ Feed refreshed da Firebase: ${_feedItems.length} sessioni');
+
+      // Segna che il primo caricamento è completato
+      _cacheService.markFirstLoadComplete();
     } finally {
       if (mounted) {
         setState(() => _isRefreshing = false);
@@ -352,6 +371,9 @@ class _FeedPageState extends State<FeedPage> {
     int added = 0;
     int attempts = 0;
 
+    // Ottieni l'ID dell'utente corrente per filtrare le proprie sessioni
+    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+
     try {
       while (added < _pageSize && _hasMore && attempts < 4) {
         attempts++;
@@ -369,6 +391,12 @@ class _FeedPageState extends State<FeedPage> {
 
         for (final doc in snap.docs) {
           final session = SessionModel.fromFirestore(doc.id, doc.data());
+
+          // Salta le proprie sessioni - non devono apparire nel feed
+          if (currentUserId != null && session.userId == currentUserId) {
+            continue;
+          }
+
           final isFollowed = _followingIds.contains(session.userId);
           final isNearby = _isNearby(session);
           if (!isFollowed && !isNearby) continue;

@@ -44,6 +44,10 @@ dependencies:
   image_picker: ^1.0.7
   share_plus: ^10.1.4
   permission_handler: ^11.3.0
+  url_launcher: ^6.2.5
+
+  # WebView per documenti
+  webview_flutter: ^4.10.0
 
 dev_dependencies:
   flutter_test:
@@ -57,6 +61,7 @@ flutter:
   assets:
     - assets/images/
     - assets/icon/
+    - assets/docs/
 
 flutter_launcher_icons:
   android: true

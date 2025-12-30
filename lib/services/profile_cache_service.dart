@@ -22,12 +22,15 @@ class ProfileCacheService {
   UserStats? _cachedUserStats;
   List<SessionModel> _cachedSessions = [];
   DateTime? _lastRefresh;
+  String? _cachedUserId; // Per verificare che la cache sia dell'utente corrente
+  bool _isFirstAppOpen = true; // Flag per forzare caricamento da Firebase all'apertura
 
   // Chiavi SharedPreferences
   static const String _userDataCacheKey = 'profile_user_data_v1';
   static const String _userStatsCacheKey = 'profile_user_stats_v1';
   static const String _sessionsCacheKey = 'profile_sessions_v1';
   static const String _timestampKey = 'profile_cache_timestamp';
+  static const String _userIdCacheKey = 'profile_user_id_v1';
 
   // Durata massima cache
   static const Duration _maxCacheAge = Duration(hours: 24);
@@ -37,6 +40,15 @@ class ProfileCacheService {
     final prefs = await SharedPreferences.getInstance();
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
+
+    // Verifica che la cache sia dell'utente corrente
+    final cachedUserId = prefs.getString(_userIdCacheKey);
+    if (cachedUserId != null && cachedUserId != user.uid) {
+      // La cache è di un altro utente, cancellala
+      print('⚠️ Cache di un altro utente, cancellazione...');
+      await clearCache();
+      return;
+    }
 
     // Carica timestamp
     final timestamp = prefs.getInt(_timestampKey);
@@ -79,10 +91,26 @@ class ProfileCacheService {
         _cachedSessions = [];
       }
     }
+
+    _cachedUserId = user.uid;
   }
 
   /// Verifica se abbiamo dati in cache
-  bool get hasCachedData => _cachedUserData != null || _cachedSessions.isNotEmpty;
+  /// All'apertura dell'app ritorna sempre false per forzare il caricamento da Firebase
+  bool get hasCachedData {
+    if (_isFirstAppOpen) {
+      return false; // Forza caricamento da Firebase
+    }
+    return _cachedUserData != null || _cachedSessions.isNotEmpty;
+  }
+
+  /// Segna che il primo caricamento è stato completato
+  void markFirstLoadComplete() {
+    _isFirstAppOpen = false;
+  }
+
+  /// Verifica se è la prima apertura dell'app
+  bool get isFirstAppOpen => _isFirstAppOpen;
 
   /// Verifica se la cache è valida
   bool get isCacheValid {
@@ -194,6 +222,12 @@ class ProfileCacheService {
   Future<void> _saveToPrefs() async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      final user = FirebaseAuth.instance.currentUser;
+
+      // Salva userId per verificare la cache al prossimo accesso
+      if (user != null) {
+        await prefs.setString(_userIdCacheKey, user.uid);
+      }
 
       // Salva user data
       if (_cachedUserData != null) {
@@ -253,12 +287,15 @@ class ProfileCacheService {
     _cachedUserStats = null;
     _cachedSessions = [];
     _lastRefresh = null;
+    _cachedUserId = null;
+    _isFirstAppOpen = true; // Reset per forzare caricamento al prossimo login
 
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_userDataCacheKey);
     await prefs.remove(_userStatsCacheKey);
     await prefs.remove(_sessionsCacheKey);
     await prefs.remove(_timestampKey);
+    await prefs.remove(_userIdCacheKey);
 
     print('🗑️ Profile cache cleared');
   }

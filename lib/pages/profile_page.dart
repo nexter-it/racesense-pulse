@@ -11,6 +11,7 @@ import '../widgets/follow_counts.dart';
 import '../widgets/pulse_background.dart';
 import '../widgets/pulse_chip.dart';
 import '../widgets/session_metadata_dialog.dart';
+import 'app_info_page.dart';
 import 'connect_devices_page.dart';
 import 'story_composer_page.dart';
 
@@ -277,6 +278,9 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
         });
 
         print('✅ ProfilePage: Refreshed da Firebase (${sessions.length} sessioni)');
+
+        // Segna che il primo caricamento è completato
+        _cacheService.markFirstLoadComplete();
       }
     } catch (e) {
       print('❌ ProfilePage: Errore refresh - $e');
@@ -427,53 +431,22 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
                     borderRadius: BorderRadius.circular(12),
                     gradient: LinearGradient(
                       colors: [
-                        kErrorColor.withAlpha(40),
-                        kErrorColor.withAlpha(25),
+                        kMutedColor.withAlpha(30),
+                        kMutedColor.withAlpha(20),
                       ],
                     ),
-                    border: Border.all(color: kErrorColor, width: 1.5),
+                    border: Border.all(color: kMutedColor.withAlpha(80), width: 1.5),
                   ),
                   child: Material(
                     color: Colors.transparent,
                     child: InkWell(
                       borderRadius: BorderRadius.circular(12),
-                      onTap: () async {
-                        final shouldLogout = await showDialog<bool>(
-                          context: context,
-                          builder: (context) => AlertDialog(
-                            backgroundColor: const Color(0xFF1a1a1a),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            title: const Text('Logout',
-                                style: TextStyle(
-                                    color: kFgColor,
-                                    fontWeight: FontWeight.w900)),
-                            content: const Text(
-                              'Sei sicuro di voler uscire?',
-                              style: TextStyle(color: kMutedColor),
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () =>
-                                    Navigator.of(context).pop(false),
-                                child: const Text('Annulla',
-                                    style: TextStyle(color: kMutedColor)),
-                              ),
-                              TextButton(
-                                onPressed: () =>
-                                    Navigator.of(context).pop(true),
-                                child: const Text('Logout',
-                                    style: TextStyle(color: kErrorColor)),
-                              ),
-                            ],
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const AppInfoPage(),
                           ),
                         );
-
-                        if (shouldLogout == true) {
-                          final authService = AuthService();
-                          await authService.signOut();
-                        }
                       },
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
@@ -481,12 +454,12 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: const [
-                            Icon(Icons.logout, color: kErrorColor, size: 18),
+                            Icon(Icons.settings, color: kMutedColor, size: 18),
                             SizedBox(width: 6),
                             Text(
-                              'Esci',
+                              'Info',
                               style: TextStyle(
-                                color: kErrorColor,
+                                color: kMutedColor,
                                 fontSize: 13,
                                 fontWeight: FontWeight.w900,
                               ),

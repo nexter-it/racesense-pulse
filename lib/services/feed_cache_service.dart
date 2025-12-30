@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/session_model.dart';
 import 'session_service.dart';
@@ -22,12 +23,15 @@ class FeedCacheService {
   Set<String> _cachedFollowingIds = {};
   DateTime? _lastFeedRefresh;
   DateTime? _lastFollowingRefresh;
+  String? _cachedUserId; // Per verificare che la cache sia dell'utente corrente
+  bool _isFirstAppOpen = true; // Flag per forzare caricamento da Firebase all'apertura
 
   // Chiavi SharedPreferences
   static const String _feedCacheKey = 'feed_cache_v1';
   static const String _followingCacheKey = 'following_cache_v1';
   static const String _feedTimestampKey = 'feed_cache_timestamp';
   static const String _followingTimestampKey = 'following_cache_timestamp';
+  static const String _userIdCacheKey = 'feed_user_id_v1';
 
   // Durata massima cache (per evitare dati troppo vecchi)
   static const Duration _maxCacheAge = Duration(hours: 24);
@@ -36,6 +40,16 @@ class FeedCacheService {
   /// Carica i dati salvati da SharedPreferences
   Future<void> initialize() async {
     final prefs = await SharedPreferences.getInstance();
+    final user = FirebaseAuth.instance.currentUser;
+
+    // Verifica che la cache sia dell'utente corrente
+    final cachedUserId = prefs.getString(_userIdCacheKey);
+    if (user != null && cachedUserId != null && cachedUserId != user.uid) {
+      // La cache è di un altro utente, cancellala
+      print('⚠️ Feed cache di un altro utente, cancellazione...');
+      await clearCache();
+      return;
+    }
 
     // Carica following ids dalla cache
     final followingJson = prefs.getString(_followingCacheKey);
@@ -73,6 +87,10 @@ class FeedCacheService {
         _cachedFeedSessions = [];
       }
     }
+
+    if (user != null) {
+      _cachedUserId = user.uid;
+    }
   }
 
   /// Restituisce i dati cached del feed (senza fare chiamate Firebase)
@@ -88,7 +106,21 @@ class FeedCacheService {
   }
 
   /// Verifica se abbiamo dati in cache
-  bool get hasCachedData => _cachedFeedSessions.isNotEmpty;
+  /// All'apertura dell'app ritorna sempre false per forzare il caricamento da Firebase
+  bool get hasCachedData {
+    if (_isFirstAppOpen) {
+      return false; // Forza caricamento da Firebase
+    }
+    return _cachedFeedSessions.isNotEmpty;
+  }
+
+  /// Segna che il primo caricamento è stato completato
+  void markFirstLoadComplete() {
+    _isFirstAppOpen = false;
+  }
+
+  /// Verifica se è la prima apertura dell'app
+  bool get isFirstAppOpen => _isFirstAppOpen;
 
   /// Timestamp ultimo refresh
   DateTime? get lastRefreshTime => _lastFeedRefresh;
@@ -242,6 +274,12 @@ class FeedCacheService {
   Future<void> _saveFeedToPrefs() async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      final user = FirebaseAuth.instance.currentUser;
+
+      // Salva userId per verificare la cache al prossimo accesso
+      if (user != null) {
+        await prefs.setString(_userIdCacheKey, user.uid);
+      }
 
       // Limita a 50 sessioni per non appesantire troppo
       final sessionsToSave = _cachedFeedSessions.take(50).toList();
@@ -266,14 +304,17 @@ class FeedCacheService {
     _cachedFollowingIds = {};
     _lastFeedRefresh = null;
     _lastFollowingRefresh = null;
+    _cachedUserId = null;
+    _isFirstAppOpen = true; // Reset per forzare caricamento al prossimo login
 
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_feedCacheKey);
     await prefs.remove(_followingCacheKey);
     await prefs.remove(_feedTimestampKey);
     await prefs.remove(_followingTimestampKey);
+    await prefs.remove(_userIdCacheKey);
 
-    print('🗑️ Cache cleared');
+    print('🗑️ Feed cache cleared');
   }
 
   /// Aggiunge una sessione alla cache (dopo salvataggio locale)

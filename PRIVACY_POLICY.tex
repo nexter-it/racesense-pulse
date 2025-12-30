@@ -1,0 +1,214 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[italian]{babel}
+\usepackage{geometry}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{xcolor}
+\usepackage{graphicx}
+
+% Margini
+\geometry{left=2.5cm, right=2.5cm, top=3cm, bottom=3cm}
+
+% Colori
+\definecolor{brandgreen}{RGB}{192, 255, 3}
+\definecolor{darkgray}{RGB}{30, 30, 30}
+
+% Stile titoli
+\titleformat{\section}{\large\bfseries\color{darkgray}}{\thesection.}{1em}{}
+\titleformat{\subsection}{\normalsize\bfseries\color{darkgray}}{\thesubsection}{1em}{}
+
+% Header e footer
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\textcolor{gray}{Privacy Policy - RaceSense Pulse}}
+\fancyhead[R]{\small\textcolor{gray}{Nexter S.r.l.}}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% Hyperlink
+\hypersetup{
+    colorlinks=true,
+    linkcolor=darkgray,
+    urlcolor=blue
+}
+
+\begin{document}
+
+% Intestazione
+\begin{center}
+    {\LARGE\bfseries INFORMATIVA SULLA PRIVACY}\\[0.3cm]
+    {\large RaceSense Pulse}\\[0.5cm]
+    {\normalsize Versione 1.0 -- Dicembre 2024}
+\end{center}
+
+\vspace{0.5cm}
+
+\noindent\rule{\textwidth}{1pt}
+
+\vspace{0.5cm}
+
+\section{Titolare del Trattamento}
+
+Il Titolare del trattamento dei dati personali raccolti tramite l'applicazione \textbf{RaceSense Pulse} è:
+
+\begin{quote}
+\textbf{Nexter S.r.l.}\\
+Azienda certificata \textbf{ISO 27001:2022}\\
+Sistema di Gestione per la Sicurezza delle Informazioni
+\end{quote}
+
+La certificazione ISO 27001 garantisce l'adozione di rigorosi standard internazionali per la protezione dei dati e la sicurezza delle informazioni.
+
+\section{Finalità e Base Giuridica del Trattamento}
+
+I dati personali sono raccolti e trattati per le seguenti finalità:
+
+\begin{enumerate}[label=\alph*)]
+    \item \textbf{Erogazione del servizio}: creazione e gestione dell'account utente, registrazione delle sessioni in pista, analisi dei tempi sul giro
+    \item \textbf{Funzionalità social}: gestione del profilo pubblico, sistema di follower/following, condivisione delle sessioni
+    \item \textbf{Miglioramento del servizio}: analisi aggregate e anonime per ottimizzare le funzionalità dell'applicazione
+\end{enumerate}
+
+La base giuridica del trattamento è il \textbf{consenso dell'interessato} (art. 6, par. 1, lett. a GDPR) e l'\textbf{esecuzione del contratto} (art. 6, par. 1, lett. b GDPR) per l'erogazione dei servizi richiesti.
+
+\section{Dati Raccolti}
+
+\subsection{Dati di Registrazione}
+\begin{itemize}[leftmargin=*]
+    \item Nome completo
+    \item Indirizzo email
+    \item Username
+    \item Data di nascita
+    \item Password (memorizzata in forma crittografata)
+\end{itemize}
+
+\subsection{Dati di Geolocalizzazione}
+Durante le sessioni di tracciamento, l'applicazione raccoglie:
+\begin{itemize}[leftmargin=*]
+    \item Coordinate GPS (latitudine, longitudine)
+    \item Velocità istantanea
+    \item Precisione del segnale GPS
+    \item Timestamp delle rilevazioni
+\end{itemize}
+
+\textbf{Nota}: La geolocalizzazione è attiva \underline{esclusivamente} durante le sessioni di tracciamento avviate volontariamente dall'utente. L'applicazione non traccia la posizione in background.
+
+\subsection{Dati dei Sensori di Movimento}
+\begin{itemize}[leftmargin=*]
+    \item Dati dell'accelerometro (forze G longitudinali e laterali)
+    \item Dati del giroscopio per il calcolo della traiettoria
+\end{itemize}
+
+\subsection{Dati Bluetooth (opzionale)}
+Se l'utente collega un dispositivo GPS esterno via Bluetooth:
+\begin{itemize}[leftmargin=*]
+    \item Identificativo del dispositivo (MAC address)
+    \item Dati GPS ricevuti dal dispositivo esterno
+    \item Stato della connessione
+\end{itemize}
+
+\subsection{Dati delle Sessioni}
+Per ogni sessione di tracciamento vengono elaborati e memorizzati:
+\begin{itemize}[leftmargin=*]
+    \item Nome del circuito e località
+    \item Tempi sul giro e miglior tempo
+    \item Velocità massima e media
+    \item Distanza percorsa
+    \item Tracciato GPS semplificato per la visualizzazione
+\end{itemize}
+
+\section{Comunicazione e Diffusione dei Dati}
+
+\textbf{I dati personali non vengono ceduti, venduti o comunicati a terzi} per finalità di marketing o profilazione commerciale.
+
+I dati sono trattati esclusivamente da:
+\begin{itemize}[leftmargin=*]
+    \item Personale autorizzato di Nexter S.r.l.
+    \item Fornitori di servizi tecnici (Firebase/Google Cloud) in qualità di Responsabili del trattamento, con adeguate garanzie contrattuali ai sensi dell'art. 28 GDPR
+\end{itemize}
+
+I dati sono conservati su server ubicati nell'Unione Europea o in Paesi che garantiscono un livello di protezione adeguato.
+
+\section{Conservazione dei Dati}
+
+I dati personali sono conservati per il tempo strettamente necessario alle finalità per cui sono stati raccolti:
+
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Dati dell'account}: fino alla cancellazione dell'account da parte dell'utente
+    \item \textbf{Dati delle sessioni}: fino alla cancellazione da parte dell'utente o dell'account
+    \item \textbf{Cache locale}: massimo 24 ore, eliminata automaticamente al logout
+\end{itemize}
+
+\section{Visibilità e Controllo dei Dati}
+
+L'utente ha il pieno controllo sulla visibilità delle proprie sessioni:
+
+\begin{itemize}[leftmargin=*]
+    \item Le sessioni possono essere impostate come \textbf{pubbliche} (visibili ad altri utenti) o \textbf{private}
+    \item Il profilo pubblico mostra solo: nome, username e statistiche aggregate
+    \item I dati GPS dettagliati delle sessioni private non sono accessibili ad altri utenti
+\end{itemize}
+
+\section{Diritti dell'Interessato}
+
+Ai sensi degli artt. 15-22 del GDPR, l'utente ha diritto di:
+
+\begin{enumerate}[label=\alph*)]
+    \item \textbf{Accesso}: ottenere conferma dell'esistenza di un trattamento e accedere ai propri dati
+    \item \textbf{Rettifica}: ottenere la correzione di dati inesatti
+    \item \textbf{Cancellazione}: ottenere la cancellazione dei propri dati (``diritto all'oblio'')
+    \item \textbf{Limitazione}: ottenere la limitazione del trattamento
+    \item \textbf{Portabilità}: ricevere i propri dati in formato strutturato
+    \item \textbf{Opposizione}: opporsi al trattamento per motivi legittimi
+    \item \textbf{Revoca del consenso}: revocare in qualsiasi momento il consenso prestato
+\end{enumerate}
+
+Per esercitare tali diritti o per richiedere la cancellazione dell'account, è possibile utilizzare l'apposita funzione nell'applicazione (Profilo > Info > Elimina Account) o contattare il Titolare.
+
+\section{Sicurezza dei Dati}
+
+Nexter S.r.l., in conformità alla certificazione \textbf{ISO 27001}, adotta misure tecniche e organizzative adeguate per garantire la sicurezza dei dati personali, tra cui:
+
+\begin{itemize}[leftmargin=*]
+    \item Crittografia delle comunicazioni (HTTPS/TLS)
+    \item Autenticazione sicura tramite Firebase Authentication
+    \item Password memorizzate con algoritmi di hashing sicuri
+    \item Controlli di accesso basati su ruoli
+    \item Monitoraggio continuo delle infrastrutture
+    \item Procedure di backup e disaster recovery
+\end{itemize}
+
+\section{Permessi dell'Applicazione}
+
+L'applicazione richiede i seguenti permessi, utilizzati esclusivamente per le funzionalità indicate:
+
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Posizione}: tracciamento delle sessioni in pista (solo quando l'app è in uso)
+    \item \textbf{Bluetooth}: connessione a dispositivi GPS esterni
+    \item \textbf{Sensori di movimento}: calcolo delle forze G durante la guida
+    \item \textbf{Fotocamera}: scansione di codici QR per l'abbinamento dispositivi
+    \item \textbf{Galleria}: selezione di immagini per la condivisione delle sessioni
+\end{itemize}
+
+\section{Modifiche alla Privacy Policy}
+
+Nexter S.r.l. si riserva il diritto di modificare la presente informativa. Eventuali modifiche sostanziali saranno comunicate tramite l'applicazione. Si consiglia di consultare periodicamente questa pagina.
+
+\vspace{1cm}
+
+\noindent\rule{\textwidth}{0.4pt}
+
+\vspace{0.3cm}
+
+\begin{center}
+\textit{Ultimo aggiornamento: Dicembre 2024}\\[0.3cm]
+\textbf{Nexter S.r.l.}\\
+Certificata ISO 27001:2022\\[0.5cm]
+\textit{Per informazioni: privacy@nexter.it}
+\end{center}
+
+\end{document}

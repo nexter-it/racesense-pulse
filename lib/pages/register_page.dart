@@ -3,6 +3,7 @@ import '../theme.dart';
 import '../widgets/pulse_background.dart';
 import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
+import 'privacy_policy_page.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -719,10 +720,9 @@ class _RegisterPageState extends State<RegisterPage> {
                                   ),
                                   GestureDetector(
                                     onTap: () {
-                                      // TODO: Mostra privacy policy
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(
-                                          content: Text('Privacy Policy - da implementare'),
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (_) => const PrivacyPolicyPage(),
                                         ),
                                       );
                                     },
