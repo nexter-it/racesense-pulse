@@ -1073,17 +1073,17 @@ class _RegisterPageState extends State<RegisterPage> with TickerProviderStateMix
             );
           },
         ),
-        const SizedBox(height: 14),
-        _buildSocialButton(
-          icon: const Icon(Icons.apple, size: 24, color: kFgColor),
-          label: 'Continua con Apple',
-          onTap: () {
-            HapticFeedback.lightImpact();
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Apple Sign In - da implementare')),
-            );
-          },
-        ),
+        // const SizedBox(height: 14),
+        // _buildSocialButton(
+        //   icon: const Icon(Icons.apple, size: 24, color: kFgColor),
+        //   label: 'Continua con Apple',
+        //   onTap: () {
+        //     HapticFeedback.lightImpact();
+        //     ScaffoldMessenger.of(context).showSnackBar(
+        //       const SnackBar(content: Text('Apple Sign In - da implementare')),
+        //     );
+        //   },
+        // ),
       ],
     );
   }
