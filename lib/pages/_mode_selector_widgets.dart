@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 
@@ -8,6 +9,15 @@ import '../theme.dart';
 import '../models/track_definition.dart';
 import '../services/ble_tracking_service.dart';
 import '../services/custom_circuit_service.dart';
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PREMIUM UI CONSTANTS
+// ═══════════════════════════════════════════════════════════════════════════
+const Color _kBgColor = Color(0xFF0A0A0A);
+const Color _kCardStart = Color(0xFF1A1A1A);
+const Color _kCardEnd = Color(0xFF141414);
+const Color _kBorderColor = Color(0xFF2A2A2A);
+const Color _kTileColor = Color(0xFF0D0D0D);
 
 /// Modalità di avvio sessione - RaceChrono Pro Style
 ///
@@ -156,114 +166,207 @@ class ModeCard extends StatelessWidget {
   }
 }
 
-// Pagina per selezione circuiti ufficiali
+// ═══════════════════════════════════════════════════════════════════════════
+// PAGINA CIRCUITI UFFICIALI - PREMIUM STYLE
+// ═══════════════════════════════════════════════════════════════════════════
 class ExistingCircuitPage extends StatelessWidget {
   const ExistingCircuitPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // Usa i circuiti predefiniti da PredefinedTracks
     final staticTracks = PredefinedTracks.all;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Circuiti ufficiali'),
-        backgroundColor: kBgColor,
-      ),
-      body: staticTracks.isEmpty
-          ? const Center(
-              child: Text(
-                'Nessun circuito ufficiale disponibile',
-                style: TextStyle(color: kMutedColor),
-              ),
-            )
-          : ListView.separated(
-              padding: const EdgeInsets.all(16),
-              itemCount: staticTracks.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
-              itemBuilder: (context, index) {
-                final t = staticTracks[index];
-                return InkWell(
-                  onTap: () => Navigator.of(context).pop(t),
-                  borderRadius: BorderRadius.circular(16),
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(16),
-                      gradient: const LinearGradient(
-                        colors: [
-                          Color.fromRGBO(255, 255, 255, 0.08),
-                          Color.fromRGBO(255, 255, 255, 0.04),
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      border: Border.all(color: kBrandColor),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.25),
-                          blurRadius: 12,
-                          offset: const Offset(0, 6),
-                        )
-                      ],
+      backgroundColor: _kBgColor,
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Premium Header
+            _buildHeader(context),
+            // Content
+            Expanded(
+              child: staticTracks.isEmpty
+                  ? _buildEmptyState()
+                  : ListView.separated(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                      itemCount: staticTracks.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 12),
+                      itemBuilder: (context, index) {
+                        final t = staticTracks[index];
+                        return _CircuitCard(
+                          name: t.name,
+                          location: t.location,
+                          lengthKm: t.estimatedLengthMeters != null
+                              ? (t.estimatedLengthMeters! / 1000)
+                              : null,
+                          icon: Icons.flag_circle,
+                          isOfficial: true,
+                          onTap: () {
+                            HapticFeedback.lightImpact();
+                            Navigator.of(context).pop(t);
+                          },
+                        );
+                      },
                     ),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: kBrandColor.withOpacity(0.14),
-                          ),
-                          child: const Icon(Icons.flag, color: kBrandColor),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                t.name,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w900,
-                                  fontSize: 15,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                t.location,
-                                style: const TextStyle(
-                                  color: kMutedColor,
-                                  fontSize: 12,
-                                ),
-                              ),
-                              if (t.estimatedLengthMeters != null) ...[
-                                const SizedBox(height: 4),
-                                Text(
-                                  '${(t.estimatedLengthMeters! / 1000).toStringAsFixed(2)} km',
-                                  style: const TextStyle(
-                                    color: kBrandColor,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
-                        const Icon(Icons.chevron_right, color: kMutedColor),
-                      ],
-                    ),
-                  ),
-                );
-              },
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [_kBgColor, const Color(0xFF121212)],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ),
+        border: const Border(
+          bottom: BorderSide(color: _kBorderColor, width: 1),
+        ),
+      ),
+      child: Row(
+        children: [
+          // Back button
+          GestureDetector(
+            onTap: () {
+              HapticFeedback.lightImpact();
+              Navigator.of(context).pop();
+            },
+            child: Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                color: Colors.white.withAlpha(10),
+                border: Border.all(color: Colors.white.withAlpha(20)),
+              ),
+              child: const Icon(Icons.arrow_back_ios_new, color: kFgColor, size: 18),
+            ),
+          ),
+          const SizedBox(width: 14),
+          // Icon
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              gradient: LinearGradient(
+                colors: [
+                  kBrandColor.withAlpha(40),
+                  kBrandColor.withAlpha(20),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              border: Border.all(color: kBrandColor.withAlpha(60), width: 1.5),
+            ),
+            child: Center(
+              child: Icon(Icons.flag_circle, color: kBrandColor, size: 22),
+            ),
+          ),
+          const SizedBox(width: 12),
+          // Title
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Circuiti Ufficiali',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    color: kFgColor,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Autodromi con linea S/F precisa',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: kMutedColor,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Badge count
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(10),
+              color: kBrandColor.withAlpha(20),
+              border: Border.all(color: kBrandColor.withAlpha(60)),
+            ),
+            child: Text(
+              '${PredefinedTracks.all.length}',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+                color: kBrandColor,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  colors: [_kCardStart, _kCardEnd],
+                ),
+                border: Border.all(color: _kBorderColor),
+              ),
+              child: Center(
+                child: Icon(Icons.flag_outlined, size: 36, color: kMutedColor),
+              ),
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              'Nessun circuito disponibile',
+              style: TextStyle(
+                color: kFgColor,
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'I circuiti ufficiali saranno\naggiunti prossimamente',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: kMutedColor,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
 
-// Pagina per selezione circuiti custom
+// ═══════════════════════════════════════════════════════════════════════════
+// PAGINA CIRCUITI CUSTOM - PREMIUM STYLE
+// ═══════════════════════════════════════════════════════════════════════════
 class PrivateCircuitsPage extends StatefulWidget {
   const PrivateCircuitsPage({super.key});
 
@@ -283,167 +386,464 @@ class _PrivateCircuitsPageState extends State<PrivateCircuitsPage> {
 
   TrackDefinition? _toTrack(CustomCircuitInfo c) {
     if (c.points.length < 2) return null;
-
-    // Usa i nuovi campi finishLineStart/finishLineEnd
-    // Se non presenti, usa toTrackDefinition() che ha fallback logic
     return c.toTrackDefinition();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Circuiti custom'),
-        backgroundColor: kBgColor,
-      ),
-      body: FutureBuilder<List<CustomCircuitInfo>>(
-        future: _future,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(
-              child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation(kBrandColor),
+      backgroundColor: _kBgColor,
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Premium Header
+            _buildHeader(context),
+            // Content
+            Expanded(
+              child: FutureBuilder<List<CustomCircuitInfo>>(
+                future: _future,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          SizedBox(
+                            width: 48,
+                            height: 48,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 3,
+                              valueColor: AlwaysStoppedAnimation(kBrandColor),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Caricamento circuiti...',
+                            style: TextStyle(
+                              color: kMutedColor,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+                  final circuits = snapshot.data ?? [];
+                  if (circuits.isEmpty) {
+                    return _buildEmptyState();
+                  }
+                  return ListView.separated(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                    itemCount: circuits.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 12),
+                    itemBuilder: (context, index) {
+                      final c = circuits[index];
+                      final t = _toTrack(c);
+                      return _CircuitCard(
+                        name: c.name,
+                        location: '${c.city} ${c.country}'.trim(),
+                        lengthKm: c.lengthMeters / 1000,
+                        icon: Icons.edit_road,
+                        isOfficial: false,
+                        usedBle: c.usedBleDevice,
+                        hasError: t == null,
+                        onTap: t != null
+                            ? () {
+                                HapticFeedback.lightImpact();
+                                Navigator.of(context).pop(t);
+                              }
+                            : null,
+                      );
+                    },
+                  );
+                },
               ),
-            );
-          }
-          final circuits = snapshot.data ?? [];
-          if (circuits.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
-                  Icon(Icons.track_changes, size: 64, color: kMutedColor),
-                  SizedBox(height: 16),
-                  Text(
-                    'Nessun circuito custom salvato',
-                    style: TextStyle(color: kMutedColor, fontSize: 16),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [_kBgColor, const Color(0xFF121212)],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ),
+        border: const Border(
+          bottom: BorderSide(color: _kBorderColor, width: 1),
+        ),
+      ),
+      child: Row(
+        children: [
+          // Back button
+          GestureDetector(
+            onTap: () {
+              HapticFeedback.lightImpact();
+              Navigator.of(context).pop();
+            },
+            child: Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                color: Colors.white.withAlpha(10),
+                border: Border.all(color: Colors.white.withAlpha(20)),
+              ),
+              child: const Icon(Icons.arrow_back_ios_new, color: kFgColor, size: 18),
+            ),
+          ),
+          const SizedBox(width: 14),
+          // Icon
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              gradient: LinearGradient(
+                colors: [
+                  kPulseColor.withAlpha(40),
+                  kPulseColor.withAlpha(20),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              border: Border.all(color: kPulseColor.withAlpha(60), width: 1.5),
+            ),
+            child: Center(
+              child: Icon(Icons.edit_road, color: kPulseColor, size: 22),
+            ),
+          ),
+          const SizedBox(width: 12),
+          // Title
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Circuiti Custom',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    color: kFgColor,
+                    letterSpacing: -0.5,
                   ),
-                  SizedBox(height: 8),
-                  Text(
-                    'Crea il tuo primo circuito dalla home',
-                    style: TextStyle(color: kMutedColor, fontSize: 12),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'I tuoi tracciati personali',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: kMutedColor,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Info icon
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(10),
+              color: Colors.white.withAlpha(6),
+              border: Border.all(color: _kBorderColor),
+            ),
+            child: Icon(Icons.info_outline, color: kMutedColor, size: 18),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  colors: [_kCardStart, _kCardEnd],
+                ),
+                border: Border.all(color: _kBorderColor),
+              ),
+              child: Center(
+                child: Icon(Icons.add_road, size: 36, color: kMutedColor),
+              ),
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              'Nessun circuito salvato',
+              style: TextStyle(
+                color: kFgColor,
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Crea il tuo primo circuito\ndalla pagina Nuova Attività',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: kMutedColor,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 24),
+            // Tip card
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(14),
+                gradient: LinearGradient(
+                  colors: [_kCardStart, _kCardEnd],
+                ),
+                border: Border.all(color: _kBorderColor),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: kBrandColor.withAlpha(20),
+                      border: Border.all(color: kBrandColor.withAlpha(50)),
+                    ),
+                    child: Icon(Icons.lightbulb_outline, color: kBrandColor, size: 18),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'I circuiti custom ti permettono di tracciare qualsiasi percorso con la tua linea S/F personalizzata.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: kMutedColor,
+                        fontWeight: FontWeight.w600,
+                        height: 1.4,
+                      ),
+                    ),
                   ),
                 ],
               ),
-            );
-          }
-          return ListView.separated(
-            padding: const EdgeInsets.all(16),
-            itemCount: circuits.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 12),
-            itemBuilder: (context, index) {
-              final c = circuits[index];
-              final t = _toTrack(c);
-              return InkWell(
-                onTap: t != null ? () => Navigator.of(context).pop(t) : null,
-                borderRadius: BorderRadius.circular(16),
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16),
-                    gradient: const LinearGradient(
-                      colors: [
-                        Color.fromRGBO(255, 255, 255, 0.08),
-                        Color.fromRGBO(255, 255, 255, 0.04),
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    border: Border.all(
-                        color: t != null ? kBrandColor : kErrorColor.withOpacity(0.8)),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.25),
-                        blurRadius: 12,
-                        offset: const Offset(0, 6),
-                      )
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: kBrandColor.withOpacity(0.14),
-                        ),
-                        child: const Icon(Icons.track_changes, color: kBrandColor),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              c.name,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w900,
-                                fontSize: 15,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 4),
-                            Row(
-                              children: [
-                                Text(
-                                  '${c.city} ${c.country}'.trim(),
-                                  style: const TextStyle(
-                                    color: kMutedColor,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                                if (c.usedBleDevice) ...[
-                                  const SizedBox(width: 8),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(4),
-                                      color: kBrandColor.withOpacity(0.15),
-                                      border: Border.all(color: kBrandColor.withOpacity(0.5)),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: const [
-                                        Icon(Icons.bluetooth_connected, color: kBrandColor, size: 10),
-                                        SizedBox(width: 3),
-                                        Text(
-                                          'BLE',
-                                          style: TextStyle(
-                                            color: kBrandColor,
-                                            fontSize: 9,
-                                            fontWeight: FontWeight.w800,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '${(c.lengthMeters / 1000).toStringAsFixed(2)} km',
-                              style: const TextStyle(
-                                color: kBrandColor,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Icon(
-                        t != null ? Icons.chevron_right : Icons.error_outline,
-                        color: t != null ? kMutedColor : kErrorColor,
-                      ),
-                    ],
-                  ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CIRCUIT CARD WIDGET - CONDIVISO TRA ENTRAMBE LE PAGINE
+// ═══════════════════════════════════════════════════════════════════════════
+class _CircuitCard extends StatelessWidget {
+  final String name;
+  final String location;
+  final double? lengthKm;
+  final IconData icon;
+  final bool isOfficial;
+  final bool usedBle;
+  final bool hasError;
+  final VoidCallback? onTap;
+
+  const _CircuitCard({
+    required this.name,
+    required this.location,
+    this.lengthKm,
+    required this.icon,
+    required this.isOfficial,
+    this.usedBle = false,
+    this.hasError = false,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final borderColor = hasError
+        ? kErrorColor.withAlpha(150)
+        : (isOfficial ? kBrandColor.withAlpha(80) : kPulseColor.withAlpha(80));
+    final accentColor = hasError ? kErrorColor : (isOfficial ? kBrandColor : kPulseColor);
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(18),
+          gradient: LinearGradient(
+            colors: [_kCardStart, _kCardEnd],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          border: Border.all(color: borderColor, width: 1.5),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withAlpha(60),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            // Icon container
+            Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(14),
+                gradient: LinearGradient(
+                  colors: [
+                    accentColor.withAlpha(25),
+                    accentColor.withAlpha(10),
+                  ],
                 ),
-              );
-            },
-          );
-        },
+                border: Border.all(color: accentColor.withAlpha(60)),
+              ),
+              child: Center(
+                child: Icon(
+                  hasError ? Icons.error_outline : icon,
+                  color: accentColor,
+                  size: 24,
+                ),
+              ),
+            ),
+            const SizedBox(width: 14),
+            // Info
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    name,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w900,
+                      fontSize: 15,
+                      color: kFgColor,
+                      letterSpacing: -0.3,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Icon(Icons.location_on_outlined, color: kMutedColor, size: 13),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          location,
+                          style: TextStyle(
+                            color: kMutedColor,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  // Bottom row with badges
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 6,
+                    children: [
+                      // Length badge
+                      if (lengthKm != null)
+                        _buildBadge(
+                          icon: Icons.straighten,
+                          text: '${lengthKm!.toStringAsFixed(2)} km',
+                          color: accentColor,
+                        ),
+                      // BLE badge
+                      if (usedBle)
+                        _buildBadge(
+                          icon: Icons.bluetooth_connected,
+                          text: 'GPS PRO',
+                          color: kBrandColor,
+                        ),
+                      // Official badge
+                      if (isOfficial)
+                        _buildBadge(
+                          icon: Icons.verified,
+                          text: 'Ufficiale',
+                          color: kBrandColor,
+                        ),
+                      // Error badge
+                      if (hasError)
+                        _buildBadge(
+                          icon: Icons.warning_amber,
+                          text: 'Non valido',
+                          color: kErrorColor,
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            // Arrow
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: hasError ? kErrorColor.withAlpha(15) : Colors.white.withAlpha(6),
+                border: Border.all(
+                  color: hasError ? kErrorColor.withAlpha(50) : _kBorderColor,
+                ),
+              ),
+              child: Icon(
+                hasError ? Icons.block : Icons.chevron_right,
+                color: hasError ? kErrorColor : kMutedColor,
+                size: 18,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBadge({
+    required IconData icon,
+    required String text,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(6),
+        color: color.withAlpha(15),
+        border: Border.all(color: color.withAlpha(50)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: color, size: 11),
+          const SizedBox(width: 4),
+          Text(
+            text,
+            style: TextStyle(
+              color: color,
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
       ),
     );
   }
