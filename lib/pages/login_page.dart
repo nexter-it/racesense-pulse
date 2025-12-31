@@ -63,6 +63,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
         _passwordController.text,
       );
       // Il routing viene gestito automaticamente da AuthGate
+      // che controlla anche se l'account è nella lista di eliminazione
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);

@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../widgets/pulse_background.dart';
 import '../services/disclaimer_service.dart';
 import '../theme.dart';
 import 'login_page.dart';
 import 'disclaimer_page.dart';
+import 'account_deleted_page.dart';
 import '../main.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -18,6 +20,7 @@ enum _AuthState {
   unauthenticated,
   checkingDisclaimer,
   needsDisclaimer,
+  accountDeleted, // Nuovo stato per account in eliminazione
   authenticated,
 }
 
@@ -71,6 +74,22 @@ class _AuthGateState extends State<AuthGate> {
           _currentUserId = user.uid;
         });
 
+        // Prima controlla se l'account è nella lista di eliminazione
+        final isDeleted = await _checkIfAccountDeleted(user.uid);
+
+        if (!mounted) return;
+
+        if (isDeleted) {
+          // Account in eliminazione - fai logout e mostra pagina
+          await FirebaseAuth.instance.signOut();
+          setState(() {
+            _authState = _AuthState.accountDeleted;
+            _currentUserId = null;
+            _rootShell = null;
+          });
+          return;
+        }
+
         // Controlla disclaimer
         final accepted = await DisclaimerService().hasAcceptedDisclaimer(user.uid);
 
@@ -91,11 +110,33 @@ class _AuthGateState extends State<AuthGate> {
     });
   }
 
+  /// Controlla se l'utente ha richiesto l'eliminazione dell'account
+  Future<bool> _checkIfAccountDeleted(String userId) async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('deleted_request_account')
+          .doc(userId)
+          .get();
+      return doc.exists;
+    } catch (e) {
+      // In caso di errore, permetti il login
+      debugPrint('Errore nel controllo eliminazione account: $e');
+      return false;
+    }
+  }
+
   void _onDisclaimerAccepted() {
     setState(() {
       _authState = _AuthState.authenticated;
       // Crea RootShell solo una volta
       _rootShell ??= const RootShell();
+    });
+  }
+
+  /// Chiamato quando l'utente clicca "Torna al login" dalla pagina AccountDeleted
+  void _onBackToLogin() {
+    setState(() {
+      _authState = _AuthState.unauthenticated;
     });
   }
 
@@ -118,6 +159,9 @@ class _AuthGateState extends State<AuthGate> {
 
       case _AuthState.unauthenticated:
         return const LoginPage();
+
+      case _AuthState.accountDeleted:
+        return AccountDeletedPage(onBackToLogin: _onBackToLogin);
 
       case _AuthState.needsDisclaimer:
         return DisclaimerPage(

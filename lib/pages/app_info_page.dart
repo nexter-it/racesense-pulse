@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../theme.dart';
 import '../services/version_check_service.dart';
 import '../services/feed_cache_service.dart';
@@ -306,13 +308,65 @@ class AppInfoPage extends StatelessWidget {
     );
 
     if (shouldDelete == true) {
+      await _processAccountDeletion(context);
+    }
+  }
+
+  Future<void> _processAccountDeletion(BuildContext context) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    // Mostra loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(kBrandColor),
+        ),
+      ),
+    );
+
+    try {
+      // Scrivi la richiesta di eliminazione su Firestore
+      await FirebaseFirestore.instance
+          .collection('deleted_request_account')
+          .doc(user.uid)
+          .set({
+        'userId': user.uid,
+        'timestamp': FieldValue.serverTimestamp(),
+        'email': user.email,
+      });
+
+      // Cancella la cache locale
+      await FeedCacheService().clearCache();
+      await ProfileCacheService().clearCache();
+
+      // Effettua il logout
+      await FirebaseAuth.instance.signOut();
+
       if (context.mounted) {
+        // Chiudi il loading dialog
+        Navigator.of(context).pop();
+
+        // Torna alla schermata principale
+        Navigator.of(context).popUntil((route) => route.isFirst);
+
+        // Apri il questionario Google Form
+        final Uri formUrl = Uri.parse('https://forms.gle/ywZnXWaj42RqhEMu7');
+        if (await canLaunchUrl(formUrl)) {
+          await launchUrl(formUrl, mode: LaunchMode.externalApplication);
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        // Chiudi il loading dialog
+        Navigator.of(context).pop();
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text(
-              'Funzionalità in arrivo. Contatta il supporto per eliminare l\'account.',
-            ),
-            backgroundColor: kPulseColor,
+            content: Text('Errore durante l\'eliminazione: $e'),
+            backgroundColor: kErrorColor,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
