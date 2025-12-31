@@ -6,6 +6,7 @@ import '../services/version_check_service.dart';
 import '../services/feed_cache_service.dart';
 import '../services/profile_cache_service.dart';
 import 'privacy_policy_page.dart';
+import 'terms_conditions_page.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // PREMIUM UI CONSTANTS
@@ -360,6 +361,15 @@ class AppInfoPage extends StatelessWidget {
     );
   }
 
+  void _openTermsConditions(BuildContext context) {
+    HapticFeedback.lightImpact();
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => const TermsConditionsPage(),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -392,6 +402,16 @@ class AppInfoPage extends StatelessWidget {
                     title: 'Privacy Policy',
                     subtitle: 'Leggi la nostra informativa sulla privacy',
                     onTap: () => _openPrivacyPolicy(context),
+                  ),
+                  const SizedBox(height: 10),
+
+                  // Termini e Condizioni
+                  _buildActionCard(
+                    icon: Icons.description_outlined,
+                    iconColor: kBrandColor,
+                    title: 'Termini e Condizioni',
+                    subtitle: 'Leggi i termini d\'uso dell\'app',
+                    onTap: () => _openTermsConditions(context),
                   ),
                   const SizedBox(height: 10),
 

@@ -40,6 +40,10 @@
 	<key>NSBluetoothPeripheralUsageDescription</key>
 	<string>Racesense Pulse usa il Bluetooth per collegarsi ai tracker GPS esterni.</string>
 
+	<!-- 📷 Permesso fotocamera per QR scanner -->
+	<key>NSCameraUsageDescription</key>
+	<string>Racesense Pulse usa la fotocamera per scansionare i QR code dei dispositivi GPS.</string>
+
 	<!-- 📸 Permessi per accesso galleria foto -->
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Racesense Pulse ha bisogno di accedere alla tua galleria per personalizzare le storie con le tue foto.</string>
