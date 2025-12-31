@@ -1122,7 +1122,7 @@ class _GpsWaitPageState extends State<GpsWaitPage>
           _buildTipRow(
             icon: Icons.route_outlined,
             text:
-                'Sistema RaceChrono Pro: seleziona un circuito pre-tracciato per tempi giro precisi.',
+                'Sistema Pulse+: seleziona un circuito pre-tracciato per tempi giro precisi.',
             color: kBrandColor,
           ),
           const SizedBox(height: 12),

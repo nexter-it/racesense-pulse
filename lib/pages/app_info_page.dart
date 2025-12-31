@@ -761,7 +761,7 @@ class AppInfoPage extends StatelessWidget {
                 Icon(Icons.bolt, color: kPulseColor, size: 16),
                 const SizedBox(width: 6),
                 Text(
-                  'Powered by PULSE+ Technology',
+                  'Abbonamento PULSE+',
                   style: TextStyle(
                     color: kPulseColor,
                     fontSize: 11,

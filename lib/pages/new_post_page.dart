@@ -238,35 +238,35 @@ class _NewPostPageState extends State<NewPostPage>
             ),
           ),
           // Auto Lap badge
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(10),
-              gradient: LinearGradient(
-                colors: [
-                  kPulseColor.withAlpha(30),
-                  kPulseColor.withAlpha(15),
-                ],
-              ),
-              border: Border.all(color: kPulseColor.withAlpha(80)),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.flag_outlined, color: kPulseColor, size: 14),
-                const SizedBox(width: 6),
-                Text(
-                  'AUTO LAP',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w900,
-                    color: kPulseColor,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-              ],
-            ),
-          ),
+          // Container(
+          //   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          //   decoration: BoxDecoration(
+          //     borderRadius: BorderRadius.circular(10),
+          //     gradient: LinearGradient(
+          //       colors: [
+          //         kPulseColor.withAlpha(30),
+          //         kPulseColor.withAlpha(15),
+          //       ],
+          //     ),
+          //     border: Border.all(color: kPulseColor.withAlpha(80)),
+          //   ),
+          //   child: Row(
+          //     mainAxisSize: MainAxisSize.min,
+          //     children: [
+          //       Icon(Icons.flag_outlined, color: kPulseColor, size: 14),
+          //       const SizedBox(width: 6),
+          //       Text(
+          //         'AUTO LAP',
+          //         style: TextStyle(
+          //           fontSize: 10,
+          //           fontWeight: FontWeight.w900,
+          //           color: kPulseColor,
+          //           letterSpacing: 0.5,
+          //         ),
+          //       ),
+          //     ],
+          //   ),
+          // ),
         ],
       ),
     );

@@ -348,7 +348,7 @@ class _SearchPageState extends State<SearchPage>
           .toList();
       return _buildTopSection(
         title: 'Top Circuiti',
-        subtitle: 'I circuiti con pi sessioni tracciate',
+        subtitle: 'I circuiti con più sessioni tracciate',
         icon: Icons.flag_outlined,
         iconColor: kPulseColor,
         isLoading: _loadingTopCircuits && _topCircuitOrder.isEmpty,
@@ -1060,26 +1060,16 @@ class _SearchPageState extends State<SearchPage>
       _circuitsError = null;
     });
     try {
-      Query<Map<String, dynamic>> q = _firestore
+      // Carica tutte le sessioni pubbliche recenti e filtra localmente
+      // per supportare ricerca case-insensitive con contains
+      final snap = await _firestore
           .collection('sessions')
           .where('isPublic', isEqualTo: true)
-          .orderBy('trackNameLower')
-          .startAt([termLower]).endAt(['$termLower\uf8ff']).limit(80);
+          .orderBy('dateTime', descending: true)
+          .limit(500)
+          .get();
 
-      QuerySnapshot<Map<String, dynamic>> snap;
-      try {
-        snap = await q.get();
-      } on FirebaseException {
-        snap = await _firestore
-            .collection('sessions')
-            .where('isPublic', isEqualTo: true)
-            .orderBy('trackName')
-            .startAt([term])
-            .endAt(['$term\uf8ff'])
-            .limit(80)
-            .get();
-      }
-
+      // Filtra localmente: case-insensitive e supporta sottostringhe
       final results = snap.docs
           .map((d) => SessionModel.fromFirestore(d.id, d.data()))
           .where((s) => s.trackName.toLowerCase().contains(termLower))
@@ -1090,9 +1080,13 @@ class _SearchPageState extends State<SearchPage>
         groups.putIfAbsent(s.trackName, () => []).add(s);
       }
 
+      // Ordina i circuiti per numero di sessioni (più popolari prima)
+      final orderedKeys = groups.keys.toList()
+        ..sort((a, b) => groups[b]!.length.compareTo(groups[a]!.length));
+
       setState(() {
         _circuitGroups = groups;
-        _circuitOrder = groups.keys.toList();
+        _circuitOrder = orderedKeys;
       });
     } catch (e) {
       setState(() {
