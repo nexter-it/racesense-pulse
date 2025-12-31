@@ -1,0 +1,96 @@
+{
+  "version": "1.0.0",
+  "lastUpdated": "2025-01-01",
+  "circuits": [
+    {
+      "id": "mugello",
+      "name": "Autodromo Internazionale del Mugello",
+      "city": "Scarperia e San Piero",
+      "country": "Italia",
+      "countryCode": "IT",
+      "continent": "Europa",
+      "lengthMeters": 5245,
+      "finishLineStart": {
+        "lat": 43.997439,
+        "lon": 11.371856
+      },
+      "finishLineEnd": {
+        "lat": 43.997589,
+        "lon": 11.372044
+      },
+      "category": "MotoGP"
+    },
+    {
+      "id": "monza",
+      "name": "Autodromo Nazionale di Monza",
+      "city": "Monza",
+      "country": "Italia",
+      "countryCode": "IT",
+      "continent": "Europa",
+      "lengthMeters": 5793,
+      "finishLineStart": {
+        "lat": 45.620722,
+        "lon": 9.281167
+      },
+      "finishLineEnd": {
+        "lat": 45.620856,
+        "lon": 9.281389
+      },
+      "category": "F1"
+    },
+    {
+      "id": "imola",
+      "name": "Autodromo Enzo e Dino Ferrari",
+      "city": "Imola",
+      "country": "Italia",
+      "countryCode": "IT",
+      "continent": "Europa",
+      "lengthMeters": 4909,
+      "finishLineStart": {
+        "lat": 44.344167,
+        "lon": 11.715722
+      },
+      "finishLineEnd": {
+        "lat": 44.344278,
+        "lon": 11.715889
+      },
+      "category": "F1"
+    },
+    {
+      "id": "misano",
+      "name": "Misano World Circuit Marco Simoncelli",
+      "city": "Misano Adriatico",
+      "country": "Italia",
+      "countryCode": "IT",
+      "continent": "Europa",
+      "lengthMeters": 4226,
+      "finishLineStart": {
+        "lat": 43.965389,
+        "lon": 12.686056
+      },
+      "finishLineEnd": {
+        "lat": 43.965500,
+        "lon": 12.686222
+      },
+      "category": "MotoGP"
+    },
+    {
+      "id": "vallelunga",
+      "name": "Autodromo Vallelunga Piero Taruffi",
+      "city": "Campagnano di Roma",
+      "country": "Italia",
+      "countryCode": "IT",
+      "continent": "Europa",
+      "lengthMeters": 4085,
+      "finishLineStart": {
+        "lat": 42.147500,
+        "lon": 12.270833
+      },
+      "finishLineEnd": {
+        "lat": 42.147639,
+        "lon": 12.271000
+      },
+      "category": "GT"
+    }
+  ]
+}

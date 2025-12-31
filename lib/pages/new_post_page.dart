@@ -8,6 +8,7 @@ import '../theme.dart';
 import 'connect_devices_page.dart';
 import 'custom_circuits_page.dart';
 import 'gps_wait_page.dart';
+import 'official_circuits_page.dart';
 import 'qr_scanner_page.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -155,6 +156,24 @@ class _NewPostPageState extends State<NewPostPage>
                         ),
                       ),
                     ],
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  // Official Circuits Button
+                  _buildOptionCard(
+                    icon: Icons.stadium_rounded,
+                    title: 'Circuiti Ufficiali',
+                    subtitle: 'Autodromi con linea S/F verificata',
+                    color: const Color(0xFF29B6F6),
+                    onTap: () {
+                      HapticFeedback.lightImpact();
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const OfficialCircuitsPage(),
+                        ),
+                      );
+                    },
                   ),
 
                   const SizedBox(height: 24),

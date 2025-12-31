@@ -10,6 +10,7 @@ import '../theme.dart';
 import '../models/track_definition.dart';
 import 'live_session_page.dart';
 import '_mode_selector_widgets.dart';
+import 'official_circuits_page.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // PREMIUM UI CONSTANTS
@@ -902,15 +903,15 @@ class _GpsWaitPageState extends State<GpsWaitPage>
       children: [
         Expanded(
           child: _buildCircuitOption(
-            icon: Icons.flag_circle,
+            icon: Icons.stadium_rounded,
             title: 'Ufficiale',
-            subtitle: 'Circuiti esistenti',
+            subtitle: 'Autodromi verificati',
             isSelected: _selectedMode == StartMode.existing,
             onTap: () async {
               HapticFeedback.lightImpact();
               final track = await Navigator.of(context).push<TrackDefinition?>(
                 MaterialPageRoute(
-                  builder: (_) => const ExistingCircuitPage(),
+                  builder: (_) => const OfficialCircuitsPage(selectionMode: true),
                 ),
               );
               if (track != null) {
