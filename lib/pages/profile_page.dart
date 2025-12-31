@@ -1077,7 +1077,9 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          _affiliateCode!,
+                          _affiliateCode!.length > 10
+                              ? '${_affiliateCode!.substring(0, 10)}...'
+                              : _affiliateCode!,
                           style: TextStyle(
                             fontSize: 22,
                             fontWeight: FontWeight.w900,
@@ -1502,8 +1504,8 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
                             _buildSessionStat(Icons.loop, '${session.lapCount}', const Color(0xFF29B6F6)),
                             const SizedBox(width: 10),
                             _buildSessionStat(Icons.route, '${session.distanceKm.toStringAsFixed(1)} km', const Color(0xFF00E676)),
-                            const SizedBox(width: 10),
-                            _buildSessionStat(Icons.timer, bestLapText, const Color(0xFFFFB74D)),
+                            // const SizedBox(width: 10),
+                            // _buildSessionStat(Icons.timer, bestLapText, const Color(0xFFFFB74D)),
                           ],
                         ),
                       ],

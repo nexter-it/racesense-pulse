@@ -465,34 +465,43 @@ class _SessionRecapPageState extends State<SessionRecapPage>
               ],
             ),
           ),
-          // GPS Badge
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(10),
-              color: widget.usedBleDevice ? kBrandColor.withAlpha(20) : kMutedColor.withAlpha(15),
-              border: Border.all(
-                color: widget.usedBleDevice ? kBrandColor.withAlpha(80) : kMutedColor.withAlpha(40),
+          // Save button
+          GestureDetector(
+            onTap: _isSaving ? null : () => _handleSaveSession(context),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                gradient: LinearGradient(
+                  colors: _isSaving
+                      ? [kMutedColor.withAlpha(30), kMutedColor.withAlpha(15)]
+                      : [kBrandColor.withAlpha(40), kBrandColor.withAlpha(20)],
+                ),
+                border: Border.all(
+                  color: _isSaving ? kMutedColor.withAlpha(60) : kBrandColor.withAlpha(100),
+                  width: 1.5,
+                ),
+                boxShadow: _isSaving
+                    ? null
+                    : [
+                        BoxShadow(
+                          color: kBrandColor.withOpacity(0.3),
+                          blurRadius: 12,
+                          spreadRadius: 2,
+                        ),
+                      ],
               ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  widget.usedBleDevice ? Icons.bluetooth : Icons.sensors,
-                  size: 14,
-                  color: widget.usedBleDevice ? kBrandColor : kMutedColor,
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  widget.usedBleDevice ? 'BLE GPS' : 'Phone GPS',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w800,
-                    color: widget.usedBleDevice ? kBrandColor : kMutedColor,
-                  ),
-                ),
-              ],
+              child: _isSaving
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(kMutedColor),
+                      ),
+                    )
+                  : const Icon(Icons.save_alt, color: kBrandColor, size: 20),
             ),
           ),
         ],
