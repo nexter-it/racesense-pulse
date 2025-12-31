@@ -573,77 +573,80 @@ class _CustomCircuitBuilderPageState extends State<CustomCircuitBuilderPage>
 
   Widget _buildProgressDialog(double progress) {
     return Center(
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 40),
-        padding: const EdgeInsets.all(28),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [_kCardStart, _kCardEnd],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+      child: Material(
+        color: Colors.transparent,
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 40),
+          padding: const EdgeInsets.all(28),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [_kCardStart, _kCardEnd],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: _kBorderColor),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withAlpha(100),
+                blurRadius: 30,
+                offset: const Offset(0, 10),
+              ),
+            ],
           ),
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: _kBorderColor),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withAlpha(100),
-              blurRadius: 30,
-              offset: const Offset(0, 10),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: kBrandColor.withAlpha(25),
-                shape: BoxShape.circle,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: kBrandColor.withAlpha(25),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.cloud_upload_outlined, color: kBrandColor, size: 40),
               ),
-              child: const Icon(Icons.cloud_upload_outlined, color: kBrandColor, size: 40),
-            ),
-            const SizedBox(height: 20),
-            const Text(
-              'Salvataggio circuito',
-              style: TextStyle(
-                fontSize: 18,
-                color: Colors.white,
-                fontWeight: FontWeight.w900,
-                letterSpacing: -0.3,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Caricamento su Firebase...',
-              style: TextStyle(fontSize: 13, color: kMutedColor),
-            ),
-            const SizedBox(height: 24),
-            Container(
-              height: 6,
-              decoration: BoxDecoration(
-                color: _kTileColor,
-                borderRadius: BorderRadius.circular(3),
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(3),
-                child: LinearProgressIndicator(
-                  value: progress,
-                  backgroundColor: Colors.transparent,
-                  valueColor: const AlwaysStoppedAnimation<Color>(kBrandColor),
+              const SizedBox(height: 20),
+              const Text(
+                'Salvataggio circuito',
+                style: TextStyle(
+                  fontSize: 18,
+                  color: Colors.white,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -0.3,
                 ),
               ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              '${(progress * 100).toInt()}%',
-              style: const TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.w900,
-                color: kBrandColor,
+              const SizedBox(height: 8),
+              Text(
+                'Caricamento su Firebase...',
+                style: TextStyle(fontSize: 13, color: kMutedColor),
               ),
-            ),
-          ],
+              const SizedBox(height: 24),
+              Container(
+                height: 6,
+                decoration: BoxDecoration(
+                  color: _kTileColor,
+                  borderRadius: BorderRadius.circular(3),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(3),
+                  child: LinearProgressIndicator(
+                    value: progress,
+                    backgroundColor: Colors.transparent,
+                    valueColor: const AlwaysStoppedAnimation<Color>(kBrandColor),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                '${(progress * 100).toInt()}%',
+                style: const TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w900,
+                  color: kBrandColor,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

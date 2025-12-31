@@ -559,11 +559,11 @@ class _SuccessBanner extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [kBrandColor.withAlpha(20), Colors.transparent],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-              ),
+              // gradient: LinearGradient(
+              //   colors: [kBrandColor.withAlpha(20), Colors.transparent],
+              //   begin: Alignment.topCenter,
+              //   end: Alignment.bottomCenter,
+              // ),
               borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
             ),
             child: Column(
@@ -2069,87 +2069,90 @@ class _SaveProgressDialog extends StatelessWidget {
     return ValueListenableBuilder<double>(
       valueListenable: progress,
       builder: (context, value, _) => Center(
-        child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 40),
-          padding: const EdgeInsets.all(28),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [_kCardStart, _kCardEnd],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 40),
+            padding: const EdgeInsets.all(28),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [_kCardStart, _kCardEnd],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: _kBorderColor, width: 1.5),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withAlpha(150),
+                  blurRadius: 30,
+                  spreadRadius: 5,
+                ),
+              ],
             ),
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: _kBorderColor, width: 1.5),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withAlpha(150),
-                blurRadius: 30,
-                spreadRadius: 5,
-              ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 64,
-                height: 64,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    colors: [kBrandColor.withAlpha(40), kBrandColor.withAlpha(20)],
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      colors: [kBrandColor.withAlpha(40), kBrandColor.withAlpha(20)],
+                    ),
+                    border: Border.all(color: kBrandColor.withAlpha(80), width: 2),
                   ),
-                  border: Border.all(color: kBrandColor.withAlpha(80), width: 2),
+                  child: const Icon(Icons.cloud_upload, color: kBrandColor, size: 28),
                 ),
-                child: const Icon(Icons.cloud_upload, color: kBrandColor, size: 28),
-              ),
-              const SizedBox(height: 20),
-              const Text(
-                'Caricamento sessione',
-                style: TextStyle(
-                  fontSize: 18,
-                  color: kFgColor,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                'Salvataggio dei dati telemetrici...',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: kMutedColor,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 24),
-              Container(
-                height: 10,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(5),
-                  color: _kTileColor,
-                  border: Border.all(color: _kBorderColor),
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(5),
-                  child: LinearProgressIndicator(
-                    value: value,
-                    minHeight: 10,
-                    backgroundColor: Colors.transparent,
-                    valueColor: AlwaysStoppedAnimation<Color>(kBrandColor),
+                const SizedBox(height: 20),
+                const Text(
+                  'Caricamento sessione',
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: kFgColor,
+                    fontWeight: FontWeight.w900,
                   ),
                 ),
-              ),
-              const SizedBox(height: 14),
-              Text(
-                '${(value * 100).toInt()}%',
-                style: const TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w900,
-                  color: kBrandColor,
-                  letterSpacing: -1,
+                const SizedBox(height: 6),
+                Text(
+                  'Salvataggio dei dati telemetrici...',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: kMutedColor,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 24),
+                Container(
+                  height: 10,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(5),
+                    color: _kTileColor,
+                    border: Border.all(color: _kBorderColor),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(5),
+                    child: LinearProgressIndicator(
+                      value: value,
+                      minHeight: 10,
+                      backgroundColor: Colors.transparent,
+                      valueColor: AlwaysStoppedAnimation<Color>(kBrandColor),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  '${(value * 100).toInt()}%',
+                  style: const TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w900,
+                    color: kBrandColor,
+                    letterSpacing: -1,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
