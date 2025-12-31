@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../widgets/pulse_background.dart';
 import '../services/disclaimer_service.dart';
+import '../services/follow_service.dart';
 import '../theme.dart';
 import 'login_page.dart';
 import 'disclaimer_page.dart';
@@ -42,18 +44,30 @@ class _AuthGateState extends State<AuthGate> {
   // una volta che l'utente è autenticato
   Widget? _rootShell;
 
+  // FIX MEMORY LEAK: Subscription per auth state changes
+  StreamSubscription<User?>? _authSubscription;
+
   @override
   void initState() {
     super.initState();
     _listenToAuthChanges();
   }
 
+  @override
+  void dispose() {
+    // FIX MEMORY LEAK: Cancella subscription quando widget viene distrutto
+    _authSubscription?.cancel();
+    super.dispose();
+  }
+
   void _listenToAuthChanges() {
-    FirebaseAuth.instance.authStateChanges().listen((user) async {
+    _authSubscription = FirebaseAuth.instance.authStateChanges().listen((user) async {
       if (!mounted) return;
 
       if (user == null) {
         // Utente non autenticato - resetta tutto
+        // OTTIMIZZAZIONE: Pulisce cache FollowService al logout
+        FollowService.clearCache();
         setState(() {
           _authState = _AuthState.unauthenticated;
           _currentUserId = null;

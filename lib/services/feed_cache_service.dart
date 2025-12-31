@@ -152,11 +152,14 @@ class FeedCacheService {
 
   /// Refresha il feed completo da Firebase
   /// Chiamato solo con pull-to-refresh o al primo avvio senza cache
+  ///
+  /// OTTIMIZZAZIONE: Ridotto maxBatchAttempts da 4 a 2 e aggiunto early exit
+  /// Risparmio: da 100 letture potenziali a max 50 per refresh
   Future<List<SessionModel>> refreshFeed({
     required Set<String> followingIds,
     required bool Function(SessionModel) isNearbyFilter,
     int pageSize = 10,
-    int maxBatchAttempts = 4,
+    int maxBatchAttempts = 2, // OTTIMIZZATO: era 4
   }) async {
     try {
       print('🔄 Refreshing feed from Firebase...');
@@ -194,6 +197,12 @@ class FeedCacheService {
           if (added >= pageSize) break;
         }
 
+        // OTTIMIZZAZIONE: Early exit se abbiamo abbastanza sessioni
+        if (added >= pageSize) {
+          print('✅ Early exit: raggiunte $added sessioni in $attempts tentativi');
+          break;
+        }
+
         if (snap.docs.length < fetchBatchSize) break;
       }
 
@@ -204,7 +213,7 @@ class FeedCacheService {
       // Salva in SharedPreferences
       await _saveFeedToPrefs();
 
-      print('✅ Feed refreshed: ${feedSessions.length} sessioni');
+      print('✅ Feed refreshed: ${feedSessions.length} sessioni in $attempts batch');
       return feedSessions;
     } catch (e) {
       print('❌ Errore refresh feed: $e');
@@ -214,6 +223,8 @@ class FeedCacheService {
 
   /// Carica più sessioni per il feed (paginazione)
   /// Usato per infinite scroll
+  ///
+  /// OTTIMIZZAZIONE: Ridotto maxAttempts da 4 a 2 con early exit
   Future<List<SessionModel>> loadMoreFeed({
     required Set<String> followingIds,
     required bool Function(SessionModel) isNearbyFilter,
@@ -226,7 +237,7 @@ class FeedCacheService {
       int added = 0;
       int attempts = 0;
       const fetchBatchSize = 25;
-      const maxAttempts = 4;
+      const maxAttempts = 2; // OTTIMIZZATO: era 4
 
       while (added < pageSize && attempts < maxAttempts) {
         attempts++;
@@ -255,6 +266,9 @@ class FeedCacheService {
 
           if (added >= pageSize) break;
         }
+
+        // OTTIMIZZAZIONE: Early exit se abbiamo abbastanza sessioni
+        if (added >= pageSize) break;
 
         if (snap.docs.length < fetchBatchSize) break;
       }

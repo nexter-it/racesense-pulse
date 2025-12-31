@@ -51,6 +51,19 @@ class _SearchPageState extends State<SearchPage>
 
   Set<String> _followingIds = {};
 
+  // OTTIMIZZAZIONE: Cache risultati ricerca per evitare query duplicate
+  final Map<String, List<Map<String, dynamic>>> _userSearchCache = {};
+  final Map<String, Map<String, List<SessionModel>>> _circuitSearchCache = {};
+  static const int _maxCacheEntries = 20; // Limita dimensione cache
+
+  // OTTIMIZZAZIONE: Cache statica per top users/circuits (condivisa tra istanze)
+  // Evita di ricaricare ogni volta che si apre la pagina
+  static List<Map<String, dynamic>>? _cachedTopUsers;
+  static Map<String, List<SessionModel>>? _cachedTopCircuitGroups;
+  static List<String>? _cachedTopCircuitOrder;
+  static DateTime? _topCacheTimestamp;
+  static const Duration _topCacheMaxAge = Duration(minutes: 15);
+
   @override
   void initState() {
     super.initState();
@@ -87,6 +100,17 @@ class _SearchPageState extends State<SearchPage>
   }
 
   Future<void> _loadTopUsers() async {
+    // OTTIMIZZAZIONE: Usa cache se valida (evita query Firebase)
+    if (_cachedTopUsers != null &&
+        _topCacheTimestamp != null &&
+        DateTime.now().difference(_topCacheTimestamp!) < _topCacheMaxAge) {
+      setState(() {
+        _topUsers = _cachedTopUsers!;
+        _loadingTopUsers = false;
+      });
+      return;
+    }
+
     setState(() => _loadingTopUsers = true);
     try {
       final snap = await _firestore
@@ -95,24 +119,48 @@ class _SearchPageState extends State<SearchPage>
           .limit(3)
           .get();
       if (!mounted) return;
+
+      final users = snap.docs.map((d) => {'id': d.id, ...d.data()}).toList();
+
+      // OTTIMIZZAZIONE: Salva in cache statica
+      _cachedTopUsers = users;
+      _topCacheTimestamp = DateTime.now();
+
       setState(() {
-        _topUsers = snap.docs.map((d) => {'id': d.id, ...d.data()}).toList();
+        _topUsers = users;
         _loadingTopUsers = false;
       });
-    } catch (_) {
+    } catch (e) {
+      debugPrint('⚠️ Errore caricamento top users: $e');
       if (!mounted) return;
       setState(() => _loadingTopUsers = false);
     }
   }
 
   Future<void> _loadTopCircuits() async {
+    // OTTIMIZZAZIONE: Usa cache se valida (evita query Firebase)
+    if (_cachedTopCircuitGroups != null &&
+        _cachedTopCircuitOrder != null &&
+        _topCacheTimestamp != null &&
+        DateTime.now().difference(_topCacheTimestamp!) < _topCacheMaxAge) {
+      setState(() {
+        _topCircuitGroups = _cachedTopCircuitGroups!;
+        _topCircuitOrder = _cachedTopCircuitOrder!;
+        _loadingTopCircuits = false;
+      });
+      return;
+    }
+
     setState(() => _loadingTopCircuits = true);
     try {
+      // OTTIMIZZAZIONE: Ridotto da 200 a 30 sessioni
+      // Per i TOP 3 circuiti, 30 sessioni recenti sono sufficienti
+      // Risparmio: ~170 letture Firebase per ogni apertura della pagina
       final snap = await _firestore
           .collection('sessions')
           .where('isPublic', isEqualTo: true)
           .orderBy('dateTime', descending: true)
-          .limit(200)
+          .limit(30)
           .get();
       final sessions = snap.docs
           .map((d) => SessionModel.fromFirestore(d.id, d.data()))
@@ -125,13 +173,21 @@ class _SearchPageState extends State<SearchPage>
 
       final ordered = groups.keys.toList()
         ..sort((a, b) => groups[b]!.length.compareTo(groups[a]!.length));
+      final top3 = ordered.take(3).toList();
+
+      // OTTIMIZZAZIONE: Salva in cache statica
+      _cachedTopCircuitGroups = groups;
+      _cachedTopCircuitOrder = top3;
+      // Nota: _topCacheTimestamp già aggiornato da _loadTopUsers se chiamato prima
+
       if (!mounted) return;
       setState(() {
         _topCircuitGroups = groups;
-        _topCircuitOrder = ordered.take(3).toList();
+        _topCircuitOrder = top3;
         _loadingTopCircuits = false;
       });
-    } catch (_) {
+    } catch (e) {
+      debugPrint('⚠️ Errore caricamento top circuiti: $e');
       if (!mounted) return;
       setState(() => _loadingTopCircuits = false);
     }
@@ -1005,6 +1061,16 @@ class _SearchPageState extends State<SearchPage>
 
   Future<void> _searchUsers(String term) async {
     final termLower = term.toLowerCase();
+
+    // OTTIMIZZAZIONE: Controlla cache prima di fare query Firebase
+    if (_userSearchCache.containsKey(termLower)) {
+      setState(() {
+        _userResults = _userSearchCache[termLower]!;
+        _loadingUsers = false;
+      });
+      return;
+    }
+
     setState(() {
       _loadingUsers = true;
       _usersError = null;
@@ -1021,26 +1087,38 @@ class _SearchPageState extends State<SearchPage>
           snap.docs.map((d) => {'id': d.id, ...d.data()}).toList();
 
       if (results.isEmpty) {
-        final alt = await _firestore
-            .collection('users')
-            .orderBy('fullName')
-            .startAt([term])
-            .endAt(['$term\uf8ff'])
-            .limit(20)
-            .get();
-        results = alt.docs
-            .map((d) => {'id': d.id, ...d.data()})
-            .where((u) => (u['fullName'] ?? '')
-                .toString()
-                .toLowerCase()
-                .contains(termLower))
-            .toList();
+        try {
+          final alt = await _firestore
+              .collection('users')
+              .orderBy('fullName')
+              .startAt([term])
+              .endAt(['$term\uf8ff'])
+              .limit(20)
+              .get();
+          results = alt.docs
+              .map((d) => {'id': d.id, ...d.data()})
+              .where((u) => (u['fullName'] ?? '')
+                  .toString()
+                  .toLowerCase()
+                  .contains(termLower))
+              .toList();
+        } catch (indexError) {
+          debugPrint('⚠️ FIREBASE INDEX MANCANTE: users(fullName)');
+          debugPrint('   Aggiungi indice in Firebase Console per ottimizzare');
+        }
       }
+
+      // OTTIMIZZAZIONE: Salva in cache
+      if (_userSearchCache.length >= _maxCacheEntries) {
+        _userSearchCache.remove(_userSearchCache.keys.first);
+      }
+      _userSearchCache[termLower] = results;
 
       setState(() {
         _userResults = results;
       });
     } catch (e) {
+      debugPrint('❌ Errore ricerca utenti: $e');
       setState(() {
         _usersError = e.toString();
       });
@@ -1055,30 +1133,72 @@ class _SearchPageState extends State<SearchPage>
 
   Future<void> _searchCircuits(String term) async {
     final termLower = term.toLowerCase();
+
+    // OTTIMIZZAZIONE: Controlla cache prima di fare query Firebase
+    if (_circuitSearchCache.containsKey(termLower)) {
+      final cached = _circuitSearchCache[termLower]!;
+      final orderedKeys = cached.keys.toList()
+        ..sort((a, b) => cached[b]!.length.compareTo(cached[a]!.length));
+      setState(() {
+        _circuitGroups = cached;
+        _circuitOrder = orderedKeys;
+        _loadingCircuits = false;
+      });
+      return;
+    }
+
     setState(() {
       _loadingCircuits = true;
       _circuitsError = null;
     });
     try {
-      // Carica tutte le sessioni pubbliche recenti e filtra localmente
-      // per supportare ricerca case-insensitive con contains
-      final snap = await _firestore
-          .collection('sessions')
-          .where('isPublic', isEqualTo: true)
-          .orderBy('dateTime', descending: true)
-          .limit(500)
-          .get();
+      List<SessionModel> results = [];
 
-      // Filtra localmente: case-insensitive e supporta sottostringhe
-      final results = snap.docs
-          .map((d) => SessionModel.fromFirestore(d.id, d.data()))
-          .where((s) => s.trackName.toLowerCase().contains(termLower))
-          .toList();
+      // OTTIMIZZAZIONE: Prima prova query indicizzata su trackNameLower (richiede indice)
+      // Se l'indice non esiste, fallback a query ridotta
+      try {
+        final snap = await _firestore
+            .collection('sessions')
+            .where('isPublic', isEqualTo: true)
+            .where('trackNameLower', isGreaterThanOrEqualTo: termLower)
+            .where('trackNameLower', isLessThanOrEqualTo: '$termLower\uf8ff')
+            .limit(50)
+            .get();
+
+        results = snap.docs
+            .map((d) => SessionModel.fromFirestore(d.id, d.data()))
+            .toList();
+      } catch (indexError) {
+        // Fallback: query senza indice trackNameLower ma con limit ridotto
+        // Logga warning per aggiungere indice in Firebase Console
+        debugPrint('⚠️ FIREBASE INDEX MANCANTE: sessions(isPublic, trackNameLower)');
+        debugPrint('   Aggiungi indice composto in Firebase Console per ottimizzare');
+        debugPrint('   Errore: $indexError');
+
+        // Fallback con limit molto ridotto (era 500, ora 50)
+        final snap = await _firestore
+            .collection('sessions')
+            .where('isPublic', isEqualTo: true)
+            .orderBy('dateTime', descending: true)
+            .limit(50)
+            .get();
+
+        results = snap.docs
+            .map((d) => SessionModel.fromFirestore(d.id, d.data()))
+            .where((s) => s.trackName.toLowerCase().contains(termLower))
+            .toList();
+      }
 
       final groups = <String, List<SessionModel>>{};
       for (final s in results) {
         groups.putIfAbsent(s.trackName, () => []).add(s);
       }
+
+      // OTTIMIZZAZIONE: Salva in cache
+      if (_circuitSearchCache.length >= _maxCacheEntries) {
+        _circuitSearchCache.remove(_circuitSearchCache.keys.first);
+      }
+      _circuitSearchCache[termLower] = groups;
 
       // Ordina i circuiti per numero di sessioni (più popolari prima)
       final orderedKeys = groups.keys.toList()
@@ -1089,6 +1209,7 @@ class _SearchPageState extends State<SearchPage>
         _circuitOrder = orderedKeys;
       });
     } catch (e) {
+      debugPrint('❌ Errore ricerca circuiti: $e');
       setState(() {
         _circuitsError = e.toString();
       });
