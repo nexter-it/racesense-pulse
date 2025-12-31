@@ -2,20 +2,21 @@ import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../theme.dart';
-import '../widgets/pulse_background.dart';
 import 'search_user_profile_page.dart';
 import '../models/session_model.dart';
 import 'search_track_sessions_page.dart';
 import '../services/follow_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-/// Pagina Cerca - Mock UI (solo grafica, nessuna logica)
-/// Funzionalità future:
-/// - Ricerca utenti
-/// - Ricerca circuiti
-/// - Filtro per paese
-/// - Mappa con tutti i circuiti della piattaforma (OpenStreetMap)
+// Premium UI constants
+const Color _kBgColor = Color(0xFF0A0A0A);
+const Color _kCardStart = Color(0xFF1A1A1A);
+const Color _kCardEnd = Color(0xFF141414);
+const Color _kBorderColor = Color(0xFF2A2A2A);
+const Color _kTileColor = Color(0xFF0D0D0D);
+
 class SearchPage extends StatefulWidget {
   const SearchPage({super.key});
 
@@ -99,7 +100,6 @@ class _SearchPageState extends State<SearchPage>
         _loadingTopUsers = false;
       });
     } catch (_) {
-      // silenzioso: top utenti opzionale
       if (!mounted) return;
       setState(() => _loadingTopUsers = false);
     }
@@ -132,7 +132,6 @@ class _SearchPageState extends State<SearchPage>
         _loadingTopCircuits = false;
       });
     } catch (_) {
-      // silenzioso: top circuiti opzionale
       if (!mounted) return;
       setState(() => _loadingTopCircuits = false);
     }
@@ -140,48 +139,59 @@ class _SearchPageState extends State<SearchPage>
 
   @override
   Widget build(BuildContext context) {
-    return PulseBackground(
-      withTopPadding: true,
-      child: Column(
-        children: [
-          // Header
-          _buildHeader(),
-
-          // Search bar
-          _buildSearchBar(),
-
-          // Tabs
-          _buildTabs(),
-
-          // Content
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                _buildUsersTab(),
-                _buildCircuitsTab(),
-              ],
+    return Scaffold(
+      backgroundColor: _kBgColor,
+      body: SafeArea(
+        child: Column(
+          children: [
+            _buildHeader(),
+            _buildSearchBar(),
+            _buildTabs(),
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildUsersTab(),
+                  _buildCircuitsTab(),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildHeader() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [_kCardStart, _kCardEnd],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ),
+      ),
       child: Row(
         children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: kBrandColor.withAlpha(25),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(Icons.search, color: kBrandColor, size: 22),
+          ),
+          const SizedBox(width: 14),
           const Text(
             'Ricerca',
             style: TextStyle(
-              fontSize: 22,
+              fontSize: 24,
               fontWeight: FontWeight.w900,
-              letterSpacing: 0.8,
+              color: Colors.white,
+              letterSpacing: -0.3,
             ),
           ),
-          const Spacer(),
         ],
       ),
     );
@@ -189,52 +199,70 @@ class _SearchPageState extends State<SearchPage>
 
   Widget _buildSearchBar() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       child: Container(
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(18),
+          gradient: const LinearGradient(
+            colors: [_kCardStart, _kCardEnd],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: _kBorderColor),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withAlpha(120),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
+              color: Colors.black.withAlpha(60),
+              blurRadius: 16,
+              offset: const Offset(0, 6),
             ),
           ],
         ),
         child: TextField(
           controller: _searchController,
           style: const TextStyle(
-              fontSize: 16, color: kFgColor, fontWeight: FontWeight.w600),
+            fontSize: 15,
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
+          ),
           decoration: InputDecoration(
-            hintText: 'Cerca utenti o circuiti...',
+            hintText: 'Cerca piloti o circuiti...',
             hintStyle: TextStyle(
-                color: kMutedColor.withAlpha(130), fontWeight: FontWeight.w500),
-            prefixIcon: const Icon(Icons.search, color: kBrandColor, size: 22),
+              color: kMutedColor.withAlpha(130),
+              fontWeight: FontWeight.w500,
+            ),
+            prefixIcon: Icon(Icons.search, color: kMutedColor.withAlpha(150), size: 22),
             suffixIcon: _searchController.text.isNotEmpty
-                ? IconButton(
-                    icon: const Icon(Icons.clear, color: kMutedColor, size: 20),
-                    onPressed: () {
+                ? GestureDetector(
+                    onTap: () {
                       _searchController.clear();
                       _onQueryChanged('');
                     },
+                    child: Container(
+                      margin: const EdgeInsets.all(8),
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: _kTileColor,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(Icons.close, color: kMutedColor, size: 16),
+                    ),
                   )
                 : null,
             filled: true,
-            fillColor: const Color(0xFF1A1A20),
+            fillColor: _kTileColor,
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(18),
-              borderSide: const BorderSide(color: kLineColor, width: 1),
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide.none,
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(18),
-              borderSide: const BorderSide(color: kLineColor, width: 1),
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide.none,
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(18),
-              borderSide: const BorderSide(color: kBrandColor, width: 2),
+              borderRadius: BorderRadius.circular(16),
+              borderSide: const BorderSide(color: kBrandColor, width: 1.5),
             ),
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
           ),
           onChanged: (value) {
             _onQueryChanged(value);
@@ -246,51 +274,34 @@ class _SearchPageState extends State<SearchPage>
 
   Widget _buildTabs() {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            const Color(0xFF1A1A20).withAlpha(255),
-            const Color(0xFF0F0F15).withAlpha(255),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: kLineColor, width: 1),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha(100),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        color: _kTileColor,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: _kBorderColor),
       ),
       child: TabBar(
         controller: _tabController,
         indicatorSize: TabBarIndicatorSize.tab,
         indicator: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(10),
           gradient: LinearGradient(
-            colors: [
-              kBrandColor.withAlpha(40),
-              kBrandColor.withAlpha(25),
-            ],
+            colors: [kBrandColor.withAlpha(40), kBrandColor.withAlpha(20)],
           ),
           border: Border.all(color: kBrandColor, width: 1.5),
-          boxShadow: [
-            BoxShadow(
-              color: kBrandColor.withAlpha(60),
-              blurRadius: 8,
-              spreadRadius: 0,
-            ),
-          ],
         ),
         labelColor: kBrandColor,
         unselectedLabelColor: kMutedColor,
         labelStyle: const TextStyle(
-            fontSize: 13, fontWeight: FontWeight.w900, letterSpacing: 0.5),
-        unselectedLabelStyle:
-            const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+          fontSize: 13,
+          fontWeight: FontWeight.w900,
+          letterSpacing: 0.5,
+        ),
+        unselectedLabelStyle: const TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w700,
+        ),
         dividerColor: Colors.transparent,
         tabs: const [
           Tab(text: 'PILOTI'),
@@ -302,41 +313,135 @@ class _SearchPageState extends State<SearchPage>
 
   Widget _buildUsersTab() {
     if (_query.length < 2) {
-      return _buildSearchHint(
-        title: 'Top 3 piloti',
-        subtitle: 'Top 3 piloti più seguiti della piattaforma.',
-        loadingWidget: (_loadingTopUsers && _topUsers.isEmpty)
-            ? _buildPremiumSearchLoading(
-                title: 'Sto cercando i più seguiti…',
-                subtitle: 'Caricamento...',
-              )
-            : null,
-        placeholderList:
-            _topUsers.map((u) => _buildUserCard(u)).take(3).toList(),
+      return _buildTopSection(
+        title: 'Top Piloti',
+        subtitle: 'I piloti pi seguiti della piattaforma',
+        icon: Icons.emoji_events_outlined,
+        iconColor: const Color(0xFFFFD60A),
+        isLoading: _loadingTopUsers && _topUsers.isEmpty,
+        children: _topUsers.take(3).map((u) => _buildUserCard(u)).toList(),
       );
     }
 
     if (_loadingUsers) {
-      return Center(
-        child: _buildPremiumSearchLoading(
-          title: 'Ricerca in corso…',
-          subtitle: 'Sto interrogando Firebase',
-        ),
-      );
+      return _buildLoadingState();
     }
 
-    print(_usersError);
     if (_usersError != null) {
-      return _buildErrorBox(_usersError!);
+      return _buildErrorState(_usersError!);
     }
 
     if (_userResults.isEmpty) {
-      return _buildEmptyState('Nessun utente trovato con "$_query".');
+      return _buildEmptyState('Nessun pilota trovato per "$_query"');
     }
 
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       children: _userResults.map((user) => _buildUserCard(user)).toList(),
+    );
+  }
+
+  Widget _buildCircuitsTab() {
+    if (_query.length < 2) {
+      final widgets = _topCircuitOrder
+          .map((name) => _buildCircuitCard(name, _topCircuitGroups[name] ?? []))
+          .toList();
+      return _buildTopSection(
+        title: 'Top Circuiti',
+        subtitle: 'I circuiti con pi sessioni tracciate',
+        icon: Icons.flag_outlined,
+        iconColor: kPulseColor,
+        isLoading: _loadingTopCircuits && _topCircuitOrder.isEmpty,
+        children: widgets,
+      );
+    }
+
+    if (_loadingCircuits) {
+      return _buildLoadingState();
+    }
+
+    if (_circuitsError != null) {
+      return _buildErrorState(_circuitsError!);
+    }
+
+    if (_circuitGroups.isEmpty) {
+      return _buildEmptyState('Nessun circuito trovato per "$_query"');
+    }
+
+    return ListView(
+      padding: const EdgeInsets.all(20),
+      children: _circuitOrder
+          .map((name) => _buildCircuitCard(name, _circuitGroups[name]!))
+          .toList(),
+    );
+  }
+
+  Widget _buildTopSection({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required Color iconColor,
+    required bool isLoading,
+    required List<Widget> children,
+  }) {
+    return ListView(
+      padding: const EdgeInsets.all(20),
+      children: [
+        // Section header
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [_kCardStart, _kCardEnd],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: iconColor.withAlpha(60)),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: iconColor.withAlpha(25),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: iconColor, size: 22),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900,
+                        color: iconColor,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: kMutedColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        if (isLoading)
+          _buildLoadingCard()
+        else
+          ...children,
+      ],
     );
   }
 
@@ -344,19 +449,17 @@ class _SearchPageState extends State<SearchPage>
     final fullName = user['fullName'] ?? user['name'] ?? '';
     final stats = user['stats'] as Map<String, dynamic>? ?? {};
     final totalSessions = stats['totalSessions'] ?? user['sessions'] ?? 0;
-    final totalDistance =
-        (stats['totalDistanceKm'] ?? user['distance'] ?? 0).toString();
     final initials = user['initials'] ??
         (fullName.isNotEmpty ? fullName[0].toUpperCase() : '?');
     final userId = user['id']?.toString();
     final followerCount = stats['followerCount'] ?? 0;
-    final followingCount = stats['followingCount'] ?? 0;
     final isMe = _currentUserId != null && _currentUserId == userId;
     final isFollowing = userId != null && _followingIds.contains(userId);
 
-    return InkWell(
+    return GestureDetector(
       onTap: (userId != null && userId.isNotEmpty)
           ? () {
+              HapticFeedback.selectionClick();
               Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (_) => SearchUserProfilePage(
@@ -367,26 +470,21 @@ class _SearchPageState extends State<SearchPage>
               );
             }
           : null,
-      borderRadius: BorderRadius.circular(20),
       child: Container(
-        margin: const EdgeInsets.only(bottom: 14),
+        margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              const Color(0xFF1A1A20).withAlpha(255),
-              const Color(0xFF0F0F15).withAlpha(255),
-            ],
+          gradient: const LinearGradient(
+            colors: [_kCardStart, _kCardEnd],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: kLineColor, width: 1),
+          border: Border.all(color: _kBorderColor),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withAlpha(140),
-              blurRadius: 12,
-              spreadRadius: -2,
+              color: Colors.black.withAlpha(60),
+              blurRadius: 16,
               offset: const Offset(0, 6),
             ),
           ],
@@ -399,21 +497,24 @@ class _SearchPageState extends State<SearchPage>
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: LinearGradient(
-                  colors: [
-                    kBrandColor.withAlpha(60),
-                    kPulseColor.withAlpha(40)
-                  ],
+                  colors: [kBrandColor.withAlpha(80), kPulseColor.withAlpha(60)],
                 ),
               ),
-              child: CircleAvatar(
-                radius: 28,
-                backgroundColor: const Color(0xFF1A1A20),
-                child: Text(
-                  initials.toString(),
-                  style: const TextStyle(
-                    color: kBrandColor,
-                    fontWeight: FontWeight.w900,
-                    fontSize: 18,
+              child: Container(
+                width: 52,
+                height: 52,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: _kTileColor,
+                ),
+                child: Center(
+                  child: Text(
+                    initials.toString(),
+                    style: const TextStyle(
+                      color: kBrandColor,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 18,
+                    ),
                   ),
                 ),
               ),
@@ -430,161 +531,92 @@ class _SearchPageState extends State<SearchPage>
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w900,
-                      color: kFgColor,
+                      color: Colors.white,
                     ),
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 8),
                   Row(
                     children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(8),
-                          color: const Color.fromRGBO(255, 255, 255, 0.05),
-                          border: Border.all(color: kLineColor.withAlpha(100)),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.directions_run,
-                                color: kBrandColor, size: 12),
-                            const SizedBox(width: 4),
-                            Text(
-                              '$totalSessions',
-                              style: const TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w800,
-                                color: kFgColor,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(8),
-                          color: const Color.fromRGBO(255, 255, 255, 0.05),
-                          border: Border.all(color: kLineColor.withAlpha(100)),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.people,
-                                color: kPulseColor, size: 12),
-                            const SizedBox(width: 4),
-                            Text(
-                              '$followerCount',
-                              style: const TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w800,
-                                color: kFgColor,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                      _buildMiniStat(Icons.directions_run, '$totalSessions', kBrandColor),
+                      const SizedBox(width: 8),
+                      _buildMiniStat(Icons.people, '$followerCount', kPulseColor),
                     ],
                   ),
                 ],
               ),
             ),
 
+            // Follow button
             if (!isMe)
-              Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  gradient: isFollowing
-                      ? null
-                      : LinearGradient(
-                          colors: [
-                            kBrandColor.withAlpha(40),
-                            kBrandColor.withAlpha(25),
-                          ],
-                        ),
-                  border: Border.all(
-                    color: isFollowing ? kMutedColor : kBrandColor,
-                    width: 1.5,
-                  ),
-                ),
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(12),
-                    onTap: userId == null
-                        ? null
-                        : () async {
-                            if (_currentUserId == null) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content:
-                                      Text('Devi essere loggato per seguire.'),
-                                ),
-                              );
-                              return;
-                            }
-                            try {
-                              if (isFollowing) {
-                                await _followService.unfollow(userId!);
-                                setState(() {
-                                  _followingIds.remove(userId);
-                                  if (user['stats'] != null) {
-                                    final s = Map<String, dynamic>.from(
-                                        user['stats'] as Map);
-                                    s['followerCount'] =
-                                        (s['followerCount'] ?? 0) - 1;
-                                    user['stats'] = s;
-                                  }
-                                });
-                              } else {
-                                await _followService.follow(userId!);
-                                setState(() {
-                                  _followingIds.add(userId);
-                                  if (user['stats'] != null) {
-                                    final s = Map<String, dynamic>.from(
-                                        user['stats'] as Map);
-                                    s['followerCount'] =
-                                        (s['followerCount'] ?? 0) + 1;
-                                    user['stats'] = s;
-                                  }
-                                });
+              GestureDetector(
+                onTap: userId == null
+                    ? null
+                    : () async {
+                        HapticFeedback.selectionClick();
+                        if (_currentUserId == null) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Devi essere loggato per seguire.')),
+                          );
+                          return;
+                        }
+                        try {
+                          if (isFollowing) {
+                            await _followService.unfollow(userId);
+                            setState(() {
+                              _followingIds.remove(userId);
+                              if (user['stats'] != null) {
+                                final s = Map<String, dynamic>.from(user['stats'] as Map);
+                                s['followerCount'] = (s['followerCount'] ?? 0) - 1;
+                                user['stats'] = s;
                               }
-                            } catch (e) {
-                              print('❌ Follow toggle error: $e');
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('Errore: $e'),
-                                  backgroundColor: kErrorColor,
-                                ),
-                              );
-                            }
-                          },
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 10),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            isFollowing ? Icons.check : Icons.person_add,
-                            color: isFollowing ? kMutedColor : kBrandColor,
-                            size: 16,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            isFollowing ? 'Segui' : 'Segui',
-                            style: TextStyle(
-                              color: isFollowing ? kMutedColor : kBrandColor,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w900,
-                            ),
-                          ),
-                        ],
-                      ),
+                            });
+                          } else {
+                            await _followService.follow(userId);
+                            setState(() {
+                              _followingIds.add(userId);
+                              if (user['stats'] != null) {
+                                final s = Map<String, dynamic>.from(user['stats'] as Map);
+                                s['followerCount'] = (s['followerCount'] ?? 0) + 1;
+                                user['stats'] = s;
+                              }
+                            });
+                          }
+                        } catch (e) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Errore: $e'), backgroundColor: kErrorColor),
+                          );
+                        }
+                      },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    gradient: isFollowing
+                        ? null
+                        : LinearGradient(colors: [kBrandColor.withAlpha(30), kBrandColor.withAlpha(15)]),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: isFollowing ? kMutedColor.withAlpha(100) : kBrandColor,
+                      width: 1.5,
                     ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        isFollowing ? Icons.check : Icons.person_add,
+                        color: isFollowing ? kMutedColor : kBrandColor,
+                        size: 16,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        isFollowing ? 'Segui' : 'Segui',
+                        style: TextStyle(
+                          color: isFollowing ? kMutedColor : kBrandColor,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -594,57 +626,35 @@ class _SearchPageState extends State<SearchPage>
     );
   }
 
-  Widget _buildCircuitsTab() {
-    if (_query.length < 2) {
-      final widgets = _topCircuitOrder
-          .map((name) => _buildCircuitGroupCard(
-                name,
-                _topCircuitGroups[name] ?? [],
-              ))
-          .toList();
-      return _buildSearchHint(
-        title: 'Top 3 circuiti',
-        subtitle: 'Lista dei circuiti con più sessioni tracciate.',
-        loadingWidget: (_loadingTopCircuits && _topCircuitOrder.isEmpty)
-            ? _buildPremiumSearchLoading(
-                title: 'Sto cercando i circuiti top…',
-                subtitle: 'Caricamento...',
-              )
-            : null,
-        placeholderList: widgets,
-      );
-    }
-
-    if (_loadingCircuits) {
-      return Center(
-        child: _buildPremiumSearchLoading(
-          title: 'Ricerca in corso…',
-          subtitle: 'Sto interrogando Firebase',
-        ),
-      );
-    }
-
-    if (_circuitsError != null) {
-      return _buildErrorBox(_circuitsError!);
-    }
-
-    if (_circuitGroups.isEmpty) {
-      return _buildEmptyState('Nessun circuito trovato con "$_query".');
-    }
-
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: _circuitOrder
-          .map((name) => _buildCircuitGroupCard(
-                name,
-                _circuitGroups[name]!,
-              ))
-          .toList(),
+  Widget _buildMiniStat(IconData icon, String value, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withAlpha(15),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withAlpha(50)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: color, size: 14),
+          const SizedBox(width: 6),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+              color: color,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _buildCircuitGroupCard(String trackName, List<SessionModel> sessions) {
+  Widget _buildCircuitCard(String trackName, List<SessionModel> sessions) {
     if (sessions.isEmpty) return const SizedBox.shrink();
+
     final location = sessions.first.location;
     final totalSessions = sessions.length;
     final bestLap = sessions
@@ -654,15 +664,11 @@ class _SearchPageState extends State<SearchPage>
       if (prev == null) return d;
       return d < prev ? d : prev;
     });
-    final avgDistance = sessions.isNotEmpty
-        ? sessions.map((s) => s.distanceKm).reduce((a, b) => a + b) /
-            sessions.length
-        : 0.0;
-    final bestLapStr =
-        bestLap != null ? _formatBestLap(bestLap.inMilliseconds) : '—';
+    final bestLapStr = bestLap != null ? _formatLap(bestLap) : '--:--.--';
 
-    return InkWell(
+    return GestureDetector(
       onTap: () {
+        HapticFeedback.selectionClick();
         Navigator.of(context).push(
           MaterialPageRoute(
             builder: (_) => SearchTrackSessionsPage(
@@ -672,70 +678,39 @@ class _SearchPageState extends State<SearchPage>
           ),
         );
       },
-      borderRadius: BorderRadius.circular(24),
       child: Container(
-        margin: const EdgeInsets.only(bottom: 14),
+        margin: const EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              const Color(0xFF1A1A20).withAlpha(255),
-              const Color(0xFF0F0F15).withAlpha(255),
-            ],
+          gradient: const LinearGradient(
+            colors: [_kCardStart, _kCardEnd],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: kLineColor, width: 1),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: _kBorderColor),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withAlpha(140),
+              color: Colors.black.withAlpha(60),
               blurRadius: 16,
-              spreadRadius: -3,
-              offset: const Offset(0, 8),
+              offset: const Offset(0, 6),
             ),
           ],
         ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header with gradient overlay
-            Container(
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(24)),
-                gradient: LinearGradient(
-                  colors: [
-                    Colors.transparent,
-                    Colors.transparent,
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-              ),
+            // Header
+            Padding(
+              padding: const EdgeInsets.all(16),
               child: Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(14),
+                    padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(16),
-                      // gradient: LinearGradient(
-                      //   colors: [
-                      //     const Color.fromARGB(67, 255, 0, 0).withAlpha(40),
-                      //     const Color.fromARGB(67, 255, 0, 0).withAlpha(40),
-                      //   ],
-                      // ),
-                      border: Border.all(color: kPulseColor, width: 1.5),
-                      boxShadow: [
-                        BoxShadow(
-                          color: kPulseColor.withAlpha(80),
-                          blurRadius: 0,
-                          spreadRadius: 0,
-                        ),
-                      ],
+                      color: kPulseColor.withAlpha(20),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: kPulseColor.withAlpha(60)),
                     ),
-                    child: const Icon(Icons.location_on,
-                        color: kPulseColor, size: 28),
+                    child: const Icon(Icons.location_on, color: kPulseColor, size: 24),
                   ),
                   const SizedBox(width: 14),
                   Expanded(
@@ -745,23 +720,26 @@ class _SearchPageState extends State<SearchPage>
                         Text(
                           trackName,
                           style: const TextStyle(
-                            fontSize: 18,
+                            fontSize: 17,
                             fontWeight: FontWeight.w900,
-                            color: kFgColor,
+                            color: Colors.white,
                           ),
                         ),
                         const SizedBox(height: 4),
                         Row(
                           children: [
-                            const Icon(Icons.place,
-                                size: 13, color: kMutedColor),
+                            Icon(Icons.place, size: 14, color: kMutedColor),
                             const SizedBox(width: 4),
-                            Text(
-                              location,
-                              style: const TextStyle(
-                                fontSize: 13,
-                                color: kMutedColor,
-                                fontWeight: FontWeight.w600,
+                            Expanded(
+                              child: Text(
+                                location,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: kMutedColor,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                           ],
@@ -769,32 +747,26 @@ class _SearchPageState extends State<SearchPage>
                       ],
                     ),
                   ),
-                  const Icon(Icons.chevron_right, color: kMutedColor, size: 24),
+                  Icon(Icons.chevron_right, color: kMutedColor, size: 24),
                 ],
               ),
             ),
 
-            // Stats section
-            Padding(
-              padding: const EdgeInsets.fromLTRB(18, 0, 18, 18),
-              child: Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  color: const Color.fromRGBO(255, 255, 255, 0.03),
-                  border: Border.all(color: kLineColor.withAlpha(100)),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _buildCircuitStat('Sessioni', totalSessions.toString()),
-                    Container(width: 1, height: 45, color: kLineColor),
-                    _buildCircuitStat(
-                        'Avg km', '${avgDistance.toStringAsFixed(1)}'),
-                    Container(width: 1, height: 45, color: kLineColor),
-                    _buildCircuitStat('Record', bestLapStr),
-                  ],
-                ),
+            // Stats row
+            Container(
+              margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: _kTileColor,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: _kBorderColor),
+              ),
+              child: Row(
+                children: [
+                  Expanded(child: _buildCircuitStat(Icons.sports_score, '$totalSessions', 'Sessioni', kBrandColor)),
+                  Container(width: 1, height: 45, color: _kBorderColor),
+                  Expanded(child: _buildCircuitStat(Icons.timer_outlined, bestLapStr, 'Record', kPulseColor)),
+                ],
               ),
             ),
           ],
@@ -803,101 +775,23 @@ class _SearchPageState extends State<SearchPage>
     );
   }
 
-  // Mock/placeholder card for circuiti statici
-  Widget _buildCircuitCard(Map<String, dynamic> circuit) {
-    final name = (circuit['name'] ?? circuit['trackName'] ?? '').toString();
-    final location = (circuit['location'] ?? '-').toString();
-    final length =
-        (circuit['length'] ?? circuit['estimatedLength'] ?? '—').toString();
-    final sessions =
-        (circuit['sessions'] ?? circuit['sessionCount'] ?? '—').toString();
-    final record =
-        _formatBestLap(circuit['record'] ?? circuit['bestLap'] ?? '—');
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF10121A),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: kLineColor),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: kBrandColor.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: kBrandColor.withOpacity(0.3)),
-                ),
-                child: const Icon(Icons.track_changes,
-                    color: kBrandColor, size: 28),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      name,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Row(
-                      children: [
-                        const Icon(Icons.location_on,
-                            size: 12, color: kMutedColor),
-                        const SizedBox(width: 4),
-                        Text(
-                          location,
-                          style:
-                              const TextStyle(fontSize: 12, color: kMutedColor),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _buildCircuitStat('Lunghezza', length),
-              _buildCircuitStat('Sessioni', sessions),
-              _buildCircuitStat('Record', record),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCircuitStat(String label, String value) {
+  Widget _buildCircuitStat(IconData icon, String value, String label, Color color) {
     return Column(
-      mainAxisSize: MainAxisSize.min,
       children: [
+        Icon(icon, color: color, size: 20),
+        const SizedBox(height: 6),
         Text(
           value,
           style: const TextStyle(
-            fontSize: 17,
+            fontSize: 16,
             fontWeight: FontWeight.w900,
-            color: Color.fromARGB(255, 255, 255, 255),
+            color: Colors.white,
           ),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 2),
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 10,
             color: kMutedColor,
             fontWeight: FontWeight.w600,
@@ -907,175 +801,87 @@ class _SearchPageState extends State<SearchPage>
     );
   }
 
-  Widget _buildCountryCard(Map<String, dynamic> country) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: BoxDecoration(
-        color: const Color(0xFF10121A),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: kLineColor),
-      ),
-      child: Row(
-        children: [
-          // Flag placeholder
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: kBrandColor.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Center(
-              child: Text(
-                country['flag'],
-                style: const TextStyle(fontSize: 24),
+  Widget _buildLoadingState() {
+    return Center(
+      child: Container(
+        margin: const EdgeInsets.all(40),
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [_kCardStart, _kCardEnd],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: kBrandColor.withAlpha(60)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: 50,
+              height: 50,
+              child: CircularProgressIndicator(
+                strokeWidth: 3,
+                valueColor: const AlwaysStoppedAnimation(kBrandColor),
+                backgroundColor: _kBorderColor,
               ),
             ),
-          ),
-          const SizedBox(width: 12),
-
-          // Info
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  country['name'],
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  '${country['circuits']} circuiti · ${country['users']} utenti',
-                  style: const TextStyle(fontSize: 12, color: kMutedColor),
-                ),
-              ],
+            const SizedBox(height: 20),
+            const Text(
+              'Ricerca in corso...',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+              ),
             ),
-          ),
-
-          const Icon(Icons.arrow_forward_ios, size: 16, color: kMutedColor),
-        ],
+          ],
+        ),
       ),
     );
   }
 
-  // Helper UI e ricerca
-  Widget _buildSearchHint({
-    required String title,
-    required String subtitle,
-    List<Widget> placeholderList = const [],
-    Widget? loadingWidget,
-  }) {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        Text(
-          title,
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 0.3,
-          ),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          subtitle,
-          style: const TextStyle(fontSize: 12, color: kMutedColor),
-        ),
-        if (loadingWidget != null) ...[
-          const SizedBox(height: 16),
-          loadingWidget,
-        ],
-        if (placeholderList.isNotEmpty) ...[
-          const SizedBox(height: 16),
-          ...placeholderList,
-        ],
-      ],
-    );
-  }
-
-  Widget _buildPremiumSearchLoading({
-    required String title,
-    required String subtitle,
-  }) {
+  Widget _buildLoadingCard() {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(18),
-        gradient: LinearGradient(
-          colors: [
-            const Color(0xFF1A1A20).withAlpha(255),
-            const Color(0xFF0F0F15).withAlpha(255),
-          ],
+        gradient: const LinearGradient(
+          colors: [_kCardStart, _kCardEnd],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        border: Border.all(color: kLineColor.withAlpha(180), width: 1),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha(120),
-            blurRadius: 14,
-            spreadRadius: -2,
-            offset: const Offset(0, 8),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _kBorderColor),
       ),
       child: Row(
         children: [
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              SizedBox(
-                width: 46,
-                height: 46,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2.4,
-                  valueColor:
-                      AlwaysStoppedAnimation<Color>(kBrandColor.withAlpha(220)),
-                  backgroundColor: kLineColor.withAlpha(80),
-                ),
-              ),
-              Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    colors: [
-                      kBrandColor.withAlpha(40),
-                      kPulseColor.withAlpha(20),
-                    ],
-                  ),
-                  border: Border.all(color: kBrandColor.withAlpha(140)),
-                ),
-                child: const Icon(Icons.search, color: kBrandColor, size: 20),
-              ),
-            ],
+          SizedBox(
+            width: 40,
+            height: 40,
+            child: CircularProgressIndicator(
+              strokeWidth: 3,
+              valueColor: const AlwaysStoppedAnimation(kBrandColor),
+              backgroundColor: _kBorderColor,
+            ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    color: kFgColor,
+                const Text(
+                  'Caricamento...',
+                  style: TextStyle(
+                    color: Colors.white,
                     fontSize: 14,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  subtitle,
-                  style: const TextStyle(
-                    color: kMutedColor,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  'Recupero dati da Firebase',
+                  style: TextStyle(color: kMutedColor, fontSize: 12),
                 ),
               ],
             ),
@@ -1087,43 +893,37 @@ class _SearchPageState extends State<SearchPage>
 
   Widget _buildEmptyState(String message) {
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24.0),
+      child: Container(
+        margin: const EdgeInsets.all(40),
+        padding: const EdgeInsets.all(30),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [_kCardStart, _kCardEnd],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: _kBorderColor),
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.search_off, color: kMutedColor, size: 44),
-            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: kMutedColor.withAlpha(20),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.search_off, color: kMutedColor, size: 40),
+            ),
+            const SizedBox(height: 20),
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: kMutedColor),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildErrorBox(String message) {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: kErrorColor.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: kErrorColor),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Icon(Icons.error_outline, color: kErrorColor),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                message,
-                style: const TextStyle(color: kErrorColor),
+              style: TextStyle(
+                color: kMutedColor,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ],
@@ -1132,18 +932,46 @@ class _SearchPageState extends State<SearchPage>
     );
   }
 
-  String _formatBestLap(dynamic raw) {
-    if (raw == null) return '—';
-    if (raw is String) return raw;
-    if (raw is int) {
-      final d = Duration(milliseconds: raw);
-      final minutes = d.inMinutes;
-      final seconds = d.inSeconds % 60;
-      final millis = (d.inMilliseconds % 1000) ~/ 10;
-      return '$minutes:${seconds.toString().padLeft(2, '0')}.${millis.toString().padLeft(2, '0')}';
-    }
-    if (raw is double) return raw.toStringAsFixed(2);
-    return raw.toString();
+  Widget _buildErrorState(String message) {
+    return Center(
+      child: Container(
+        margin: const EdgeInsets.all(40),
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [kErrorColor.withAlpha(20), kErrorColor.withAlpha(10)],
+          ),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: kErrorColor.withAlpha(60)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: kErrorColor.withAlpha(20),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.error_outline, color: kErrorColor, size: 32),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: kErrorColor, fontSize: 13),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _formatLap(Duration d) {
+    final minutes = d.inMinutes;
+    final seconds = d.inSeconds % 60;
+    final millis = (d.inMilliseconds % 1000) ~/ 10;
+    return '$minutes:${seconds.toString().padLeft(2, '0')}.${millis.toString().padLeft(2, '0')}';
   }
 
   void _onQueryChanged(String value) {
@@ -1193,7 +1021,6 @@ class _SearchPageState extends State<SearchPage>
           snap.docs.map((d) => {'id': d.id, ...d.data()}).toList();
 
       if (results.isEmpty) {
-        // fallback a startAt/endAt case-sensitive ma filtrato in locale
         final alt = await _firestore
             .collection('users')
             .orderBy('fullName')
@@ -1243,7 +1070,6 @@ class _SearchPageState extends State<SearchPage>
       try {
         snap = await q.get();
       } on FirebaseException {
-        // fallback se manca il campo indicizzato
         snap = await _firestore
             .collection('sessions')
             .where('isPublic', isEqualTo: true)

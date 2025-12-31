@@ -1,10 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 
 import '../models/session_model.dart';
 import '../services/session_service.dart';
 import '../theme.dart';
-import '../widgets/pulse_background.dart';
 import 'activity_detail_page.dart';
+import 'search_user_profile_page.dart';
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PREMIUM UI CONSTANTS
+// ═══════════════════════════════════════════════════════════════════════════
+const Color _kBgColor = Color(0xFF0A0A0A);
+const Color _kCardStart = Color(0xFF1A1A1A);
+const Color _kCardEnd = Color(0xFF141414);
+const Color _kBorderColor = Color(0xFF2A2A2A);
+const Color _kTileColor = Color(0xFF0D0D0D);
 
 class SearchTrackSessionsPage extends StatefulWidget {
   final String trackName;
@@ -44,6 +55,13 @@ class _SearchTrackSessionsPageState extends State<SearchTrackSessionsPage> {
         limit: 50,
       );
       if (mounted) {
+        // Sort by best lap time
+        data.sort((a, b) {
+          if (a.bestLap == null && b.bestLap == null) return 0;
+          if (a.bestLap == null) return 1;
+          if (b.bestLap == null) return -1;
+          return a.bestLap!.compareTo(b.bestLap!);
+        });
         setState(() {
           _sessions = data;
         });
@@ -66,102 +84,25 @@ class _SearchTrackSessionsPageState extends State<SearchTrackSessionsPage> {
     return '$minutes:${seconds.toString().padLeft(2, '0')}.${millis.toString().padLeft(2, '0')}';
   }
 
-  String _formatDate(DateTime dt) {
-    final now = DateTime.now();
-    final diff = now.difference(dt);
-
-    if (diff.inDays == 0) {
-      return 'Oggi';
-    } else if (diff.inDays == 1) {
-      return 'Ieri';
-    } else if (diff.inDays < 7) {
-      return '${diff.inDays} giorni fa';
-    } else {
-      return '${dt.day}/${dt.month}/${dt.year}';
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: PulseBackground(
-        withTopPadding: true,
+      backgroundColor: _kBgColor,
+      body: SafeArea(
         child: Column(
           children: [
-            const SizedBox(height: 8),
-
-            // ---------- HEADER ----------
-            Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 6),
-              child: Row(
-                children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      gradient: LinearGradient(
-                        colors: [
-                          kBrandColor.withAlpha(40),
-                          kBrandColor.withAlpha(25),
-                        ],
-                      ),
-                      border: Border.all(color: kBrandColor, width: 1.5),
-                    ),
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(12),
-                        onTap: () => Navigator.of(context).pop(),
-                        child: const Padding(
-                          padding: EdgeInsets.all(10),
-                          child: Icon(Icons.arrow_back,
-                              color: kBrandColor, size: 20),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          widget.trackName,
-                          style: const TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 0.8,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        Text(
-                          '${_sessions.length} ${_sessions.length == 1 ? 'sessione' : 'sessioni'}',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: kMutedColor,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // ---------- BODY ----------
+            _buildHeader(),
             Expanded(
-              child: RefreshIndicator(
-                onRefresh: _loadSessions,
-                color: kBrandColor,
-                child: _loading && _sessions.isEmpty
-                    ? const Center(
-                        child: CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation(kBrandColor),
-                        ),
-                      )
-                    : _buildSessionsList(),
-              ),
+              child: _loading && _sessions.isEmpty
+                  ? _buildLoadingState()
+                  : RefreshIndicator(
+                      onRefresh: _loadSessions,
+                      color: kBrandColor,
+                      backgroundColor: _kCardStart,
+                      child: _sessions.isEmpty
+                          ? _buildEmptyState()
+                          : _buildSessionsList(),
+                    ),
             ),
           ],
         ),
@@ -169,75 +110,372 @@ class _SearchTrackSessionsPageState extends State<SearchTrackSessionsPage> {
     );
   }
 
-  Widget _buildSessionsList() {
-    if (_sessions.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
+  Widget _buildHeader() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [_kBgColor, const Color(0xFF121212)],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ),
+        border: const Border(
+          bottom: BorderSide(color: _kBorderColor, width: 1),
+        ),
+      ),
+      child: Row(
+        children: [
+          // Back button
+          GestureDetector(
+            onTap: () {
+              HapticFeedback.lightImpact();
+              Navigator.of(context).pop();
+            },
+            child: Container(
+              padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                shape: BoxShape.circle,
+                borderRadius: BorderRadius.circular(12),
                 gradient: LinearGradient(
                   colors: [
-                    kMutedColor.withAlpha(40),
-                    kMutedColor.withAlpha(20),
+                    kBrandColor.withAlpha(40),
+                    kBrandColor.withAlpha(20),
                   ],
                 ),
-                border:
-                    Border.all(color: kMutedColor.withAlpha(100), width: 1.5),
+                border: Border.all(color: kBrandColor.withAlpha(80), width: 1.5),
               ),
-              child:
-                  const Icon(Icons.sports_score, color: kMutedColor, size: 48),
+              child: const Icon(Icons.arrow_back, color: kBrandColor, size: 20),
             ),
-            const SizedBox(height: 16),
-            const Text(
-              'Nessuna sessione trovata',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-                color: kMutedColor,
+          ),
+          const SizedBox(width: 14),
+          // Track icon
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              gradient: LinearGradient(
+                colors: [
+                  kPulseColor.withAlpha(40),
+                  kPulseColor.withAlpha(20),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
+              border: Border.all(color: kPulseColor.withAlpha(60), width: 1.5),
             ),
-            const SizedBox(height: 6),
-            const Text(
-              'Prova a cercare un altro circuito',
-              style: TextStyle(
-                fontSize: 13,
-                color: kMutedColor,
-              ),
+            child: Center(
+              child: Icon(Icons.flag_rounded, color: kPulseColor, size: 22),
             ),
-          ],
-        ),
-      );
-    }
+          ),
+          const SizedBox(width: 12),
+          // Title and count
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.trackName,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    color: kFgColor,
+                    letterSpacing: -0.5,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: kBrandColor.withAlpha(20),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: kBrandColor.withAlpha(60)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.leaderboard, size: 11, color: kBrandColor),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${_sessions.length} ${_sessions.length == 1 ? 'sessione' : 'sessioni'}',
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: kBrandColor,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
+  Widget _buildLoadingState() {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            width: 48,
+            height: 48,
+            child: CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation(kBrandColor),
+              strokeWidth: 3,
+            ),
+          ),
+          const SizedBox(height: 20),
+          Text(
+            'Caricamento classifica...',
+            style: TextStyle(
+              color: kMutedColor,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      children: [
+        const SizedBox(height: 100),
+        Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      kMutedColor.withAlpha(30),
+                      kMutedColor.withAlpha(10),
+                      Colors.transparent,
+                    ],
+                    stops: const [0.0, 0.6, 1.0],
+                  ),
+                ),
+                child: Container(
+                  margin: const EdgeInsets.all(15),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: _kCardStart,
+                    border: Border.all(color: kMutedColor.withAlpha(60), width: 2),
+                  ),
+                  child: Icon(Icons.sports_score, color: kMutedColor, size: 26),
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Nessuna sessione trovata',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w900,
+                  color: kFgColor,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Non ci sono ancora sessioni pubbliche\nper questo circuito',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: kMutedColor,
+                  fontWeight: FontWeight.w500,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSessionsList() {
     return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      itemCount: _sessions.length,
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+      itemCount: _sessions.length + 1, // +1 for header card
       itemBuilder: (context, index) {
-        final session = _sessions[index];
-        return _buildSessionCard(session, index);
+        if (index == 0) {
+          return _buildLeaderboardHeader();
+        }
+        final session = _sessions[index - 1];
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: _buildSessionCard(session, index - 1),
+        );
       },
     );
   }
 
-  Widget _buildSessionCard(SessionModel session, int index) {
-    final bestLapStr =
-        session.bestLap != null ? _formatLap(session.bestLap!) : '--:--.--';
+  Widget _buildLeaderboardHeader() {
+    if (_sessions.isEmpty) return const SizedBox.shrink();
 
+    return Container(
+      margin: const EdgeInsets.only(bottom: 20),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        gradient: LinearGradient(
+          colors: [_kCardStart, _kCardEnd],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        border: Border.all(color: _kBorderColor),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(80),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          children: [
+            // Header
+            Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    gradient: LinearGradient(
+                      colors: [
+                        const Color(0xFFFFD700).withAlpha(40),
+                        const Color(0xFFFFD700).withAlpha(20),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    border: Border.all(color: const Color(0xFFFFD700).withAlpha(60), width: 1.5),
+                  ),
+                  child: Center(
+                    child: Icon(Icons.emoji_events, color: const Color(0xFFFFD700), size: 22),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Text(
+                    'Classifica Circuito',
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w900,
+                      color: kFgColor,
+                      letterSpacing: -0.3,
+                    ),
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(8),
+                    color: kPulseColor.withAlpha(20),
+                    border: Border.all(color: kPulseColor.withAlpha(60)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.bolt, size: 12, color: kPulseColor),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Best Lap',
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: kPulseColor,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 18),
+            // Top 3 podium
+            if (_sessions.length >= 1)
+              _buildPodiumSection(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPodiumSection() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        // 2nd place
+        if (_sessions.length >= 2)
+          Expanded(
+            child: _buildPodiumItem(
+              session: _sessions[1],
+              position: 2,
+              color: const Color(0xFFC0C0C0), // Silver
+              height: 70,
+            ),
+          )
+        else
+          const Expanded(child: SizedBox()),
+        const SizedBox(width: 8),
+        // 1st place
+        Expanded(
+          child: _buildPodiumItem(
+            session: _sessions[0],
+            position: 1,
+            color: const Color(0xFFFFD700), // Gold
+            height: 90,
+          ),
+        ),
+        const SizedBox(width: 8),
+        // 3rd place
+        if (_sessions.length >= 3)
+          Expanded(
+            child: _buildPodiumItem(
+              session: _sessions[2],
+              position: 3,
+              color: const Color(0xFFCD7F32), // Bronze
+              height: 55,
+            ),
+          )
+        else
+          const Expanded(child: SizedBox()),
+      ],
+    );
+  }
+
+  Widget _buildPodiumItem({
+    required SessionModel session,
+    required int position,
+    required Color color,
+    required double height,
+  }) {
     final userInitials = session.driverFullName.isNotEmpty
         ? session.driverFullName
             .split(' ')
-            .map((e) => e[0])
+            .map((e) => e.isNotEmpty ? e[0] : '')
             .take(2)
             .join()
             .toUpperCase()
         : '??';
 
-    return InkWell(
+    return GestureDetector(
       onTap: () {
+        HapticFeedback.lightImpact();
         Navigator.of(context).push(
           MaterialPageRoute(
             builder: (_) => const ActivityDetailPage(),
@@ -245,209 +483,321 @@ class _SearchTrackSessionsPageState extends State<SearchTrackSessionsPage> {
           ),
         );
       },
-      borderRadius: BorderRadius.circular(24),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 14),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              const Color(0xFF1A1A20).withAlpha(255),
-              const Color(0xFF0F0F15).withAlpha(255),
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: kLineColor, width: 1),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withAlpha(140),
-              blurRadius: 16,
-              spreadRadius: -3,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: Column(
-          children: [
-            // Header con utente
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(24)),
-                // gradient: LinearGradient(
-                //   colors: [
-                //     kBrandColor.withAlpha(10),
-                //     Colors.transparent,
-                //   ],
-                // ),
-              ),
-              child: Row(
-                children: [
-                  // Avatar dell'utente
-                  Container(
-                    padding: const EdgeInsets.all(3),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: LinearGradient(
-                        colors: [
-                          kBrandColor.withAlpha(60),
-                          kPulseColor.withAlpha(40),
-                        ],
-                      ),
-                    ),
-                    child: CircleAvatar(
-                      radius: 24,
-                      backgroundColor: const Color(0xFF1A1A20),
-                      child: Text(
-                        userInitials,
-                        style: const TextStyle(
-                          color: kBrandColor,
-                          fontWeight: FontWeight.w900,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-
-                  // Nome utente e data
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          session.driverFullName.isNotEmpty
-                              ? session.driverFullName
-                              : 'Pilota Anonimo',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w900,
-                            color: kFgColor,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            const Icon(Icons.calendar_today,
-                                size: 11, color: kMutedColor),
-                            const SizedBox(width: 4),
-                            Text(
-                              _formatDate(session.dateTime.toLocal()),
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: kMutedColor,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // Badge posizione
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      gradient: LinearGradient(
-                        colors: [
-                          kPulseColor.withAlpha(40),
-                          kPulseColor.withAlpha(25),
-                        ],
-                      ),
-                      border: Border.all(color: kPulseColor, width: 1.5),
-                    ),
-                    child: Text(
-                      '#${index + 1}',
-                      style: const TextStyle(
-                        color: kPulseColor,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Avatar
+          Container(
+            padding: const EdgeInsets.all(2),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                colors: [
+                  color.withAlpha(150),
+                  color.withAlpha(80),
                 ],
               ),
             ),
-
-            // Stats section
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-              child: Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  color: const Color.fromRGBO(255, 255, 255, 0.03),
-                  border: Border.all(color: kLineColor.withAlpha(100)),
+            child: Container(
+              width: position == 1 ? 52 : 44,
+              height: position == 1 ? 52 : 44,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: _kBgColor,
+                boxShadow: [
+                  BoxShadow(
+                    color: color.withAlpha(60),
+                    blurRadius: 12,
+                  ),
+                ],
+              ),
+              child: Center(
+                child: Text(
+                  userInitials,
+                  style: TextStyle(
+                    fontSize: position == 1 ? 16 : 14,
+                    fontWeight: FontWeight.w900,
+                    color: color,
+                    letterSpacing: 1,
+                  ),
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          // Name
+          Text(
+            session.driverFullName.split(' ').first,
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: kFgColor,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 4),
+          // Time
+          Text(
+            session.bestLap != null ? _formatLap(session.bestLap!) : '--:--.--',
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w800,
+              color: color,
+            ),
+          ),
+          const SizedBox(height: 8),
+          // Podium block
+          Container(
+            height: height,
+            decoration: BoxDecoration(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
+              gradient: LinearGradient(
+                colors: [
+                  color.withAlpha(40),
+                  color.withAlpha(20),
+                ],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ),
+              border: Border.all(color: color.withAlpha(60)),
+            ),
+            child: Center(
+              child: Text(
+                '$position',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w900,
+                  color: color,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSessionCard(SessionModel session, int index) {
+    final bestLapStr =
+        session.bestLap != null ? _formatLap(session.bestLap!) : '--:--.--';
+    final formattedDate = DateFormat('dd MMM yyyy').format(session.dateTime);
+
+    final userInitials = session.driverFullName.isNotEmpty
+        ? session.driverFullName
+            .split(' ')
+            .map((e) => e.isNotEmpty ? e[0] : '')
+            .take(2)
+            .join()
+            .toUpperCase()
+        : '??';
+
+    // Position colors for top 3
+    Color positionColor;
+    if (index == 0) {
+      positionColor = const Color(0xFFFFD700); // Gold
+    } else if (index == 1) {
+      positionColor = const Color(0xFFC0C0C0); // Silver
+    } else if (index == 2) {
+      positionColor = const Color(0xFFCD7F32); // Bronze
+    } else {
+      positionColor = kMutedColor;
+    }
+
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => const ActivityDetailPage(),
+            settings: RouteSettings(arguments: session),
+          ),
+        );
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          gradient: LinearGradient(
+            colors: [_kCardStart, _kCardEnd],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          border: Border.all(color: _kBorderColor),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withAlpha(60),
+              blurRadius: 15,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              // Position badge
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(10),
+                  gradient: LinearGradient(
+                    colors: [
+                      positionColor.withAlpha(40),
+                      positionColor.withAlpha(20),
+                    ],
+                  ),
+                  border: Border.all(color: positionColor.withAlpha(80)),
+                ),
+                child: Center(
+                  child: Text(
+                    '${index + 1}',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w900,
+                      color: positionColor,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              // Avatar
+              GestureDetector(
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => SearchUserProfilePage(
+                        userId: session.userId,
+                        fullName: session.driverFullName,
+                      ),
+                    ),
+                  );
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(2),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      colors: [
+                        kBrandColor.withAlpha(100),
+                        kPulseColor.withAlpha(80),
+                      ],
+                    ),
+                  ),
+                  child: Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: _kBgColor,
+                    ),
+                    child: Center(
+                      child: Text(
+                        userInitials,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w900,
+                          color: kBrandColor,
+                          letterSpacing: 1,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              // Name and info
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildStatColumn(
-                      icon: Icons.straighten,
-                      label: 'Distanza',
-                      value: '${session.distanceKm.toStringAsFixed(1)} km',
-                      color: kBrandColor,
+                    Text(
+                      session.driverFullName.isNotEmpty
+                          ? session.driverFullName
+                          : 'Pilota Anonimo',
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: kFgColor,
+                        letterSpacing: -0.3,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    Container(width: 1, height: 50, color: kLineColor),
-                    _buildStatColumn(
-                      icon: Icons.timer,
-                      label: 'Best Lap',
-                      value: bestLapStr,
-                      color: kPulseColor,
-                    ),
-                    Container(width: 1, height: 50, color: kLineColor),
-                    _buildStatColumn(
-                      icon: Icons.location_on,
-                      label: 'Località',
-                      value: session.location.length > 8
-                          ? '${session.location.substring(0, 8)}...'
-                          : session.location,
-                      color: kCoachColor,
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      children: [
+                        _buildMiniStat(Icons.calendar_today, formattedDate, kMutedColor),
+                        _buildMiniStat(Icons.loop, '${session.lapCount}', const Color(0xFF29B6F6)),
+                      ],
                     ),
                   ],
                 ),
               ),
-            ),
-          ],
+              const SizedBox(width: 12),
+              // Best lap time
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  gradient: LinearGradient(
+                    colors: [
+                      kPulseColor.withAlpha(30),
+                      kPulseColor.withAlpha(15),
+                    ],
+                  ),
+                  border: Border.all(color: kPulseColor.withAlpha(60)),
+                ),
+                child: Column(
+                  children: [
+                    Text(
+                      bestLapStr,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w900,
+                        color: kPulseColor,
+                      ),
+                    ),
+                    Text(
+                      'Best Lap',
+                      style: TextStyle(
+                        fontSize: 9,
+                        fontWeight: FontWeight.w700,
+                        color: kPulseColor.withAlpha(180),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildStatColumn({
-    required IconData icon,
-    required String label,
-    required String value,
-    required Color color,
-  }) {
-    return Expanded(
-      child: Column(
+  Widget _buildMiniStat(IconData icon, String value, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(6),
+        color: color.withAlpha(15),
+        border: Border.all(color: color.withAlpha(40)),
+      ),
+      child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: color, size: 20),
-          const SizedBox(height: 6),
+          Icon(icon, color: color, size: 10),
+          const SizedBox(width: 4),
           Text(
             value,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w900,
-              color: kFgColor,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
+            style: TextStyle(
+              color: color,
               fontSize: 10,
-              color: kMutedColor,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w700,
             ),
           ),
         ],

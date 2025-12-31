@@ -498,106 +498,56 @@ class _FeedPageState extends State<FeedPage> with TickerProviderStateMixin {
       ),
       child: Row(
         children: [
-          // Logo
-          Container(
-            padding: const EdgeInsets.all(2),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(14),
-              gradient: LinearGradient(
-                colors: [
-                  kBrandColor.withAlpha(100),
-                  kPulseColor.withAlpha(80),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-            ),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                gradient: const LinearGradient(
-                  colors: [
-                    Color.fromRGBO(26, 56, 36, 0.8),
-                    Color.fromRGBO(18, 18, 26, 0.9),
-                    Color.fromRGBO(41, 26, 63, 0.8),
-                  ],
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                ),
-              ),
-              child: Image.asset(
-                'assets/icon/allrspulselogoo.png',
-                height: 28,
-                fit: BoxFit.contain,
-              ),
+          // Logo a sinistra
+          Image.asset(
+            'assets/icon/allrspulselogoo.png',
+            height: 32,
+            fit: BoxFit.contain,
+          ),
+          const Spacer(),
+          // Attività recenti + Beta a destra
+          Text(
+            'Attività recenti',
+            style: TextStyle(
+              fontSize: 12,
+              color: kMutedColor,
+              fontWeight: FontWeight.w600,
             ),
           ),
-          const SizedBox(width: 14),
-          // Title
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(
+              color: kPulseColor.withAlpha(20),
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: kPulseColor.withAlpha(60)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                const Text(
-                  'Feed',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w900,
-                    color: kFgColor,
-                    letterSpacing: -0.5,
+                Container(
+                  width: 6,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: kPulseColor,
+                    boxShadow: [
+                      BoxShadow(
+                        color: kPulseColor.withAlpha(150),
+                        blurRadius: 6,
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: kPulseColor.withAlpha(20),
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: kPulseColor.withAlpha(60)),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            width: 6,
-                            height: 6,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: kPulseColor,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: kPulseColor.withAlpha(150),
-                                  blurRadius: 6,
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            'BETA',
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: kPulseColor,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Attività recenti',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: kMutedColor,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
+                const SizedBox(width: 6),
+                Text(
+                  'BETA',
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: kPulseColor,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.5,
+                  ),
                 ),
               ],
             ),
