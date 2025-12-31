@@ -12,6 +12,15 @@ import '../main.dart';
 // ═══════════════════════════════════════════════════════════════════════════
 const Color _kBgColor = Color(0xFF0A0A0A);
 
+/// Enum per lo stato dell'autenticazione
+enum _AuthState {
+  loading,
+  unauthenticated,
+  checkingDisclaimer,
+  needsDisclaimer,
+  authenticated,
+}
+
 /// AuthGate monitora lo stato di autenticazione e mostra
 /// LoginPage se l'utente non è autenticato,
 /// altrimenti mostra la home dell'app (previo check del disclaimer)
@@ -23,89 +32,102 @@ class AuthGate extends StatefulWidget {
 }
 
 class _AuthGateState extends State<AuthGate> {
-  bool? _hasAcceptedDisclaimer;
+  _AuthState _authState = _AuthState.loading;
   String? _currentUserId;
 
-  Future<void> _checkDisclaimer(String userId) async {
-    if (_currentUserId == userId && _hasAcceptedDisclaimer != null) {
-      return; // Already checked for this user
-    }
+  // RootShell mantenuto come istanza persistente - NON viene mai ricreato
+  // una volta che l'utente è autenticato
+  Widget? _rootShell;
 
-    final accepted = await DisclaimerService().hasAcceptedDisclaimer(userId);
-    if (mounted) {
-      setState(() {
-        _currentUserId = userId;
-        _hasAcceptedDisclaimer = accepted;
-      });
-    }
+  @override
+  void initState() {
+    super.initState();
+    _listenToAuthChanges();
+  }
+
+  void _listenToAuthChanges() {
+    FirebaseAuth.instance.authStateChanges().listen((user) async {
+      if (!mounted) return;
+
+      if (user == null) {
+        // Utente non autenticato - resetta tutto
+        setState(() {
+          _authState = _AuthState.unauthenticated;
+          _currentUserId = null;
+          _rootShell = null; // Distruggi RootShell solo al logout
+        });
+        return;
+      }
+
+      // Se è lo stesso utente già autenticato, non fare nulla
+      if (_currentUserId == user.uid && _authState == _AuthState.authenticated) {
+        return;
+      }
+
+      // Nuovo utente o primo check
+      if (_currentUserId != user.uid) {
+        setState(() {
+          _authState = _AuthState.checkingDisclaimer;
+          _currentUserId = user.uid;
+        });
+
+        // Controlla disclaimer
+        final accepted = await DisclaimerService().hasAcceptedDisclaimer(user.uid);
+
+        if (!mounted) return;
+
+        if (accepted) {
+          setState(() {
+            _authState = _AuthState.authenticated;
+            // Crea RootShell solo una volta
+            _rootShell ??= const RootShell();
+          });
+        } else {
+          setState(() {
+            _authState = _AuthState.needsDisclaimer;
+          });
+        }
+      }
+    });
   }
 
   void _onDisclaimerAccepted() {
     setState(() {
-      _hasAcceptedDisclaimer = true;
+      _authState = _AuthState.authenticated;
+      // Crea RootShell solo una volta
+      _rootShell ??= const RootShell();
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<User?>(
-      stream: FirebaseAuth.instance.authStateChanges(),
-      builder: (context, snapshot) {
-        // Mostra loading mentre controlla lo stato
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return Scaffold(
-            backgroundColor: _kBgColor,
-            body: const PulseBackground(
-              withTopPadding: true,
-              child: Center(
-                child: CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(kBrandColor),
-                ),
+    switch (_authState) {
+      case _AuthState.loading:
+      case _AuthState.checkingDisclaimer:
+        return Scaffold(
+          backgroundColor: _kBgColor,
+          body: const PulseBackground(
+            withTopPadding: true,
+            child: Center(
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(kBrandColor),
               ),
             ),
-          );
-        }
+          ),
+        );
 
-        // Se non c'è un utente autenticato, mostra il login
-        if (!snapshot.hasData || snapshot.data == null) {
-          // Reset disclaimer state when user logs out
-          _hasAcceptedDisclaimer = null;
-          _currentUserId = null;
-          return const LoginPage();
-        }
+      case _AuthState.unauthenticated:
+        return const LoginPage();
 
-        final user = snapshot.data!;
+      case _AuthState.needsDisclaimer:
+        return DisclaimerPage(
+          userId: _currentUserId!,
+          onAccepted: _onDisclaimerAccepted,
+        );
 
-        // Check del disclaimer
-        if (_hasAcceptedDisclaimer == null || _currentUserId != user.uid) {
-          // Prima verifica se ha già accettato
-          _checkDisclaimer(user.uid);
-
-          // Mostra loading mentre verifica
-          return Scaffold(
-            backgroundColor: _kBgColor,
-            body: const PulseBackground(
-              withTopPadding: true,
-              child: Center(
-                child: CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(kBrandColor),
-                ),
-              ),
-            ),
-          );
-        }
-
-        // Se non ha ancora accettato il disclaimer, mostralo
-        if (_hasAcceptedDisclaimer == false) {
-          return DisclaimerPage(
-            userId: user.uid,
-            onAccepted: _onDisclaimerAccepted,
-          );
-        }
-
-        // Se ha accettato, mostra la home
-        return const RootShell();
-      },
-    );
+      case _AuthState.authenticated:
+        // Usa l'istanza cached di RootShell - MAI ricreata
+        return _rootShell!;
+    }
   }
 }

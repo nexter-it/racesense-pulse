@@ -5,7 +5,7 @@ import 'theme.dart';
 import 'firebase_options.dart';
 import 'pages/feed_page.dart';
 import 'pages/profile_page.dart';
-import 'pages/new_post_page.dart';
+import 'pages/new_post_page.dart'; // Usato nel RootShell
 import 'pages/activity_detail_page.dart';
 import 'pages/auth_gate.dart';
 import 'pages/search_page.dart';
@@ -41,7 +41,9 @@ class RacesensePulseApp extends StatelessWidget {
       ),
       routes: {
         ActivityDetailPage.routeName: (_) => const ActivityDetailPage(),
-        NewPostPage.routeName: (_) => const NewPostPage(),
+        // NOTA: NewPostPage NON deve essere qui perché è già gestita nel RootShell
+        // come tab della bottom navigation. Averla anche come route causava
+        // problemi di navigazione (flash della FeedPage quando si tornava indietro).
       },
     );
   }
@@ -58,18 +60,52 @@ class RootShell extends StatefulWidget {
 class _RootShellState extends State<RootShell> {
   int _index = 0;
 
+  // Cache delle pagine già visitate (lazy loading)
+  final Map<int, Widget> _cachedPages = {};
+
+  // Factory per creare le pagine
+  Widget _buildPage(int index) {
+    switch (index) {
+      case 0:
+        return const FeedPage();
+      case 1:
+        return const SearchPage();
+      case 2:
+        return const NewPostPage();
+      case 3:
+        return const ProfilePage();
+      default:
+        return const FeedPage();
+    }
+  }
+
+  // Ottieni la pagina (dalla cache o creala)
+  Widget _getPage(int index) {
+    if (!_cachedPages.containsKey(index)) {
+      _cachedPages[index] = _buildPage(index);
+    }
+    return _cachedPages[index]!;
+  }
+
   @override
   Widget build(BuildContext context) {
-    final pages = [
-      const FeedPage(),
-      const SearchPage(),
-      const NewPostPage(),
-      const ProfilePage(),
-    ];
+    // Costruisci solo le pagine già visitate + quella corrente
+    final List<Widget> stackChildren = [];
+    for (int i = 0; i < 4; i++) {
+      if (_cachedPages.containsKey(i) || i == _index) {
+        stackChildren.add(_getPage(i));
+      } else {
+        // Placeholder vuoto per le pagine non ancora visitate
+        stackChildren.add(const SizedBox.shrink());
+      }
+    }
 
     return Scaffold(
       body: SafeArea(
-        child: pages[_index],
+        child: IndexedStack(
+          index: _index,
+          children: stackChildren,
+        ),
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _index,
