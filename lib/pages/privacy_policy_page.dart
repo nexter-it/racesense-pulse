@@ -4,7 +4,15 @@ import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import '../theme.dart';
-import '../widgets/pulse_background.dart';
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PREMIUM UI CONSTANTS
+// ═══════════════════════════════════════════════════════════════════════════
+const Color _kBgColor = Color(0xFF0A0A0A);
+const Color _kCardStart = Color(0xFF1A1A1A);
+const Color _kCardEnd = Color(0xFF141414);
+const Color _kBorderColor = Color(0xFF2A2A2A);
+const Color _kTileColor = Color(0xFF0D0D0D);
 
 class PrivacyPolicyPage extends StatefulWidget {
   const PrivacyPolicyPage({super.key});
@@ -34,7 +42,7 @@ class _PrivacyPolicyPageState extends State<PrivacyPolicyPage> {
 
       _controller = WebViewController()
         ..setJavaScriptMode(JavaScriptMode.unrestricted)
-        ..setBackgroundColor(const Color(0xFF0a0a0a))
+        ..setBackgroundColor(_kBgColor)
         ..setNavigationDelegate(
           NavigationDelegate(
             onPageFinished: (String url) {
@@ -66,45 +74,11 @@ class _PrivacyPolicyPageState extends State<PrivacyPolicyPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: PulseBackground(
-        withTopPadding: true,
+      backgroundColor: _kBgColor,
+      body: SafeArea(
         child: Column(
           children: [
-            // Header
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
-              child: Row(
-                children: [
-                  GestureDetector(
-                    onTap: () => Navigator.of(context).pop(),
-                    child: Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withAlpha(10),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.white.withAlpha(20)),
-                      ),
-                      child: const Icon(Icons.arrow_back_ios_new,
-                          color: kFgColor, size: 18),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  const Expanded(
-                    child: Text(
-                      'Privacy Policy',
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Content
+            _buildHeader(),
             Expanded(
               child: _buildContent(),
             ),
@@ -114,44 +88,113 @@ class _PrivacyPolicyPageState extends State<PrivacyPolicyPage> {
     );
   }
 
+  Widget _buildHeader() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [_kBgColor, const Color(0xFF121212)],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ),
+        border: const Border(
+          bottom: BorderSide(color: _kBorderColor, width: 1),
+        ),
+      ),
+      child: Row(
+        children: [
+          // Back button
+          GestureDetector(
+            onTap: () {
+              HapticFeedback.lightImpact();
+              Navigator.of(context).pop();
+            },
+            child: Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                gradient: LinearGradient(
+                  colors: [
+                    kBrandColor.withAlpha(40),
+                    kBrandColor.withAlpha(20),
+                  ],
+                ),
+                border: Border.all(color: kBrandColor.withAlpha(80), width: 1.5),
+              ),
+              child: const Icon(Icons.arrow_back, color: kBrandColor, size: 20),
+            ),
+          ),
+          const SizedBox(width: 14),
+          // Icon
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              gradient: LinearGradient(
+                colors: [
+                  kPulseColor.withAlpha(40),
+                  kPulseColor.withAlpha(20),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              border: Border.all(color: kPulseColor.withAlpha(60), width: 1.5),
+            ),
+            child: Center(
+              child: Icon(Icons.privacy_tip_outlined, color: kPulseColor, size: 22),
+            ),
+          ),
+          const SizedBox(width: 12),
+          // Title
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Privacy Policy',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    color: kFgColor,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: kPulseColor.withAlpha(20),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: kPulseColor.withAlpha(60)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.verified_user, size: 11, color: kPulseColor),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Documento Ufficiale',
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: kPulseColor,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildContent() {
     if (_error != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(
-                Icons.error_outline,
-                color: kErrorColor,
-                size: 64,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                _error!,
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: kMutedColor),
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: () {
-                  setState(() {
-                    _isLoading = true;
-                    _error = null;
-                  });
-                  _initWebView();
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: kBrandColor,
-                  foregroundColor: Colors.black,
-                ),
-                child: const Text('Riprova'),
-              ),
-            ],
-          ),
-        ),
-      );
+      return _buildErrorState();
     }
 
     return Stack(
@@ -159,31 +202,150 @@ class _PrivacyPolicyPageState extends State<PrivacyPolicyPage> {
         Container(
           margin: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: kLineColor),
+            borderRadius: BorderRadius.circular(20),
+            gradient: LinearGradient(
+              colors: [_kCardStart, _kCardEnd],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            border: Border.all(color: _kBorderColor),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withAlpha(80),
+                blurRadius: 20,
+                offset: const Offset(0, 8),
+              ),
+            ],
           ),
           clipBehavior: Clip.antiAlias,
           child: _isLoading
               ? const SizedBox.shrink()
               : WebViewWidget(controller: _controller),
         ),
-        if (_isLoading)
-          Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(kBrandColor),
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Caricamento documento...',
-                  style: TextStyle(color: kMutedColor),
-                ),
-              ],
+        if (_isLoading) _buildLoadingState(),
+      ],
+    );
+  }
+
+  Widget _buildLoadingState() {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            width: 48,
+            height: 48,
+            child: CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation(kBrandColor),
+              strokeWidth: 3,
             ),
           ),
-      ],
+          const SizedBox(height: 20),
+          Text(
+            'Caricamento documento...',
+            style: TextStyle(
+              color: kMutedColor,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildErrorState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    kErrorColor.withAlpha(30),
+                    kErrorColor.withAlpha(10),
+                    Colors.transparent,
+                  ],
+                  stops: const [0.0, 0.6, 1.0],
+                ),
+              ),
+              child: Container(
+                margin: const EdgeInsets.all(15),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: _kCardStart,
+                  border: Border.all(color: kErrorColor.withAlpha(100), width: 2),
+                ),
+                child: Icon(Icons.error_outline, color: kErrorColor, size: 28),
+              ),
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              'Errore nel caricamento',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w900,
+                color: kFgColor,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _error!,
+              style: TextStyle(
+                fontSize: 13,
+                color: kMutedColor,
+                fontWeight: FontWeight.w500,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            GestureDetector(
+              onTap: () {
+                HapticFeedback.lightImpact();
+                setState(() {
+                  _isLoading = true;
+                  _error = null;
+                });
+                _initWebView();
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  gradient: LinearGradient(
+                    colors: [
+                      kBrandColor.withAlpha(40),
+                      kBrandColor.withAlpha(20),
+                    ],
+                  ),
+                  border: Border.all(color: kBrandColor.withAlpha(80)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.refresh, color: kBrandColor, size: 18),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Riprova',
+                      style: TextStyle(
+                        color: kBrandColor,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
