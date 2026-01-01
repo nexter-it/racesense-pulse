@@ -263,16 +263,14 @@ class _GrandPrixLivePageState extends State<GrandPrixLivePage> {
       }
     });
 
-    // Store GPS point
-    _gpsTrack.add(position);
-    _lastPosition = position;
-
-    // Feed to lap detection
+    // IMPORTANTE: Sempre passare i punti GPS al lap detection
+    // ANCHE durante il formation lap, altrimenti non può rilevare il passaggio!
     if (_trackDefinition != null) {
+      final wasInFormationLap = _isFormationLap;
       _lapDetection.processGpsPoint(position);
 
       // Check if formation lap completed and start recording
-      if (_isFormationLap && _lapDetection.formationLapCrossed) {
+      if (wasInFormationLap && _lapDetection.formationLapCrossed) {
         setState(() {
           _isFormationLap = false;
           _recording = true;
@@ -280,6 +278,12 @@ class _GrandPrixLivePageState extends State<GrandPrixLivePage> {
         _sessionWatch.start();
         print('✓ Formation lap completato, inizia registrazione');
       }
+    }
+
+    // Store GPS point only after formation lap
+    if (_recording) {
+      _gpsTrack.add(position);
+      _lastPosition = position;
     }
   }
 

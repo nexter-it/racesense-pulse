@@ -238,7 +238,8 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
     _bleGpsSub = _bleService.gpsStream.listen((gpsData) {
       if (_connectedBleDeviceId != null) {
         final data = gpsData[_connectedBleDeviceId!];
-        if (data != null && mounted && _recording) {
+        // IMPORTANTE: Rimuovi il check _recording per permettere il lap detection durante formation lap
+        if (data != null && mounted) {
           // Converti BLE GPS data in Position
           final position = Position(
             latitude: data.position.latitude,
@@ -287,19 +288,7 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
   // ============================================================
 
   void _onGpsData(Position pos) {
-    if (!_recording) return;
-
-    // Salva GPS grezzo
-    _gpsTrack.add(pos);
-    _lastPosition = pos;
-
-    // Aggiorna display path per mappa
-    _displayPath.add(LatLng(pos.latitude, pos.longitude));
-    if (_displayPath.length > 500) {
-      _displayPath = _displayPath.sublist(_displayPath.length - 500);
-    }
-
-    // Calcola velocità
+    // Calcola velocità PRIMA del check _recording (necessario per telemetria live)
     final speedKmh = pos.speed * 3.6;
     _currentSpeedKmh = speedKmh;
 
@@ -314,49 +303,69 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
       _gForceY = gForce.abs();
     }
 
-    // Salva storia per recap
-    _speedHistory.add(speedKmh);
-    _gForceHistory.add(gForce);
-    _gpsAccuracyHistory.add(pos.accuracy);
-    _timeHistory.add(_sessionWatch.elapsed);
-
-    // Lap detection live (best-effort)
+    // IMPORTANTE: Sempre processare GPS per lap detection
+    // ANCHE durante formation lap, altrimenti non può rilevare il passaggio!
     if (widget.trackDefinition != null) {
       final wasInFormationLap = _lapDetection.inFormationLap;
       _lapDetection.processGpsPoint(pos);
+
+      // Debug: Log stato formation lap
+      if (wasInFormationLap) {
+        print('📍 GPS durante formation lap: ${pos.latitude}, ${pos.longitude}, inFormationLap dopo process: ${_lapDetection.inFormationLap}');
+      }
 
       // Se abbiamo completato il formation lap, avvia timer e registrazione
       if (wasInFormationLap && !_lapDetection.inFormationLap && !_timerStarted) {
         _sessionWatch.start();
         _timerStarted = true;
         _recording = true;
-        print('✓ Timer e registrazione avviati dopo formation lap');
+        print('✓✓✓ Timer e registrazione avviati dopo formation lap ✓✓✓');
+        print('✓✓✓ _recording = $_recording, _timerStarted = $_timerStarted ✓✓✓');
+      }
+    }
+
+    // Salva GPS grezzo e storia SOLO se _recording è true (dopo formation lap)
+    if (_recording) {
+      _gpsTrack.add(pos);
+      _lastPosition = pos;
+      print('📊 GPS salvato in _gpsTrack: totale ${_gpsTrack.length} punti');
+
+      // Aggiorna display path per mappa
+      _displayPath.add(LatLng(pos.latitude, pos.longitude));
+      if (_displayPath.length > 500) {
+        _displayPath = _displayPath.sublist(_displayPath.length - 500);
       }
 
-      // Salva punto GPS per delta live (solo se il timer è partito e non siamo in formation lap)
-      if (_timerStarted && !_lapDetection.inFormationLap) {
-        final currentLapTime = _lapDetection.currentLapTime;
-        if (currentLapTime != null) {
-          _currentLapGpsPoints.add(_LapGpsPoint(
-            position: LatLng(pos.latitude, pos.longitude),
-            lapTime: currentLapTime,
-          ));
+      // Salva storia per recap
+      _speedHistory.add(speedKmh);
+      _gForceHistory.add(gForce);
+      _gpsAccuracyHistory.add(pos.accuracy);
+      _timeHistory.add(_sessionWatch.elapsed);
+    }
 
-          // Calcola delta live se abbiamo un best lap con punti GPS
-          if (_bestLapGpsPoints.isNotEmpty) {
-            _liveDelta = _calculateLiveDelta(
-              LatLng(pos.latitude, pos.longitude),
-              currentLapTime,
-            );
-          }
+    // Salva punto GPS per delta live (solo se il timer è partito e non siamo in formation lap)
+    if (widget.trackDefinition != null && _timerStarted && !_lapDetection.inFormationLap) {
+      final currentLapTime = _lapDetection.currentLapTime;
+      if (currentLapTime != null) {
+        _currentLapGpsPoints.add(_LapGpsPoint(
+          position: LatLng(pos.latitude, pos.longitude),
+          lapTime: currentLapTime,
+        ));
+
+        // Calcola delta live se abbiamo un best lap con punti GPS
+        if (_bestLapGpsPoints.isNotEmpty) {
+          _liveDelta = _calculateLiveDelta(
+            LatLng(pos.latitude, pos.longitude),
+            currentLapTime,
+          );
         }
       }
-    } else {
-      // Nessun circuito: avvia timer subito
-      if (!_timerStarted) {
-        _sessionWatch.start();
-        _timerStarted = true;
-      }
+    }
+
+    // Nessun circuito: avvia timer subito
+    if (widget.trackDefinition == null && !_timerStarted) {
+      _sessionWatch.start();
+      _timerStarted = true;
     }
 
     setState(() {});
@@ -472,6 +481,15 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
 
     _sessionWatch.stop();
     _stopAllStreams();
+
+    // Debug: Log dati finali
+    print('🏁 Sessione terminata:');
+    print('   GPS Track: ${_gpsTrack.length} punti');
+    print('   Speed History: ${_speedHistory.length} punti');
+    print('   GForce History: ${_gForceHistory.length} punti');
+    print('   Laps: ${_laps.length}');
+    print('   Recording: $_recording');
+    print('   Timer Started: $_timerStarted');
 
     // Naviga a recap
     if (!mounted) return;
