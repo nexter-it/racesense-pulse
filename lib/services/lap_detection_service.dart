@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 
@@ -53,6 +52,7 @@ class LapDetectionService {
     _lapCount = 0;
     _inFormationLap = true;
     _formationLapCrossed = false;
+    _lastInterpolatedCrossingTime = null;
   }
 
   // ============================================================
@@ -86,13 +86,31 @@ class LapDetectionService {
     // FORMATION LAP: Attende primo passaggio dalla linea del via
     // ============================================================
     if (_inFormationLap) {
+      // Se abbiamo almeno 2 punti, prova interpolazione
+      if (_gpsHistory.length >= 2) {
+        final p1 = _gpsHistory[_gpsHistory.length - 2];
+        final p2 = _gpsHistory[_gpsHistory.length - 1];
+        final crossed = _checkSegmentIntersection(p1, p2);
+        if (crossed) {
+          _formationLapCrossed = true;
+          _inFormationLap = false;
+          // Usa tempo interpolato se disponibile
+          final crossingTime = _lastInterpolatedCrossingTime ?? position.timestamp;
+          _currentLapStartTime = crossingTime;
+          _lastCrossingTime = crossingTime;
+          print('✓ Formation lap completato (interpolato): inizia tracciamento giri');
+          return false;
+        }
+      }
+
+      // Fallback: usa geofence semplice per primo punto GPS
       final crossed = _checkFinishLineCrossing(position);
       if (crossed) {
         _formationLapCrossed = true;
         _inFormationLap = false;
         _currentLapStartTime = position.timestamp;
         _lastCrossingTime = position.timestamp;
-        print('✓ Formation lap completato: inizia tracciamento giri');
+        print('✓ Formation lap completato (geofence): inizia tracciamento giri');
       }
       return false; // Durante formation lap non contiamo giri
     }
@@ -110,28 +128,31 @@ class LapDetectionService {
     final crossed = _checkSegmentIntersection(p1, p2);
 
     if (crossed) {
-      // Calcola tempo del lap (best-effort)
+      // Usa tempo interpolato se disponibile, altrimenti fallback a p2.timestamp
+      final crossingTime = _lastInterpolatedCrossingTime ?? p2.timestamp;
+
+      // Calcola tempo del lap con timestamp interpolato
       if (_currentLapStartTime != null) {
-        final lapTime = p2.timestamp!.difference(_currentLapStartTime!);
+        final lapTime = crossingTime.difference(_currentLapStartTime!);
 
         // Validazione: lap minimo 20 secondi (evita false detection)
         if (lapTime.inSeconds >= 20) {
           _lapCount++;
-          _currentLapStartTime = p2.timestamp;
-          _lastCrossingTime = p2.timestamp;
+          _currentLapStartTime = crossingTime;
+          _lastCrossingTime = crossingTime;
 
           // Notifica callback
           if (onLapCompleted != null) {
             onLapCompleted!(lapTime);
           }
 
-          print('✓ Lap #$_lapCount completato (live best-effort): ${lapTime.inSeconds}s');
+          print('✓ Lap #$_lapCount completato (interpolato): ${lapTime.inSeconds}.${(lapTime.inMilliseconds % 1000).toString().padLeft(3, '0')}s');
           return true;
         }
       } else {
         // Primo crossing dopo formation lap
-        _currentLapStartTime = p2.timestamp;
-        _lastCrossingTime = p2.timestamp;
+        _currentLapStartTime = crossingTime;
+        _lastCrossingTime = crossingTime;
       }
     }
 
@@ -140,8 +161,8 @@ class LapDetectionService {
 
   /// Verifica intersezione tra segmento GPS [p1, p2] e linea S/F
   ///
-  /// Algoritmo geometrico semplificato per live detection (best-effort).
-  /// Il post-processing userà algoritmo più preciso con interpolazione temporale.
+  /// Algoritmo geometrico con interpolazione temporale per live detection preciso.
+  /// Calcola il tempo esatto del crossing basandosi sulla posizione di intersezione.
   bool _checkSegmentIntersection(Position p1, Position p2) {
     if (_finishLineStart == null || _finishLineEnd == null) return false;
 
@@ -157,8 +178,24 @@ class LapDetectionService {
       _finishLineEnd!,
     );
 
-    return intersection != null;
+    if (intersection != null) {
+      // Calcola il parametro t di interpolazione (0 = p1, 1 = p2)
+      final t = _computeInterpolationParameter(seg1Start, seg1End, intersection);
+
+      // Interpola il timestamp esatto del crossing
+      final interpolatedTime = _interpolateTimestamp(p1, p2, t);
+
+      // Salva il tempo interpolato per usarlo al posto di p2.timestamp
+      _lastInterpolatedCrossingTime = interpolatedTime;
+
+      return true;
+    }
+
+    return false;
   }
+
+  // Tempo interpolato dell'ultimo crossing (più preciso di p2.timestamp)
+  DateTime? _lastInterpolatedCrossingTime;
 
   /// Verifica se abbiamo attraversato la linea di start/finish (fallback per formation lap)
   ///
@@ -202,8 +239,56 @@ class LapDetectionService {
   }
 
   // ============================================================
-  // ALGORITMI GEOMETRICI (RaceChrono Style)
+  // ALGORITMI GEOMETRICI E INTERPOLAZIONE TEMPORALE
   // ============================================================
+
+  /// Interpola il timestamp esatto del crossing basandosi sul parametro t
+  ///
+  /// Formula: t_crossing = t_1 + t × (t_2 - t_1)
+  /// dove t ∈ [0,1] indica la posizione lungo il segmento (0=p1, 1=p2)
+  DateTime _interpolateTimestamp(Position p1, Position p2, double t) {
+    // Calcola differenza in microsecondi per massima precisione
+    final dt = p2.timestamp.difference(p1.timestamp).inMicroseconds;
+
+    // Interpola: tempo_crossing = tempo_p1 + t × (tempo_p2 - tempo_p1)
+    final interpolatedTimestamp = p1.timestamp.add(
+      Duration(microseconds: (t * dt).round()),
+    );
+
+    return interpolatedTimestamp;
+  }
+
+  /// Calcola parametro di interpolazione t per un punto lungo un segmento
+  ///
+  /// Trova t ∈ [0,1] tale che: intersection = start + t × (end - start)
+  /// Usa proiezione scalare per massima accuratezza
+  double _computeInterpolationParameter(
+    LatLng segmentStart,
+    LatLng segmentEnd,
+    LatLng intersection,
+  ) {
+    // Vettore del segmento
+    final dx = segmentEnd.longitude - segmentStart.longitude;
+    final dy = segmentEnd.latitude - segmentStart.latitude;
+
+    // Vettore dall'inizio all'intersezione
+    final dxIntersection = intersection.longitude - segmentStart.longitude;
+    final dyIntersection = intersection.latitude - segmentStart.latitude;
+
+    // Proiezione scalare: t = (intersection - start) · (end - start) / |end - start|²
+    final dotProduct = dxIntersection * dx + dyIntersection * dy;
+    final segmentLengthSquared = dx * dx + dy * dy;
+
+    // Evita divisione per zero (segmento degenere)
+    if (segmentLengthSquared < 1e-10) {
+      return 0.0;
+    }
+
+    final t = dotProduct / segmentLengthSquared;
+
+    // Clamp a [0,1] per sicurezza (anche se dovrebbe già essere in range)
+    return t.clamp(0.0, 1.0);
+  }
 
   /// Calcola intersezione tra due segmenti (algoritmo line-line intersection)
   ///
