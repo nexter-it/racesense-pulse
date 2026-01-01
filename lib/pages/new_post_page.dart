@@ -10,6 +10,7 @@ import 'custom_circuits_page.dart';
 import 'gps_wait_page.dart';
 import 'official_circuits_page.dart';
 import 'qr_scanner_page.dart';
+import 'grand_prix_page.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // PREMIUM UI CONSTANTS
@@ -156,6 +157,24 @@ class _NewPostPageState extends State<NewPostPage>
                         ),
                       ),
                     ],
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  // Gran Premio Button
+                  _buildOptionCard(
+                    icon: Icons.emoji_events,
+                    title: 'Gran Premio',
+                    subtitle: 'Gareggia con fino a 20 piloti',
+                    color: Colors.amber,
+                    onTap: () {
+                      HapticFeedback.lightImpact();
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const GrandPrixPage(),
+                        ),
+                      );
+                    },
                   ),
 
                   const SizedBox(height: 12),
