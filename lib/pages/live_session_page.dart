@@ -215,7 +215,23 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
         accuracy: LocationAccuracy.bestForNavigation,
         distanceFilter: 0, // GPS grezzo completo
       ),
-    ).listen(_onGpsData);
+    ).listen((position) {
+      // Sostituisce timestamp con DateTime.now() per precisione ai microsecondi
+      // (il timestamp del Geolocator può avere precisione ridotta su alcune piattaforme)
+      final precisePosition = Position(
+        latitude: position.latitude,
+        longitude: position.longitude,
+        timestamp: DateTime.now(), // ⭐ Precisione ai microsecondi come BLE GPS
+        accuracy: position.accuracy,
+        altitude: position.altitude,
+        altitudeAccuracy: position.altitudeAccuracy,
+        heading: position.heading,
+        headingAccuracy: position.headingAccuracy,
+        speed: position.speed,
+        speedAccuracy: position.speedAccuracy,
+      );
+      _onGpsData(precisePosition);
+    });
   }
 
   void _listenBleGps() {
@@ -1003,8 +1019,8 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
     }
 
     final deltaString = isNegative
-        ? '-${deltaSeconds.abs().toStringAsFixed(2)}'
-        : '+${deltaSeconds.toStringAsFixed(2)}';
+        ? '-${deltaSeconds.abs().toStringAsFixed(3)}'
+        : '+${deltaSeconds.toStringAsFixed(3)}';
 
     return Container(
       decoration: BoxDecoration(
