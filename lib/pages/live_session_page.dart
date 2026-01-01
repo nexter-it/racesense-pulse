@@ -850,7 +850,7 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
             child: Align(
               alignment: Alignment.centerRight,
               child: FractionallySizedBox(
-                widthFactor: (_gForceY / 2.5).clamp(0.0, 1.0),
+                widthFactor: (_gForceY / 1.0).clamp(0.0, 1.0),
                 child: Container(
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(4),
@@ -872,7 +872,7 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
             child: Align(
               alignment: Alignment.centerLeft,
               child: FractionallySizedBox(
-                widthFactor: (_gForceX / 2.5).clamp(0.0, 1.0),
+                widthFactor: (_gForceX / 1.0).clamp(0.0, 1.0),
                 child: Container(
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(4),
