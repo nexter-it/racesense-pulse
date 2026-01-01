@@ -74,16 +74,32 @@ class _RegisterPageState extends State<RegisterPage> with TickerProviderStateMix
       return;
     }
 
-    if (_birthDate == null) {
+    // Validate and parse birth date from text
+    final birthDateText = _birthDateController.text.trim();
+    if (birthDateText.isEmpty) {
       _showErrorSnackBar('Inserisci la tua data di nascita');
       return;
     }
 
-    final age = _calculateAge(_birthDate!);
+    final parsedDate = _parseBirthDate(birthDateText);
+    if (parsedDate == null) {
+      _showErrorSnackBar('Formato data non valido. Usa dd/mm/yyyy');
+      return;
+    }
+
+    // Check if date is in the future
+    if (parsedDate.isAfter(DateTime.now())) {
+      _showErrorSnackBar('La data di nascita non può essere nel futuro');
+      return;
+    }
+
+    final age = _calculateAge(parsedDate);
     if (age < 13) {
       _showErrorSnackBar('Devi avere almeno 13 anni per registrarti');
       return;
     }
+
+    _birthDate = parsedDate;
 
     setState(() => _isLoading = true);
 
@@ -135,37 +151,33 @@ class _RegisterPageState extends State<RegisterPage> with TickerProviderStateMix
     return age;
   }
 
-  Future<void> _pickBirthDate() async {
-    HapticFeedback.selectionClick();
-    final now = DateTime.now();
-    final initial = _birthDate ?? DateTime(now.year - 18, now.month, now.day);
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: initial,
-      firstDate: DateTime(1900),
-      lastDate: now,
-      helpText: 'Seleziona la data di nascita',
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.dark(
-              primary: kBrandColor,
-              onPrimary: Colors.black,
-              surface: _kCardStart,
-              onSurface: kFgColor,
-            ),
-            dialogBackgroundColor: _kBgColor,
-          ),
-          child: child!,
-        );
-      },
-    );
-    if (picked != null) {
-      setState(() {
-        _birthDate = picked;
-        _birthDateController.text =
-            '${picked.day.toString().padLeft(2, '0')}/${picked.month.toString().padLeft(2, '0')}/${picked.year}';
-      });
+  DateTime? _parseBirthDate(String text) {
+    if (text.length != 10) return null;
+
+    final parts = text.split('/');
+    if (parts.length != 3) return null;
+
+    try {
+      final day = int.parse(parts[0]);
+      final month = int.parse(parts[1]);
+      final year = int.parse(parts[2]);
+
+      // Validate ranges
+      if (day < 1 || day > 31) return null;
+      if (month < 1 || month > 12) return null;
+      if (year < 1900 || year > DateTime.now().year) return null;
+
+      // Try to create the date (will throw if invalid like 31/02/2000)
+      final date = DateTime(year, month, day);
+
+      // Verify the date components match (handles invalid dates like 30/02)
+      if (date.day != day || date.month != month || date.year != year) {
+        return null;
+      }
+
+      return date;
+    } catch (e) {
+      return null;
     }
   }
 
@@ -840,55 +852,63 @@ class _RegisterPageState extends State<RegisterPage> with TickerProviderStateMix
   }
 
   Widget _buildDateField() {
-    return GestureDetector(
-      onTap: _isLoading ? null : _pickBirthDate,
-      child: Container(
-        decoration: BoxDecoration(
-          color: _kTileColor,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: _kBorderColor, width: 1),
+    return Container(
+      decoration: BoxDecoration(
+        color: _kTileColor,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: _kBorderColor, width: 1),
+      ),
+      child: TextFormField(
+        controller: _birthDateController,
+        keyboardType: TextInputType.number,
+        enabled: !_isLoading,
+        inputFormatters: [
+          FilteringTextInputFormatter.digitsOnly,
+          _DateInputFormatter(),
+        ],
+        style: const TextStyle(
+          fontSize: 16,
+          color: kFgColor,
+          fontWeight: FontWeight.w500,
         ),
-        child: AbsorbPointer(
-          child: TextFormField(
-            controller: _birthDateController,
-            style: const TextStyle(
-              fontSize: 16,
-              color: kFgColor,
-              fontWeight: FontWeight.w500,
+        decoration: InputDecoration(
+          hintText: 'dd/mm/yyyy',
+          hintStyle: TextStyle(color: kMutedColor.withOpacity(0.4)),
+          prefixIcon: Container(
+            padding: const EdgeInsets.all(12),
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: kBrandColor.withAlpha(20),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(Icons.cake_outlined, color: kBrandColor, size: 18),
             ),
-            decoration: InputDecoration(
-              hintText: 'Seleziona la data',
-              hintStyle: TextStyle(color: kMutedColor.withOpacity(0.4)),
-              prefixIcon: Container(
-                padding: const EdgeInsets.all(12),
-                child: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: kBrandColor.withAlpha(20),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(Icons.cake_outlined, color: kBrandColor, size: 18),
-                ),
-              ),
-              prefixIconConstraints: const BoxConstraints(minWidth: 58),
-              suffixIcon: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Icon(Icons.calendar_today, color: kMutedColor, size: 20),
-              ),
-              border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 16,
-              ),
-            ),
-            validator: (_) {
-              if (_birthDate == null) {
-                return 'Inserisci la data di nascita';
-              }
-              return null;
-            },
+          ),
+          prefixIconConstraints: const BoxConstraints(minWidth: 58),
+          suffixIcon: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Icon(Icons.calendar_today, color: kMutedColor, size: 20),
+          ),
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 16,
           ),
         ),
+        validator: (value) {
+          if (value == null || value.isEmpty) {
+            return 'Inserisci la data di nascita';
+          }
+          if (value.length != 10) {
+            return 'Formato: dd/mm/yyyy';
+          }
+          final parsed = _parseBirthDate(value);
+          if (parsed == null) {
+            return 'Data non valida';
+          }
+          return null;
+        },
       ),
     );
   }
@@ -1169,6 +1189,39 @@ class _RegisterPageState extends State<RegisterPage> with TickerProviderStateMix
           ),
         ],
       ),
+    );
+  }
+}
+
+// Custom input formatter for dd/mm/yyyy format
+class _DateInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final text = newValue.text;
+
+    // Remove any non-digits
+    final digitsOnly = text.replaceAll(RegExp(r'[^0-9]'), '');
+
+    // Limit to 8 digits (ddmmyyyy)
+    final limitedDigits = digitsOnly.substring(0, digitsOnly.length > 8 ? 8 : digitsOnly.length);
+
+    // Build formatted string
+    final buffer = StringBuffer();
+    for (int i = 0; i < limitedDigits.length; i++) {
+      if (i == 2 || i == 4) {
+        buffer.write('/');
+      }
+      buffer.write(limitedDigits[i]);
+    }
+
+    final formattedText = buffer.toString();
+
+    return TextEditingValue(
+      text: formattedText,
+      selection: TextSelection.collapsed(offset: formattedText.length),
     );
   }
 }
