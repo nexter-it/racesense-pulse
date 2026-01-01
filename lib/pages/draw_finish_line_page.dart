@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import '../services/post_processing_service.dart';
+import '../services/ble_tracking_service.dart';
 import '../theme.dart';
 
 /// Pagina per disegnare manualmente la linea Start/Finish su una traccia GPS
@@ -38,6 +40,7 @@ const Color _kTileColor = Color(0xFF0D0D0D);
 
 class _DrawFinishLinePageState extends State<DrawFinishLinePage> {
   final MapController _mapController = MapController();
+  final BleTrackingService _bleService = BleTrackingService();
 
   LatLng? _finishLineStart;
   LatLng? _finishLineEnd;
@@ -48,10 +51,102 @@ class _DrawFinishLinePageState extends State<DrawFinishLinePage> {
 
   List<LatLng> _gpsPath = [];
 
+  // GPS tracking per posizione corrente
+  LatLng? _currentPosition;
+  String? _connectedDeviceId;
+  bool _isUsingBleDevice = false;
+  StreamSubscription<Position>? _cellularGpsSubscription;
+  StreamSubscription<Map<String, GpsData>>? _bleGpsSubscription;
+  StreamSubscription<Map<String, BleDeviceSnapshot>>? _bleDeviceSub;
+
   @override
   void initState() {
     super.initState();
     _buildGpsPath();
+    _syncConnectedDeviceFromService();
+    _listenBleConnectionChanges();
+    _startGpsTracking();
+  }
+
+  @override
+  void dispose() {
+    _cellularGpsSubscription?.cancel();
+    _bleGpsSubscription?.cancel();
+    _bleDeviceSub?.cancel();
+    _mapController.dispose();
+    super.dispose();
+  }
+
+  void _syncConnectedDeviceFromService() {
+    final connectedIds = _bleService.getConnectedDeviceIds();
+    if (connectedIds.isEmpty) return;
+    _connectedDeviceId = connectedIds.first;
+    _isUsingBleDevice = true;
+  }
+
+  void _listenBleConnectionChanges() {
+    _bleDeviceSub = _bleService.deviceStream.listen((devices) {
+      final connected = devices.values.firstWhere(
+        (d) => d.isConnected,
+        orElse: () => BleDeviceSnapshot(
+          id: '',
+          name: '',
+          rssi: null,
+          isConnected: false,
+        ),
+      );
+
+      if (mounted) {
+        setState(() {
+          if (connected.isConnected) {
+            _connectedDeviceId = connected.id;
+            _isUsingBleDevice = true;
+            _stopCellularTracking();
+          } else {
+            _connectedDeviceId = null;
+            _isUsingBleDevice = false;
+            _startCellularTrackingIfNeeded();
+          }
+        });
+      }
+    });
+  }
+
+  void _startGpsTracking() {
+    // Listen to BLE GPS data
+    _bleGpsSubscription = _bleService.gpsStream.listen((gpsData) {
+      if (_connectedDeviceId != null && _isUsingBleDevice) {
+        final data = gpsData[_connectedDeviceId!];
+        if (data != null && mounted) {
+          setState(() {
+            _currentPosition = data.position;
+          });
+        }
+      }
+    });
+
+    _startCellularTrackingIfNeeded();
+  }
+
+  void _startCellularTrackingIfNeeded() {
+    if (_isUsingBleDevice || _cellularGpsSubscription != null) return;
+    _cellularGpsSubscription = Geolocator.getPositionStream(
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.bestForNavigation,
+        distanceFilter: 0,
+      ),
+    ).listen((position) {
+      if (mounted && !_isUsingBleDevice) {
+        setState(() {
+          _currentPosition = LatLng(position.latitude, position.longitude);
+        });
+      }
+    });
+  }
+
+  void _stopCellularTracking() {
+    _cellularGpsSubscription?.cancel();
+    _cellularGpsSubscription = null;
   }
 
   /// Costruisce path dalla traccia GPS
@@ -552,6 +647,27 @@ class _DrawFinishLinePageState extends State<DrawFinishLinePage> {
                       // Markers
                       MarkerLayer(
                         markers: [
+                          // Current position marker - identico a custom_circuit_builder_page
+                          if (_currentPosition != null)
+                            Marker(
+                              point: _currentPosition!,
+                              width: 20,
+                              height: 20,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: kBrandColor,
+                                  border: Border.all(color: Colors.white, width: 3),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: kBrandColor.withAlpha(150),
+                                      blurRadius: 16,
+                                      spreadRadius: 4,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
                           if (_finishLineStart != null)
                             Marker(
                               point: _finishLineStart!,
@@ -993,11 +1109,5 @@ class _DrawFinishLinePageState extends State<DrawFinishLinePage> {
         ],
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    _mapController.dispose();
-    super.dispose();
   }
 }

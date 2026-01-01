@@ -781,7 +781,6 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
   Widget _buildHighlightsCard() {
     final distanceTotal = _userStats.totalDistanceKm.toStringAsFixed(0);
     final sessionsTotal = _userStats.totalSessions.toString();
-    final pbCount = _userStats.personalBests.toString();
     final totalLaps = _userStats.totalLaps.toString();
 
     return Container(
@@ -893,26 +892,11 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
                   ],
                 ),
                 const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildStatChip(
-                        icon: Icons.emoji_events_outlined,
-                        value: pbCount,
-                        label: 'Record',
-                        color: const Color(0xFFFFB74D),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: _buildStatChip(
-                        icon: Icons.loop_rounded,
-                        value: totalLaps,
-                        label: 'Giri',
-                        color: const Color(0xFF00E676),
-                      ),
-                    ),
-                  ],
+                _buildStatChip(
+                  icon: Icons.loop_rounded,
+                  value: totalLaps,
+                  label: 'Giri totali',
+                  color: const Color(0xFF00E676),
                 ),
               ],
             ),
