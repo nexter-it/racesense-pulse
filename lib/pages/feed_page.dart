@@ -1432,45 +1432,75 @@ class _AvatarUser extends StatelessWidget {
 
   const _AvatarUser({required this.userId});
 
-  String _assetForUser() {
-    final seed = userId.hashCode & 0x7fffffff;
-    final idx = (math.Random(seed).nextInt(5)) + 1;
-    return 'assets/images/dr$idx.png';
-  }
-
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(2),
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: LinearGradient(
-          colors: [
-            kBrandColor.withAlpha(100),
-            kPulseColor.withAlpha(80),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
-      child: Container(
-        width: 44,
-        height: 44,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: const Color(0xFF1A1A1A),
-          border: Border.all(color: const Color(0xFF2A2A2A), width: 2),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: Image.asset(
-          _assetForUser(),
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) {
-            return const Icon(Icons.person, color: kMutedColor, size: 22);
-          },
-        ),
-      ),
+    return FutureBuilder<String>(
+      future: _getInitials(),
+      builder: (context, snapshot) {
+        final initials = snapshot.data ?? 'US';
+
+        return Container(
+          padding: const EdgeInsets.all(2),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: LinearGradient(
+              colors: [
+                kBrandColor.withAlpha(100),
+                kPulseColor.withAlpha(80),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+          child: Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: const Color(0xFF1A1A1A),
+              border: Border.all(color: const Color(0xFF2A2A2A), width: 2),
+            ),
+            child: Center(
+              child: Text(
+                initials,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w900,
+                  color: kBrandColor,
+                  letterSpacing: 1,
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
+  }
+
+  Future<String> _getInitials() async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .get();
+
+      if (!doc.exists) return 'US';
+
+      final fullName = doc.data()?['fullName'] as String? ?? 'User';
+      final nameParts = fullName.split(' ');
+
+      if (nameParts.length >= 2 &&
+          nameParts[0].isNotEmpty &&
+          nameParts[1].isNotEmpty) {
+        return nameParts[0][0].toUpperCase() + nameParts[1][0].toUpperCase();
+      } else if (nameParts.isNotEmpty && nameParts[0].length >= 2) {
+        return nameParts[0].substring(0, 2).toUpperCase();
+      } else {
+        return 'US';
+      }
+    } catch (e) {
+      return 'US';
+    }
   }
 }
 
