@@ -33,7 +33,7 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
   // STATE
   // ============================================================
 
-  bool _recording = true;
+  bool _recording = false; // Diventerà true dopo il formation lap
   bool _sessionFinished = false;
 
   // Timer sessione
@@ -138,8 +138,13 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
         widget.trackDefinition!.finishLineEnd,
       );
       print('✓ Lap detection inizializzato: ${widget.trackDefinition!.name}');
+      // La registrazione partirà dopo il formation lap
     } else {
       print('⚠️ Nessun circuito pre-tracciato - solo registrazione GPS');
+      // Senza circuito, inizia subito a registrare
+      _recording = true;
+      _sessionWatch.start();
+      _timerStarted = true;
     }
 
     // Setup lap detection callback
@@ -304,11 +309,12 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
       final wasInFormationLap = _lapDetection.inFormationLap;
       _lapDetection.processGpsPoint(pos);
 
-      // Se abbiamo completato il formation lap, avvia timer
+      // Se abbiamo completato il formation lap, avvia timer e registrazione
       if (wasInFormationLap && !_lapDetection.inFormationLap && !_timerStarted) {
         _sessionWatch.start();
         _timerStarted = true;
-        print('✓ Timer avviato dopo formation lap');
+        _recording = true;
+        print('✓ Timer e registrazione avviati dopo formation lap');
       }
 
       // Salva punto GPS per delta live (solo se il timer è partito e non siamo in formation lap)
