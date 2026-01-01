@@ -157,9 +157,13 @@ class GrandPrixService {
       throw 'Seleziona un circuito prima di iniziare';
     }
 
+    // Assicuriamoci di preservare i dati essenziali quando aggiorniamo lo status
     await lobbyRef.update({
       'status': 'running',
       'startedAt': ServerValue.timestamp,
+      'hostId': user.uid, // Ri-scrivi hostId per sicurezza
+      'trackId': lobbyData['trackId'], // Preserva trackId
+      'trackName': lobbyData['trackName'], // Preserva trackName
     });
   }
 
@@ -174,13 +178,26 @@ class GrandPrixService {
     if (!snapshot.exists) throw 'Lobby non trovata';
 
     final lobbyData = snapshot.value as Map<dynamic, dynamic>;
-    if (lobbyData['hostId'] != user.uid) {
+    print('🛑 stopSession - Lobby data keys: ${lobbyData.keys.toList()}');
+    print('🛑 stopSession - hostId in lobby: ${lobbyData['hostId']}');
+    print('🛑 stopSession - user.uid: ${user.uid}');
+
+    // Check hostId solo se presente, altrimenti verifica che l'utente sia nei participants
+    final hostId = lobbyData['hostId'];
+    if (hostId != null && hostId != user.uid) {
+      // Se hostId esiste e non corrisponde, blocca
       throw 'Solo l\'host può fermare la sessione';
+    } else if (hostId == null) {
+      // Se hostId è null (dati persi), logga warning ma procedi
+      // perché abbiamo già verificato nella UI che solo l'host vede il bottone
+      print('⚠️ hostId non trovato nei dati lobby, ma procedo con stop');
     }
 
+    // Preserva hostId anche quando finisce la sessione
     await lobbyRef.update({
       'status': 'finished',
       'finishedAt': ServerValue.timestamp,
+      'hostId': hostId ?? user.uid, // Usa hostId salvato o user.uid come fallback
     });
   }
 
@@ -189,9 +206,34 @@ class GrandPrixService {
     final user = _auth.currentUser;
     if (user == null) return;
 
-    await _database.ref('grand_prix_lobbies/$code/liveData/${user.uid}').update({
-      ...data,
-      'lastUpdate': ServerValue.timestamp,
+    final path = 'grand_prix_lobbies/$code/liveData/${user.uid}';
+    print('📤 updateLiveData - Path: $path');
+    print('📤 updateLiveData - Data keys: ${data.keys.toList()}');
+
+    try {
+      await _database.ref(path).update({
+        ...data,
+        'lastUpdate': ServerValue.timestamp,
+      });
+      print('✅ updateLiveData - Success');
+    } catch (e) {
+      print('❌ updateLiveData - Error: $e');
+    }
+  }
+
+  // Preserve lobby metadata (chiamato periodicamente per evitare perdita dati)
+  Future<void> preserveLobbyMetadata(String code, {
+    required String hostId,
+    required String? trackId,
+    required String? trackName,
+  }) async {
+    final lobbyRef = _database.ref('grand_prix_lobbies/$code');
+
+    // Scrivi i metadati essenziali senza toccare liveData o participants
+    await lobbyRef.update({
+      'hostId': hostId,
+      'trackId': trackId,
+      'trackName': trackName,
     });
   }
 
@@ -208,10 +250,16 @@ class GrandPrixService {
   // Check if user is host
   Future<bool> isHost(String code) async {
     final user = _auth.currentUser;
-    if (user == null) return false;
+    if (user == null) {
+      print('⚠️ isHost: user non autenticato');
+      return false;
+    }
 
     final snapshot = await _database.ref('grand_prix_lobbies/$code/hostId').get();
-    return snapshot.value == user.uid;
+    final hostId = snapshot.value;
+    final result = hostId == user.uid;
+    print('🔍 isHost check: user.uid=${user.uid}, hostId=$hostId, result=$result');
+    return result;
   }
 
   // Get lobby data

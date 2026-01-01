@@ -77,33 +77,53 @@ class _GrandPrixStatisticsPageState extends State<GrandPrixStatisticsPage>
     if (liveDataSnapshot.exists) {
       final data = liveDataSnapshot.value as Map<dynamic, dynamic>;
       data.forEach((key, value) {
-        liveDataMap[key.toString()] =
-            GrandPrixLiveData.fromMap(key.toString(), value);
+        // value deve essere un Map, saltiamo se non lo è (es. timestamp o altro)
+        if (value is Map) {
+          liveDataMap[key.toString()] =
+              GrandPrixLiveData.fromMap(key.toString(), value);
+        } else {
+          print('⚠️ Saltato $key in liveData: non è un Map (è ${value.runtimeType})');
+        }
       });
     }
 
     // Calculate statistics for each participant
+    // IMPORTANTE: Usa liveDataMap come fonte di verità, non participants
+    // perché participants potrebbe essere vuoto a causa delle regole Firebase
     final List<GrandPrixStatistics> stats = [];
-    lobby.participants.forEach((userId, participant) {
-      final liveData = liveDataMap[userId];
-      if (liveData != null) {
+
+    print('📊 liveDataMap contiene ${liveDataMap.length} piloti');
+
+    liveDataMap.forEach((userId, liveData) {
+      // Cerca username in participants, altrimenti usa userId
+      final username = lobby.participants[userId]?.username ?? 'Pilota ${userId.substring(0, 8)}';
+
+      print('📊 Creando statistiche per $username: ${liveData.totalLaps} laps, bestLap: ${liveData.bestLap}');
+
+      try {
         stats.add(GrandPrixStatistics.fromLiveData(
           userId,
-          participant.username,
+          username,
           liveData,
         ));
+      } catch (e) {
+        print('❌ Errore creando statistiche per $username: $e');
       }
     });
 
+    print('📊 Statistiche create per ${stats.length} piloti');
+
     // Sort by best lap time
-    stats.sort((a, b) {
-      if (a.bestLap == null) return 1;
-      if (b.bestLap == null) return -1;
-      return a.bestLap!.compareTo(b.bestLap!);
-    });
+    if (stats.isNotEmpty) {
+      stats.sort((a, b) {
+        if (a.bestLap == null) return 1;
+        if (b.bestLap == null) return -1;
+        return a.bestLap!.compareTo(b.bestLap!);
+      });
+    }
 
     // Find close battles (lap times within 0.5 seconds)
-    final battles = _findCloseBattles(stats);
+    final battles = stats.length >= 2 ? _findCloseBattles(stats) : <CloseBattle>[];
 
     if (mounted) {
       setState(() {

@@ -7,6 +7,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:sensors_plus/sensors_plus.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import '../theme.dart';
 import '../models/track_definition.dart';
@@ -102,6 +103,7 @@ class _GrandPrixLivePageState extends State<GrandPrixLivePage> {
   final TrackService _trackService = TrackService();
   TrackDefinition? _trackDefinition;
   bool _isHost = false;
+  String? _hostId; // Salviamo hostId localmente per sicurezza
   bool _sessionFinishedByHost = false;
   Timer? _syncTimer;
 
@@ -127,10 +129,7 @@ class _GrandPrixLivePageState extends State<GrandPrixLivePage> {
   }
 
   Future<void> _loadLobbyAndStart() async {
-    // Check if host
-    final isHost = await _grandPrixService.isHost(widget.lobbyCode);
-
-    // Get lobby data
+    // Get lobby data PRIMA di tutto
     final lobbyData = await _grandPrixService.getLobbyData(widget.lobbyCode);
     if (lobbyData == null || lobbyData['trackId'] == null) {
       if (mounted) {
@@ -142,15 +141,28 @@ class _GrandPrixLivePageState extends State<GrandPrixLivePage> {
       return;
     }
 
+    print('📦 Lobby data ricevuta: ${lobbyData.keys.toList()}');
+    print('📦 hostId in lobby: ${lobbyData['hostId']}');
+
+    // Check if host usando i dati della lobby appena caricati
+    final user = FirebaseAuth.instance.currentUser;
+    final hostIdFromLobby = lobbyData['hostId'] as String?;
+    final isHost = user != null && hostIdFromLobby == user.uid;
+    print('🔑 isHost check: $isHost (user.uid=${user?.uid}, hostId=$hostIdFromLobby)');
+
     // Load track definition
     final trackId = lobbyData['trackId'] as String;
     final trackWithMetadata = await _trackService.getTrackById(trackId);
 
     if (trackWithMetadata == null || !mounted) return;
 
+    if (!mounted) return;
+
     setState(() {
       _isHost = isHost;
+      _hostId = hostIdFromLobby; // Salviamo hostId localmente
       _trackDefinition = trackWithMetadata.trackDefinition;
+      print('✅ setState chiamato: _isHost = $_isHost, _hostId = $_hostId, _trackDefinition = ${_trackDefinition?.name}');
     });
 
     // Initialize lap detection
@@ -235,6 +247,7 @@ class _GrandPrixLivePageState extends State<GrandPrixLivePage> {
   void _syncDataToFirebase() async {
     if (!_recording) return;
 
+    // Sync live data del pilota
     await _grandPrixService.updateLiveData(widget.lobbyCode, {
       'currentLap': _laps.length + 1,
       'lapTimes': _laps.map((d) => d.inMilliseconds).toList(),
@@ -726,6 +739,7 @@ class _GrandPrixLivePageState extends State<GrandPrixLivePage> {
   }
 
   Widget _buildTopBar() {
+    // print('🎨 _buildTopBar chiamato: _isHost = $_isHost');
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
@@ -770,9 +784,10 @@ class _GrandPrixLivePageState extends State<GrandPrixLivePage> {
             const SizedBox(width: 12),
           ],
           // END Session button (solo per host)
-          if (_isHost)
+          if (_isHost) ...[
             GestureDetector(
               onTap: () async {
+                print('🛑 END button premuto dall\'host');
                 // Host ferma la sessione per tutti
                 await _grandPrixService.stopSession(widget.lobbyCode);
                 // _finishSession verrà chiamato automaticamente da _watchLobbyStatus
@@ -802,7 +817,8 @@ class _GrandPrixLivePageState extends State<GrandPrixLivePage> {
                 ),
               ),
             ),
-          if (_isHost) const SizedBox(width: 16),
+          ],
+          const SizedBox(width: 16),
           // BLE indicator
           if (_isUsingBleGps)
             Container(
