@@ -639,128 +639,432 @@ class _GrandPrixStatisticsPageState extends State<GrandPrixStatisticsPage>
     final mostLaps = validStats.reduce(
         (a, b) => a.totalLaps > b.totalLaps ? a : b);
 
-    // slowestLap potrebbe non esistere
-    final statsWithSlowestLap = validStats.where((s) => s.slowestLap != null).toList();
-    final slowestLap = statsWithSlowestLap.isNotEmpty
-        ? statsWithSlowestLap.reduce((a, b) => a.slowestLap! > b.slowestLap! ? a : b)
-        : null;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _buildAwardCard(
-          'Pilota Più Costante',
-          mostConsistent.username,
-          Icons.trending_flat,
-          Colors.blue,
-          '',
-        ),
-        const SizedBox(height: 12),
-        _buildAwardCard(
-          'Miglior Progressione',
-          bestProgression.username,
-          Icons.trending_up,
-          Colors.green,
-          bestProgression.progression > 0
-              ? '-${bestProgression.progression.toStringAsFixed(3)}s'
-              : '',
-        ),
-        const SizedBox(height: 12),
-        _buildAwardCard(
-          'Velocità Massima',
-          fastestSpeed.username,
-          Icons.speed,
-          Colors.orange,
-          '${fastestSpeed.maxSpeed.toStringAsFixed(1)} km/h',
-        ),
-        const SizedBox(height: 12),
-        _buildAwardCard(
-          'G-Force Massima',
-          highestGForce.username,
-          Icons.adjust,
-          Colors.red,
-          '${highestGForce.maxGForce.toStringAsFixed(2)}g',
-        ),
-        if (slowestLap != null) ...[
-          const SizedBox(height: 12),
-          _buildAwardCard(
-            'Giro Più Lento',
-            slowestLap.username,
-            Icons.slow_motion_video,
-            Colors.grey,
-            _formatLapTime(slowestLap.slowestLap!),
+        // Header sezione
+        Padding(
+          padding: const EdgeInsets.only(bottom: 16),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [kBrandColor.withAlpha(50), kBrandColor.withAlpha(20)],
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: kBrandColor.withAlpha(80)),
+                ),
+                child: Icon(Icons.workspace_premium, color: kBrandColor, size: 20),
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                'Riconoscimenti',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: kFgColor,
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
+        // Prima riga - 2 card
+        Row(
+          children: [
+            Expanded(
+              child: _buildPremiumAwardCard(
+                title: 'Pilota Costante',
+                winner: mostConsistent.username,
+                icon: Icons.auto_graph,
+                gradient: const [Color(0xFF1E3A5F), Color(0xFF0D1B2A)],
+                accentColor: const Color(0xFF4DA8DA),
+                value: 'o Schumacher?',
+                description: 'Il pilota con i tempi sul giro più regolari e consistenti durante tutta la sessione.',
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildPremiumAwardCard(
+                title: 'Progressione',
+                winner: bestProgression.username,
+                icon: Icons.trending_up_rounded,
+                gradient: const [Color(0xFF1B4332), Color(0xFF081C15)],
+                accentColor: const Color(0xFF40916C),
+                value: bestProgression.progression > 0
+                    ? '-${bestProgression.progression.toStringAsFixed(2)}s'
+                    : '',
+                description: 'Il pilota che ha migliorato di più il proprio tempo rispetto al primo giro.',
+              ),
+            ),
+          ],
+        ),
         const SizedBox(height: 12),
-        _buildAwardCard(
-          'Numero Giri Completati',
-          mostLaps.username,
-          Icons.loop,
-          Colors.purple,
-          '${mostLaps.totalLaps} giri',
+        // Seconda riga - 2 card
+        Row(
+          children: [
+            Expanded(
+              child: _buildPremiumAwardCard(
+                title: 'Top Speed',
+                winner: fastestSpeed.username,
+                icon: Icons.speed_rounded,
+                gradient: const [Color(0xFF5C3D2E), Color(0xFF2D1810)],
+                accentColor: const Color(0xFFE85D04),
+                value: '${fastestSpeed.maxSpeed.toStringAsFixed(1)} km/h',
+                description: 'Il pilota che ha raggiunto la velocità massima più alta durante la sessione.',
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildPremiumAwardCard(
+                title: 'Max G-Force',
+                winner: highestGForce.username,
+                icon: Icons.bolt_rounded,
+                gradient: const [Color(0xFF4A1942), Color(0xFF1A0A18)],
+                accentColor: const Color(0xFFE91E63),
+                value: '${highestGForce.maxGForce.toStringAsFixed(2)}g',
+                description: 'Il pilota che ha registrato la forza G laterale più alta in curva.',
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        // Terza riga - 1 card grande
+        _buildPremiumAwardCardLarge(
+          title: 'Maratoneta',
+          winner: mostLaps.username,
+          icon: Icons.replay_circle_filled_rounded,
+          gradient: const [Color(0xFF3D1C56), Color(0xFF1A0B26)],
+          accentColor: const Color(0xFFAB47BC),
+          value: '${mostLaps.totalLaps} giri',
+          description: 'Il pilota che ha completato il maggior numero di giri durante la sessione.',
         ),
       ],
     );
   }
 
-  Widget _buildAwardCard(
-      String title, String winner, IconData icon, Color color, String value) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [_kCardStart, _kCardEnd],
-        ),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: color.withOpacity(0.3), width: 1),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(icon, color: color, size: 24),
+  /// Card premio premium con design accattivante
+  Widget _buildPremiumAwardCard({
+    required String title,
+    required String winner,
+    required IconData icon,
+    required List<Color> gradient,
+    required Color accentColor,
+    required String value,
+    required String description,
+  }) {
+    return GestureDetector(
+      onTap: () => _showAwardInfo(title, description, accentColor),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: gradient,
           ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: accentColor.withAlpha(60), width: 1.5),
+          boxShadow: [
+            BoxShadow(
+              color: accentColor.withAlpha(30),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header con icona e info button
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: kMutedColor,
-                    fontWeight: FontWeight.w600,
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: accentColor.withAlpha(40),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: accentColor.withAlpha(80)),
                   ),
+                  child: Icon(icon, color: accentColor, size: 22),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  winner,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                    color: color,
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withAlpha(10),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.info_outline_rounded,
+                    color: Colors.white.withAlpha(120),
+                    size: 16,
                   ),
                 ),
               ],
             ),
-          ),
-          if (value.isNotEmpty)
+            const SizedBox(height: 14),
+            // Titolo
             Text(
-              value,
+              title.toUpperCase(),
               style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: color,
+                fontSize: 10,
+                fontWeight: FontWeight.w800,
+                color: accentColor.withAlpha(200),
+                letterSpacing: 1.2,
               ),
             ),
-        ],
+            const SizedBox(height: 6),
+            // Winner name
+            Text(
+              winner,
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w900,
+                color: kFgColor,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            if (value.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              // Value badge
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: accentColor.withAlpha(30),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: accentColor.withAlpha(60)),
+                ),
+                child: Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    color: accentColor,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Card premio grande per singola riga
+  Widget _buildPremiumAwardCardLarge({
+    required String title,
+    required String winner,
+    required IconData icon,
+    required List<Color> gradient,
+    required Color accentColor,
+    required String value,
+    required String description,
+  }) {
+    return GestureDetector(
+      onTap: () => _showAwardInfo(title, description, accentColor),
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: gradient,
+          ),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: accentColor.withAlpha(60), width: 1.5),
+          boxShadow: [
+            BoxShadow(
+              color: accentColor.withAlpha(30),
+              blurRadius: 16,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            // Icona grande
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: accentColor.withAlpha(40),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: accentColor.withAlpha(80)),
+                boxShadow: [
+                  BoxShadow(
+                    color: accentColor.withAlpha(40),
+                    blurRadius: 12,
+                  ),
+                ],
+              ),
+              child: Icon(icon, color: accentColor, size: 28),
+            ),
+            const SizedBox(width: 16),
+            // Info
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title.toUpperCase(),
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      color: accentColor.withAlpha(200),
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    winner,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w900,
+                      color: kFgColor,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Value + info
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withAlpha(10),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.info_outline_rounded,
+                    color: Colors.white.withAlpha(120),
+                    size: 16,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: accentColor.withAlpha(30),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: accentColor.withAlpha(60)),
+                  ),
+                  child: Text(
+                    value,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w900,
+                      color: accentColor,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Mostra un banner informativo per l'award
+  void _showAwardInfo(String title, String description, Color accentColor) {
+    HapticFeedback.lightImpact();
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        margin: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1A1A1A),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: accentColor.withAlpha(60), width: 1.5),
+          boxShadow: [
+            BoxShadow(
+              color: accentColor.withAlpha(40),
+              blurRadius: 20,
+              offset: const Offset(0, -4),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Handle bar
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.white.withAlpha(30),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 20),
+            // Icon
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: accentColor.withAlpha(30),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: accentColor.withAlpha(60)),
+              ),
+              child: Icon(
+                Icons.emoji_events_rounded,
+                color: accentColor,
+                size: 32,
+              ),
+            ),
+            const SizedBox(height: 16),
+            // Title
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w900,
+                color: accentColor,
+              ),
+            ),
+            const SizedBox(height: 12),
+            // Description
+            Text(
+              description,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.white.withAlpha(180),
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 24),
+            // Close button
+            GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                decoration: BoxDecoration(
+                  color: accentColor.withAlpha(30),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: accentColor.withAlpha(80)),
+                ),
+                child: Text(
+                  'Ho capito',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: accentColor,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
