@@ -8,6 +8,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../theme.dart';
 import '../models/track_definition.dart';
@@ -112,6 +113,7 @@ class _GrandPrixLivePageState extends State<GrandPrixLivePage> {
   double _maxSpeed = 0.0;
   double _minSpeed = double.infinity;
   double _maxGForce = 0.0;
+  String _username = 'Unknown'; // Username del pilota per sync Firebase
 
   // ============================================================
   // LIFECYCLE
@@ -159,6 +161,17 @@ class _GrandPrixLivePageState extends State<GrandPrixLivePage> {
     final hostIdFromLobby = lobbyData['hostId']?.toString();
     final isHost = user != null && hostIdFromLobby == user.uid;
     print('🔑 isHost check: $isHost (user.uid=${user?.uid}, hostId=$hostIdFromLobby)');
+
+    // Carica username del pilota corrente per sync Firebase
+    if (user != null) {
+      try {
+        final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+        _username = userDoc.data()?['username']?.toString() ?? 'Unknown';
+        print('👤 Username caricato: $_username');
+      } catch (e) {
+        print('⚠️ Errore caricamento username: $e');
+      }
+    }
 
     // Load track definition
     final trackIdValue = lobbyData['trackId'];
@@ -267,8 +280,9 @@ class _GrandPrixLivePageState extends State<GrandPrixLivePage> {
   void _syncDataToFirebase() async {
     if (!_recording) return;
 
-    // Sync live data del pilota
+    // Sync live data del pilota (incluso username per statistiche finali)
     await _grandPrixService.updateLiveData(widget.lobbyCode, {
+      'username': _username,
       'currentLap': _laps.length + 1,
       'lapTimes': _laps.map((d) => d.inMilliseconds).toList(),
       'bestLap': _bestLap?.inMilliseconds,

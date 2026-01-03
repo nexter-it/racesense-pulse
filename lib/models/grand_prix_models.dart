@@ -91,6 +91,7 @@ class GrandPrixParticipant {
 
 class GrandPrixLiveData {
   final String userId;
+  final String? username; // Username del pilota
   final int currentLap;
   final List<double> lapTimes;
   final double? bestLap;
@@ -102,6 +103,7 @@ class GrandPrixLiveData {
 
   GrandPrixLiveData({
     required this.userId,
+    this.username,
     required this.currentLap,
     required this.lapTimes,
     this.bestLap,
@@ -113,7 +115,11 @@ class GrandPrixLiveData {
   });
 
   factory GrandPrixLiveData.fromMap(String userId, Map<dynamic, dynamic> map) {
+    // Debug: stampa i dati raw ricevuti
+    print('🔍 GrandPrixLiveData.fromMap per $userId: $map');
+
     // Parsing robusto di lapTimes
+    // NOTA: Firebase può restituire sia List che Map (quando array ha chiavi sparse)
     final List<double> lapTimes = [];
     final lapTimesRaw = map['lapTimes'];
     if (lapTimesRaw is List) {
@@ -123,7 +129,19 @@ class GrandPrixLiveData {
           lapTimes.add(e.toDouble() / 1000.0);
         }
       }
+    } else if (lapTimesRaw is Map) {
+      // Firebase converte array in Map con chiavi numeriche (0, 1, 2...)
+      // Ordiniamo per chiave e estraiamo i valori
+      final sortedKeys = lapTimesRaw.keys.toList()
+        ..sort((a, b) => int.parse(a.toString()).compareTo(int.parse(b.toString())));
+      for (final key in sortedKeys) {
+        final value = lapTimesRaw[key];
+        if (value is num) {
+          lapTimes.add(value.toDouble() / 1000.0);
+        }
+      }
     }
+    print('🔍 lapTimes parsati: $lapTimes (raw type: ${lapTimesRaw.runtimeType})');
 
     // bestLap viene salvato in millisecondi, convertiamo in secondi
     double? bestLapSeconds;
@@ -144,12 +162,17 @@ class GrandPrixLiveData {
       return defaultValue;
     }
 
+    final parsedUsername = map['username']?.toString();
+    final parsedTotalLaps = parseIntSafe(map['totalLaps'], 0);
+    print('🔍 username: $parsedUsername, totalLaps: $parsedTotalLaps, bestLap: $bestLapSeconds');
+
     return GrandPrixLiveData(
       userId: userId,
+      username: parsedUsername,
       currentLap: parseIntSafe(map['currentLap'], 0),
       lapTimes: lapTimes,
       bestLap: bestLapSeconds,
-      totalLaps: parseIntSafe(map['totalLaps'], 0),
+      totalLaps: parsedTotalLaps,
       maxSpeed: parseDoubleSafe(map['maxSpeed'], 0.0),
       maxGForce: parseDoubleSafe(map['maxGForce'], 0.0),
       isFormationLap: map['isFormationLap'] == true,

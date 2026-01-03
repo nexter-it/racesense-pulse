@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:firebase_database/firebase_database.dart';
 import '../theme.dart';
 import '../services/grand_prix_service.dart';
 import '../models/grand_prix_models.dart';
@@ -69,14 +68,16 @@ class _GrandPrixStatisticsPageState extends State<GrandPrixStatisticsPage>
 
     final lobby = GrandPrixLobby.fromMap(widget.lobbyCode, lobbyData);
 
-    // Get live data from lobby liveData node
-    final liveDataSnapshot =
-        await FirebaseDatabase.instance.ref('grand_prix_lobbies/${widget.lobbyCode}/liveData').get();
-
+    // Get live data direttamente da lobbyData (già contiene liveData)
+    // invece di fare una query separata che potrebbe avere problemi
     final Map<String, GrandPrixLiveData> liveDataMap = {};
-    if (liveDataSnapshot.exists && liveDataSnapshot.value is Map) {
-      final data = liveDataSnapshot.value as Map;
-      data.forEach((key, value) {
+
+    final liveDataRaw = lobbyData['liveData'];
+    print('🔍 liveDataRaw type: ${liveDataRaw.runtimeType}, value: $liveDataRaw');
+
+    if (liveDataRaw is Map) {
+      liveDataRaw.forEach((key, value) {
+        print('🔍 Parsing utente: $key, value type: ${value.runtimeType}');
         if (value is Map) {
           try {
             liveDataMap[key.toString()] =
@@ -96,8 +97,10 @@ class _GrandPrixStatisticsPageState extends State<GrandPrixStatisticsPage>
     print('📊 liveDataMap contiene ${liveDataMap.length} piloti');
 
     liveDataMap.forEach((userId, liveData) {
-      // Cerca username in participants, altrimenti usa userId
-      final username = lobby.participants[userId]?.username ?? 'Pilota ${userId.substring(0, 8)}';
+      // Username: priorità a liveData.username (più affidabile), poi participants, poi fallback
+      final username = liveData.username ??
+                       lobby.participants[userId]?.username ??
+                       'Pilota ${userId.substring(0, 8)}';
 
       print('📊 Creando statistiche per $username: ${liveData.totalLaps} laps, bestLap: ${liveData.bestLap}');
 
