@@ -25,7 +25,7 @@ class _BleScanPageState extends State<BleScanPage>
     with SingleTickerProviderStateMixin {
   final BleTrackingService _bleService = BleTrackingService();
 
-  static const _targetPrefix = 'GPS-';
+  static const _targetPrefix = 'RS-';
 
   bool get _scanning => _bleService.isScanning;
 

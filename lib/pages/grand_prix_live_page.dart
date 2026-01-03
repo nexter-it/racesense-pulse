@@ -106,6 +106,7 @@ class _GrandPrixLivePageState extends State<GrandPrixLivePage> {
   String? _hostId; // Salviamo hostId localmente per sicurezza
   bool _sessionFinishedByHost = false;
   Timer? _syncTimer;
+  bool _initialized = false; // Previeni inizializzazione multipla
 
   // Stats per sync Firebase
   double _maxSpeed = 0.0;
@@ -129,6 +130,15 @@ class _GrandPrixLivePageState extends State<GrandPrixLivePage> {
   }
 
   Future<void> _loadLobbyAndStart() async {
+    // Previeni inizializzazione multipla
+    if (_initialized) {
+      print('⚠️ _loadLobbyAndStart già chiamato, skip');
+      return;
+    }
+    _initialized = true;
+
+    print('🎬 Inizio _loadLobbyAndStart per lobby ${widget.lobbyCode}');
+
     // Get lobby data PRIMA di tutto
     final lobbyData = await _grandPrixService.getLobbyData(widget.lobbyCode);
     if (lobbyData == null || lobbyData['trackId'] == null) {
@@ -146,12 +156,22 @@ class _GrandPrixLivePageState extends State<GrandPrixLivePage> {
 
     // Check if host usando i dati della lobby appena caricati
     final user = FirebaseAuth.instance.currentUser;
-    final hostIdFromLobby = lobbyData['hostId'] as String?;
+    final hostIdFromLobby = lobbyData['hostId']?.toString();
     final isHost = user != null && hostIdFromLobby == user.uid;
     print('🔑 isHost check: $isHost (user.uid=${user?.uid}, hostId=$hostIdFromLobby)');
 
     // Load track definition
-    final trackId = lobbyData['trackId'] as String;
+    final trackIdValue = lobbyData['trackId'];
+    if (trackIdValue == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Circuito non selezionato')),
+        );
+        Navigator.of(context).pop();
+      }
+      return;
+    }
+    final trackId = trackIdValue.toString();
     final trackWithMetadata = await _trackService.getTrackById(trackId);
 
     if (trackWithMetadata == null || !mounted) return;
@@ -964,7 +984,7 @@ class _GrandPrixLivePageState extends State<GrandPrixLivePage> {
 
   Widget _buildCompactGForceBar() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: Colors.white.withAlpha(8),
         borderRadius: BorderRadius.circular(8),
@@ -976,17 +996,17 @@ class _GrandPrixLivePageState extends State<GrandPrixLivePage> {
             'G',
             style: TextStyle(
               color: Colors.white.withAlpha(100),
-              fontSize: 12,
+              fontSize: 11,
               fontWeight: FontWeight.w700,
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 8),
           // Brake bar
           Container(
-            width: 60,
-            height: 8,
+            width: 40,
+            height: 6,
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(4),
+              borderRadius: BorderRadius.circular(3),
               color: Colors.white.withAlpha(15),
             ),
             child: Align(
@@ -995,20 +1015,20 @@ class _GrandPrixLivePageState extends State<GrandPrixLivePage> {
                 widthFactor: (_gForceY / 1.0).clamp(0.0, 1.0),
                 child: Container(
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(4),
+                    borderRadius: BorderRadius.circular(3),
                     color: Colors.red,
                   ),
                 ),
               ),
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 6),
           // Accel bar
           Container(
-            width: 60,
-            height: 8,
+            width: 40,
+            height: 6,
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(4),
+              borderRadius: BorderRadius.circular(3),
               color: Colors.white.withAlpha(15),
             ),
             child: Align(
@@ -1017,19 +1037,19 @@ class _GrandPrixLivePageState extends State<GrandPrixLivePage> {
                 widthFactor: (_gForceX / 1.0).clamp(0.0, 1.0),
                 child: Container(
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(4),
+                    borderRadius: BorderRadius.circular(3),
                     color: Colors.green,
                   ),
                 ),
               ),
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 8),
           Text(
             _gForceMagnitude.toStringAsFixed(1),
             style: const TextStyle(
               color: Colors.white,
-              fontSize: 14,
+              fontSize: 12,
               fontWeight: FontWeight.w900,
               fontFeatures: [FontFeature.tabularFigures()],
             ),

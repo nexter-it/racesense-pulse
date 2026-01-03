@@ -35,7 +35,7 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
     super.initState();
     // Avvia scan continuo per mantenere aggiornata la lista
     _bleService.startScan(
-      nameFilters: const ['GPS-'],
+      nameFilters: const ['RS-'],
       continuous: true,
     );
     _loadDevices();

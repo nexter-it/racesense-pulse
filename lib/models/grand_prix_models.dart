@@ -22,15 +22,27 @@ class GrandPrixLobby {
   });
 
   factory GrandPrixLobby.fromMap(String code, Map<dynamic, dynamic> map) {
-    final participantsMap = map['participants'] as Map<dynamic, dynamic>? ?? {};
     final participants = <String, GrandPrixParticipant>{};
 
-    participantsMap.forEach((key, value) {
-      participants[key.toString()] = GrandPrixParticipant.fromMap(
-        key.toString(),
-        Map<String, dynamic>.from(value as Map),
-      );
-    });
+    final participantsRaw = map['participants'];
+    if (participantsRaw is Map) {
+      participantsRaw.forEach((key, value) {
+        if (value is Map) {
+          participants[key.toString()] = GrandPrixParticipant.fromMap(
+            key.toString(),
+            Map<String, dynamic>.from(value),
+          );
+        }
+      });
+    }
+
+    // Helper per convertire timestamp (può essere int o Map con .sv)
+    int? parseTimestamp(dynamic value) {
+      if (value == null) return null;
+      if (value is int) return value;
+      if (value is num) return value.toInt();
+      return null;
+    }
 
     return GrandPrixLobby(
       code: code,
@@ -38,9 +50,9 @@ class GrandPrixLobby {
       trackId: map['trackId']?.toString(),
       trackName: map['trackName']?.toString(),
       status: map['status']?.toString() ?? 'waiting',
-      createdAt: map['createdAt'] as int? ?? 0,
-      startedAt: map['startedAt'] as int?,
-      finishedAt: map['finishedAt'] as int?,
+      createdAt: parseTimestamp(map['createdAt']) ?? 0,
+      startedAt: parseTimestamp(map['startedAt']),
+      finishedAt: parseTimestamp(map['finishedAt']),
       participants: participants,
     );
   }
@@ -60,11 +72,19 @@ class GrandPrixParticipant {
   });
 
   factory GrandPrixParticipant.fromMap(String userId, Map<String, dynamic> map) {
+    // Helper per convertire timestamp
+    int parseTimestamp(dynamic value) {
+      if (value == null) return 0;
+      if (value is int) return value;
+      if (value is num) return value.toInt();
+      return 0;
+    }
+
     return GrandPrixParticipant(
       userId: userId,
       username: map['username']?.toString() ?? 'Unknown',
-      joinedAt: map['joinedAt'] as int? ?? 0,
-      connected: map['connected'] as bool? ?? false,
+      joinedAt: parseTimestamp(map['joinedAt']),
+      connected: map['connected'] == true,
     );
   }
 }
@@ -93,19 +113,47 @@ class GrandPrixLiveData {
   });
 
   factory GrandPrixLiveData.fromMap(String userId, Map<dynamic, dynamic> map) {
-    final lapTimesList = map['lapTimes'] as List<dynamic>? ?? [];
-    final lapTimes = lapTimesList.map((e) => (e as num).toDouble()).toList();
+    // Parsing robusto di lapTimes
+    final List<double> lapTimes = [];
+    final lapTimesRaw = map['lapTimes'];
+    if (lapTimesRaw is List) {
+      for (final e in lapTimesRaw) {
+        if (e is num) {
+          // lapTimes salvati in millisecondi, convertiamo in secondi
+          lapTimes.add(e.toDouble() / 1000.0);
+        }
+      }
+    }
+
+    // bestLap viene salvato in millisecondi, convertiamo in secondi
+    double? bestLapSeconds;
+    final bestLapRaw = map['bestLap'];
+    if (bestLapRaw is num) {
+      bestLapSeconds = bestLapRaw.toDouble() / 1000.0;
+    }
+
+    // Helper per parsing numeri
+    int parseIntSafe(dynamic value, int defaultValue) {
+      if (value is int) return value;
+      if (value is num) return value.toInt();
+      return defaultValue;
+    }
+
+    double parseDoubleSafe(dynamic value, double defaultValue) {
+      if (value is num) return value.toDouble();
+      return defaultValue;
+    }
 
     return GrandPrixLiveData(
       userId: userId,
-      currentLap: map['currentLap'] as int? ?? 0,
+      currentLap: parseIntSafe(map['currentLap'], 0),
       lapTimes: lapTimes,
-      bestLap: map['bestLap'] != null ? (map['bestLap'] as num).toDouble() : null,
-      totalLaps: map['totalLaps'] as int? ?? 0,
-      maxSpeed: (map['maxSpeed'] as num?)?.toDouble() ?? 0.0,
-      maxGForce: (map['maxGForce'] as num?)?.toDouble() ?? 0.0,
-      isFormationLap: map['isFormationLap'] as bool? ?? true,
-      lastUpdate: map['lastUpdate'] as int? ?? 0,
+      bestLap: bestLapSeconds,
+      totalLaps: parseIntSafe(map['totalLaps'], 0),
+      maxSpeed: parseDoubleSafe(map['maxSpeed'], 0.0),
+      maxGForce: parseDoubleSafe(map['maxGForce'], 0.0),
+      isFormationLap: map['isFormationLap'] == true,
+      lastUpdate: parseIntSafe(map['lastUpdate'], 0),
     );
   }
 

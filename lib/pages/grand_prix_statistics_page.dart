@@ -69,20 +69,21 @@ class _GrandPrixStatisticsPageState extends State<GrandPrixStatisticsPage>
 
     final lobby = GrandPrixLobby.fromMap(widget.lobbyCode, lobbyData);
 
-    // Get live data
+    // Get live data from lobby liveData node
     final liveDataSnapshot =
         await FirebaseDatabase.instance.ref('grand_prix_lobbies/${widget.lobbyCode}/liveData').get();
 
     final Map<String, GrandPrixLiveData> liveDataMap = {};
-    if (liveDataSnapshot.exists) {
-      final data = liveDataSnapshot.value as Map<dynamic, dynamic>;
+    if (liveDataSnapshot.exists && liveDataSnapshot.value is Map) {
+      final data = liveDataSnapshot.value as Map;
       data.forEach((key, value) {
-        // value deve essere un Map, saltiamo se non lo è (es. timestamp o altro)
         if (value is Map) {
-          liveDataMap[key.toString()] =
-              GrandPrixLiveData.fromMap(key.toString(), value);
-        } else {
-          print('⚠️ Saltato $key in liveData: non è un Map (è ${value.runtimeType})');
+          try {
+            liveDataMap[key.toString()] =
+                GrandPrixLiveData.fromMap(key.toString(), Map<dynamic, dynamic>.from(value));
+          } catch (e) {
+            print('Errore parsing liveData per $key: $e');
+          }
         }
       });
     }
@@ -182,6 +183,62 @@ class _GrandPrixStatisticsPageState extends State<GrandPrixStatisticsPage>
     return '${minutes.toString().padLeft(1, '0')}:${secs.toStringAsFixed(3).padLeft(6, '0')}';
   }
 
+  Widget _buildNoDataMessage() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(40),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.info_outline,
+              size: 64,
+              color: kMutedColor,
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              'Nessun dato disponibile',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+                color: kFgColor,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'La sessione è terminata senza dati registrati.\nCompleta almeno un giro per vedere le statistiche.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
+                color: kMutedColor,
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 32),
+            GestureDetector(
+              onTap: () => Navigator.of(context).popUntil((route) => route.isFirst),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
+                decoration: BoxDecoration(
+                  color: kBrandColor,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Text(
+                  'Torna alla Home',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.black,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -197,24 +254,26 @@ class _GrandPrixStatisticsPageState extends State<GrandPrixStatisticsPage>
                         valueColor: AlwaysStoppedAnimation<Color>(kBrandColor),
                       ),
                     )
-                  : SingleChildScrollView(
-                      physics: const BouncingScrollPhysics(),
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          const SizedBox(height: 12),
-                          _buildPodium(),
-                          const SizedBox(height: 24),
-                          _buildFullLeaderboard(),
-                          const SizedBox(height: 24),
-                          _buildAwards(),
-                          const SizedBox(height: 24),
-                          if (_battles.isNotEmpty) _buildCloseBattles(),
-                          if (_battles.isNotEmpty) const SizedBox(height: 32),
-                        ],
-                      ),
-                    ),
+                  : _statistics.isEmpty
+                      ? _buildNoDataMessage()
+                      : SingleChildScrollView(
+                          physics: const BouncingScrollPhysics(),
+                          padding: const EdgeInsets.all(20),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              const SizedBox(height: 12),
+                              _buildPodium(),
+                              const SizedBox(height: 24),
+                              _buildFullLeaderboard(),
+                              const SizedBox(height: 24),
+                              _buildAwards(),
+                              const SizedBox(height: 24),
+                              if (_battles.isNotEmpty) _buildCloseBattles(),
+                              if (_battles.isNotEmpty) const SizedBox(height: 32),
+                            ],
+                          ),
+                        ),
             ),
           ],
         ),
@@ -427,6 +486,8 @@ class _GrandPrixStatisticsPageState extends State<GrandPrixStatisticsPage>
   }
 
   Widget _buildFullLeaderboard() {
+    if (_statistics.isEmpty) return const SizedBox.shrink();
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -559,19 +620,27 @@ class _GrandPrixStatisticsPageState extends State<GrandPrixStatisticsPage>
   Widget _buildAwards() {
     if (_statistics.isEmpty) return const SizedBox.shrink();
 
-    // Find award winners
-    final mostConsistent = _statistics.reduce(
+    // Filtra solo statistiche con dati validi
+    final validStats = _statistics.where((s) => s.totalLaps > 0 || s.maxSpeed > 0).toList();
+    if (validStats.isEmpty) return const SizedBox.shrink();
+
+    // Find award winners con controlli null-safe
+    final mostConsistent = validStats.reduce(
         (a, b) => a.consistency > b.consistency ? a : b);
-    final bestProgression = _statistics.reduce(
+    final bestProgression = validStats.reduce(
         (a, b) => a.progression > b.progression ? a : b);
-    final fastestSpeed = _statistics.reduce(
+    final fastestSpeed = validStats.reduce(
         (a, b) => a.maxSpeed > b.maxSpeed ? a : b);
-    final highestGForce = _statistics.reduce(
+    final highestGForce = validStats.reduce(
         (a, b) => a.maxGForce > b.maxGForce ? a : b);
-    final slowestLap = _statistics.where((s) => s.slowestLap != null).reduce(
-        (a, b) => a.slowestLap! > b.slowestLap! ? a : b);
-    final mostLaps = _statistics.reduce(
+    final mostLaps = validStats.reduce(
         (a, b) => a.totalLaps > b.totalLaps ? a : b);
+
+    // slowestLap potrebbe non esistere
+    final statsWithSlowestLap = validStats.where((s) => s.slowestLap != null).toList();
+    final slowestLap = statsWithSlowestLap.isNotEmpty
+        ? statsWithSlowestLap.reduce((a, b) => a.slowestLap! > b.slowestLap! ? a : b)
+        : null;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -609,16 +678,16 @@ class _GrandPrixStatisticsPageState extends State<GrandPrixStatisticsPage>
           Colors.red,
           '${highestGForce.maxGForce.toStringAsFixed(2)}g',
         ),
-        const SizedBox(height: 12),
-        _buildAwardCard(
-          'Giro Più Lento',
-          slowestLap.username,
-          Icons.slow_motion_video,
-          Colors.grey,
-          slowestLap.slowestLap != null
-              ? _formatLapTime(slowestLap.slowestLap!)
-              : '',
-        ),
+        if (slowestLap != null) ...[
+          const SizedBox(height: 12),
+          _buildAwardCard(
+            'Giro Più Lento',
+            slowestLap.username,
+            Icons.slow_motion_video,
+            Colors.grey,
+            _formatLapTime(slowestLap.slowestLap!),
+          ),
+        ],
         const SizedBox(height: 12),
         _buildAwardCard(
           'Numero Giri Completati',
