@@ -1442,69 +1442,69 @@ class _LikeStatChip extends StatefulWidget {
 
 class _LikeStatChipState extends State<_LikeStatChip> {
   final EngagementService _engagementService = EngagementService();
-  int _currentLikesCount = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    _currentLikesCount = widget.session.likesCount;
-  }
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<Map<String, bool>>(
-      future: _engagementService.getUserReactions(widget.session.sessionId),
-      builder: (context, snapshot) {
-        final isLiked = snapshot.data?['like'] ?? false;
-        const color = Color(0xFFFF6B6B);
+    const color = Color(0xFFFF6B6B);
 
-        return GestureDetector(
-          onTap: () async {
-            HapticFeedback.lightImpact();
-            await _engagementService.toggleLike(widget.session.sessionId);
-            setState(() {
-              _currentLikesCount += isLiked ? -1 : 1;
-            });
-          },
-          child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 10),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              color: isLiked ? color.withAlpha(30) : color.withAlpha(12),
-              border: Border.all(
-                color: isLiked ? color : color.withAlpha(50),
-                width: isLiked ? 1.5 : 1,
+    return StreamBuilder<bool>(
+      stream: _engagementService.watchLikeStatus(widget.session.sessionId),
+      initialData: false,
+      builder: (context, likeSnapshot) {
+        final isLiked = likeSnapshot.data ?? false;
+
+        return StreamBuilder<int>(
+          stream: _engagementService.watchSessionLikesCount(widget.session.sessionId),
+          initialData: widget.session.likesCount,
+          builder: (context, countSnapshot) {
+            final likesCount = countSnapshot.data ?? widget.session.likesCount;
+
+            return GestureDetector(
+              onTap: () async {
+                HapticFeedback.lightImpact();
+                await _engagementService.toggleLike(widget.session.sessionId);
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  color: isLiked ? color.withAlpha(30) : color.withAlpha(12),
+                  border: Border.all(
+                    color: isLiked ? color : color.withAlpha(50),
+                    width: isLiked ? 1.5 : 1,
+                  ),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      isLiked ? Icons.favorite : Icons.favorite_border,
+                      color: color,
+                      size: 16,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '$likesCount',
+                      style: const TextStyle(
+                        color: color,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Like',
+                      style: TextStyle(
+                        color: color.withAlpha(180),
+                        fontSize: 9,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  isLiked ? Icons.favorite : Icons.favorite_border,
-                  color: color,
-                  size: 16,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '$_currentLikesCount',
-                  style: const TextStyle(
-                    color: color,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  'Mi piace',
-                  style: TextStyle(
-                    color: color.withAlpha(180),
-                    fontSize: 9,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
+            );
+          },
         );
       },
     );

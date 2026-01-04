@@ -19,12 +19,14 @@ class DrawFinishLinePage extends StatefulWidget {
   final List<Position> gpsTrack;
   final String? trackName;
   final bool usedBleDevice;
+  final LatLng? initialCenter;
 
   const DrawFinishLinePage({
     Key? key,
     required this.gpsTrack,
     this.trackName,
     this.usedBleDevice = false,
+    this.initialCenter,
   }) : super(key: key);
 
   @override
@@ -185,6 +187,17 @@ class _DrawFinishLinePageState extends State<DrawFinishLinePage> {
     });
 
     try {
+      // Se non c'è traccia GPS (nuovo circuito custom), mostra dialog di conferma
+      if (widget.gpsTrack.isEmpty) {
+        setState(() {
+          _processingResult = null; // Nessun risultato di processing
+          _isProcessing = false;
+        });
+        // Mostra dialog di conferma per nuovo circuito
+        _showNewCircuitConfirmDialog();
+        return;
+      }
+
       // Valida che la linea intersechi la traccia
       final isValid = PostProcessingService.validateTrackAndFinishLine(
         gpsTrack: widget.gpsTrack,
@@ -532,6 +545,167 @@ class _DrawFinishLinePageState extends State<DrawFinishLinePage> {
     );
   }
 
+  /// Mostra dialog di conferma per nuovo circuito custom (senza traccia GPS)
+  void _showNewCircuitConfirmDialog() {
+    final dist = Distance();
+    final lineLength = dist(_finishLineStart!, _finishLineEnd!);
+
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 400),
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [_kCardStart, _kCardEnd],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: _kBorderColor),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withAlpha(100),
+                blurRadius: 30,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: kBrandColor.withAlpha(25),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.flag_outlined, color: kBrandColor, size: 36),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Linea Start/Finish Posizionata',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w900,
+                  color: Colors.white,
+                  letterSpacing: -0.3,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 20),
+
+              // Info linea S/F
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: _kTileColor,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: _kBorderColor),
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.straighten, color: kBrandColor, size: 20),
+                        const SizedBox(width: 10),
+                        Text(
+                          'Lunghezza linea',
+                          style: TextStyle(color: kMutedColor, fontSize: 13),
+                        ),
+                        const Spacer(),
+                        Text(
+                          '${lineLength.toStringAsFixed(1)} m',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: kBrandColor.withAlpha(15),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: kBrandColor.withAlpha(60)),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.info_outline, color: kBrandColor, size: 18),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'La traccia GPS verrà registrata durante le tue sessioni sul circuito',
+                              style: TextStyle(
+                                color: kBrandColor,
+                                fontSize: 12,
+                                height: 1.3,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // Buttons
+              Row(
+                children: [
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          side: BorderSide(color: _kBorderColor),
+                        ),
+                      ),
+                      child: Text(
+                        'Modifica',
+                        style: TextStyle(color: kMutedColor, fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    flex: 2,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.pop(context); // Chiudi dialog
+                        _confirmAndReturn(); // Conferma e ritorna
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: kBrandColor,
+                        foregroundColor: Colors.black,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        elevation: 0,
+                      ),
+                      child: const Text(
+                        'Conferma e Salva',
+                        style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _summaryTile(IconData icon, String value, String label, Color color) {
     return Column(
       children: [
@@ -586,7 +760,7 @@ class _DrawFinishLinePageState extends State<DrawFinishLinePage> {
   Widget build(BuildContext context) {
     final initialCenter = widget.gpsTrack.isNotEmpty
         ? LatLng(widget.gpsTrack.first.latitude, widget.gpsTrack.first.longitude)
-        : const LatLng(45.4642, 9.1900); // Milano default
+        : (widget.initialCenter ?? _currentPosition ?? const LatLng(45.4642, 9.1900)); // Usa posizione passata o corrente, altrimenti Milano default
 
     return Scaffold(
       backgroundColor: _kBgColor,

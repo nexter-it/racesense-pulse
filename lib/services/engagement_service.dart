@@ -30,6 +30,33 @@ class EngagementService {
     };
   }
 
+  /// Stream per ascoltare i cambiamenti del like status in tempo reale
+  Stream<bool> watchLikeStatus(String sessionId) {
+    final uid = _currentUser?.uid;
+    if (uid == null) return Stream.value(false);
+
+    return _firestore
+        .collection('users')
+        .doc(uid)
+        .collection('likes')
+        .doc(sessionId)
+        .snapshots()
+        .map((snapshot) => snapshot.exists);
+  }
+
+  /// Stream per ascoltare i cambiamenti del likesCount della sessione
+  Stream<int> watchSessionLikesCount(String sessionId) {
+    return _firestore
+        .collection('sessions')
+        .doc(sessionId)
+        .snapshots()
+        .map((snapshot) {
+      if (!snapshot.exists) return 0;
+      final data = snapshot.data();
+      return (data?['likesCount'] as int?) ?? 0;
+    });
+  }
+
   Future<void> toggleLike(String sessionId) async {
     final uid = _currentUser?.uid;
     if (uid == null) return;

@@ -230,8 +230,6 @@ class _ActivityDetailPageState extends State<ActivityDetailPage>
                     // === HERO CARD: Pilota + Tracciato + Best Lap ===
                     _HeroSessionCard(
                       session: _session,
-                      liked: _liked,
-                      challenged: _challenged,
                       onToggleLike: _handleToggleLike,
                       onToggleChallenge: _handleToggleChallenge,
                     ),
@@ -297,12 +295,7 @@ class _ActivityDetailPageState extends State<ActivityDetailPage>
   Future<void> _handleToggleLike() async {
     HapticFeedback.lightImpact();
     await _engagementService.toggleLike(_session.sessionId);
-    setState(() {
-      _liked = !_liked;
-      _session = _session.copyWith(
-        likesCount: _session.likesCount + (_liked ? 1 : -1),
-      );
-    });
+    // Non serve più setState, lo stream si aggiorna automaticamente
   }
 
   Future<void> _handleToggleChallenge() async {
@@ -588,20 +581,23 @@ class _ActivityDetailPageState extends State<ActivityDetailPage>
    Struttura simile alla card del feed
 ============================================================ */
 
-class _HeroSessionCard extends StatelessWidget {
+class _HeroSessionCard extends StatefulWidget {
   final SessionModel session;
-  final bool liked;
-  final bool challenged;
   final VoidCallback onToggleLike;
   final VoidCallback onToggleChallenge;
 
   const _HeroSessionCard({
     required this.session,
-    required this.liked,
-    required this.challenged,
     required this.onToggleLike,
     required this.onToggleChallenge,
   });
+
+  @override
+  State<_HeroSessionCard> createState() => _HeroSessionCardState();
+}
+
+class _HeroSessionCardState extends State<_HeroSessionCard> {
+  final EngagementService _engagementService = EngagementService();
 
   String _formatDuration(Duration d) {
     final m = d.inMinutes;
@@ -611,7 +607,7 @@ class _HeroSessionCard extends StatelessWidget {
   }
 
   List<Offset> _buildTrack2d() {
-    final raw = session.displayPath;
+    final raw = widget.session.displayPath;
     if (raw == null || raw.isEmpty) return _generateFakeTrack();
 
     final points = <Offset>[];
@@ -654,11 +650,11 @@ class _HeroSessionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bestLapText = session.bestLap != null
-        ? _formatDuration(session.bestLap!)
+    final bestLapText = widget.session.bestLap != null
+        ? _formatDuration(widget.session.bestLap!)
         : '--:--';
-    final formattedDate = DateFormat('dd MMM yyyy').format(session.dateTime);
-    final formattedTime = DateFormat('HH:mm').format(session.dateTime);
+    final formattedDate = DateFormat('dd MMM yyyy').format(widget.session.dateTime);
+    final formattedTime = DateFormat('HH:mm').format(widget.session.dateTime);
     final track2d = _buildTrack2d();
 
     return Container(
@@ -690,22 +686,22 @@ class _HeroSessionCard extends StatelessWidget {
                 Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (_) => SearchUserProfilePage(
-                      userId: session.userId,
-                      fullName: session.driverFullName,
+                      userId: widget.session.userId,
+                      fullName: widget.session.driverFullName,
                     ),
                   ),
                 );
               },
               child: Row(
                 children: [
-                  _AvatarWidget(userId: session.userId),
+                  _AvatarWidget(userId: widget.session.userId),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          session.driverFullName,
+                          widget.session.driverFullName,
                           style: const TextStyle(
                             fontWeight: FontWeight.w900,
                             fontSize: 16,
@@ -714,7 +710,7 @@ class _HeroSessionCard extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          '@${session.driverUsername}',
+                          '@${widget.session.driverUsername}',
                           style: TextStyle(
                             color: kMutedColor,
                             fontSize: 13,
@@ -848,7 +844,7 @@ class _HeroSessionCard extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            session.trackName,
+                            widget.session.trackName,
                             style: const TextStyle(
                               fontWeight: FontWeight.w900,
                               fontSize: 16,
@@ -861,7 +857,7 @@ class _HeroSessionCard extends StatelessWidget {
                               Icon(Icons.location_on, color: kMutedColor, size: 12),
                               const SizedBox(width: 4),
                               Text(
-                                session.location,
+                                widget.session.location,
                                 style: TextStyle(
                                   color: kMutedColor,
                                   fontSize: 12,
@@ -886,14 +882,29 @@ class _HeroSessionCard extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
               children: [
+                // Like button con stream
                 Expanded(
-                  child: _ActionButton(
-                    icon: liked ? Icons.favorite : Icons.favorite_border,
-                    label: 'Mi piace',
-                    count: session.likesCount,
-                    isActive: liked,
-                    activeColor: kBrandColor,
-                    onTap: onToggleLike,
+                  child: StreamBuilder<bool>(
+                    stream: _engagementService.watchLikeStatus(widget.session.sessionId),
+                    initialData: false,
+                    builder: (context, likeSnapshot) {
+                      final liked = likeSnapshot.data ?? false;
+                      return StreamBuilder<int>(
+                        stream: _engagementService.watchSessionLikesCount(widget.session.sessionId),
+                        initialData: widget.session.likesCount,
+                        builder: (context, countSnapshot) {
+                          final likesCount = countSnapshot.data ?? widget.session.likesCount;
+                          return _ActionButton(
+                            icon: liked ? Icons.favorite : Icons.favorite_border,
+                            label: 'Mi piace',
+                            count: likesCount,
+                            isActive: liked,
+                            activeColor: kBrandColor,
+                            onTap: widget.onToggleLike,
+                          );
+                        },
+                      );
+                    },
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -901,10 +912,10 @@ class _HeroSessionCard extends StatelessWidget {
                   child: _ActionButton(
                     icon: Icons.sports_martial_arts,
                     label: 'Sfida',
-                    count: session.challengeCount,
-                    isActive: challenged,
+                    count: widget.session.challengeCount,
+                    isActive: false, // TODO: add stream for challenge
                     activeColor: kPulseColor,
-                    onTap: onToggleChallenge,
+                    onTap: widget.onToggleChallenge,
                   ),
                 ),
               ],
@@ -949,7 +960,7 @@ class _HeroSessionCard extends StatelessWidget {
                   style: TextStyle(color: kMutedColor, fontSize: 12, fontWeight: FontWeight.w600),
                 ),
                 const Spacer(),
-                if (session.usedBleDevice)
+                if (widget.session.usedBleDevice)
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(

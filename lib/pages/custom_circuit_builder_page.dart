@@ -10,12 +10,12 @@ import '../services/ble_tracking_service.dart';
 import '../theme.dart';
 import 'draw_finish_line_page.dart';
 
-/// Pagina per creare un circuito custom - Flusso RaceChrono Pro
+/// Pagina per creare un circuito custom - Flusso semplificato
 ///
-/// 1. Utente fa più giri nel circuito (registrazione GPS grezzo)
-/// 2. Fine tracciamento → naviga a DrawFinishLinePage
-/// 3. Utente disegna manualmente linea S/F sulla traccia
-/// 4. Post-processing calcola lap e lunghezza circuito
+/// 1. Mostra mappa con posizione GPS attuale (cellulare o BLE)
+/// 2. Utente naviga direttamente a DrawFinishLinePage
+/// 3. Utente disegna manualmente linea S/F sulla mappa
+/// 4. Durante la sessione verrà tracciata la traccia GPS e calcolati i giri
 /// 5. Salvataggio su Firebase
 class CustomCircuitBuilderPage extends StatefulWidget {
   const CustomCircuitBuilderPage({super.key});
@@ -25,7 +25,7 @@ class CustomCircuitBuilderPage extends StatefulWidget {
       _CustomCircuitBuilderPageState();
 }
 
-enum BuilderStep { tracking, finished }
+enum BuilderStep { positioning, finished }
 
 // Premium UI constants
 const Color _kBgColor = Color(0xFF0A0A0A);
@@ -44,19 +44,17 @@ class _CustomCircuitBuilderPageState extends State<CustomCircuitBuilderPage>
   StreamSubscription<Map<String, GpsData>>? _bleGpsSubscription;
   StreamSubscription<Map<String, BleDeviceSnapshot>>? _bleDeviceSub;
 
-  BuilderStep _step = BuilderStep.tracking;
+  BuilderStep _step = BuilderStep.positioning;
   bool _saving = false;
 
-  // GPS tracking
+  // GPS positioning
   LatLng? _currentPosition;
   String? _connectedDeviceId;
   bool _isUsingBleDevice = false;
 
-  // Traccia GPS completa (grezzo)
-  List<Position> _gpsTrack = [];
-  List<LatLng> _displayPath = []; // Per visualizzazione mappa
+  // Posizione GPS corrente
   double _currentSpeed = 0.0;
-  DateTime? _trackingStartTime;
+  double _currentAccuracy = 0.0;
 
   // Animation for recording indicator
   late AnimationController _pulseController;
@@ -74,7 +72,7 @@ class _CustomCircuitBuilderPageState extends State<CustomCircuitBuilderPage>
     );
     _syncConnectedDeviceFromService();
     _listenBleConnectionChanges();
-    _startTracking();
+    _startPositioning();
   }
 
   @override
@@ -111,47 +109,28 @@ class _CustomCircuitBuilderPageState extends State<CustomCircuitBuilderPage>
           if (connected.isConnected) {
             _connectedDeviceId = connected.id;
             _isUsingBleDevice = true;
-            _stopCellularTracking();
+            _stopCellularPositioning();
           } else {
             _connectedDeviceId = null;
             _isUsingBleDevice = false;
-            _startCellularTrackingIfNeeded();
+            _startCellularPositioningIfNeeded();
           }
         });
       }
     });
   }
 
-  /// Avvia tracciamento GPS immediato
-  void _startTracking() {
-    _trackingStartTime = DateTime.now();
-    _gpsTrack.clear();
-    _displayPath.clear();
-
+  /// Avvia monitoraggio posizione GPS
+  void _startPositioning() {
     // Listen to BLE GPS data
     _bleGpsSubscription = _bleService.gpsStream.listen((gpsData) {
       if (_connectedDeviceId != null && _isUsingBleDevice) {
         final data = gpsData[_connectedDeviceId!];
-        if (data != null && mounted && _step == BuilderStep.tracking) {
-          // Crea Position da BLE GPS data
-          final position = Position(
-            latitude: data.position.latitude,
-            longitude: data.position.longitude,
-            timestamp: DateTime.now(),
-            accuracy: 5.0, // BLE GPS tipicamente ha accuratezza ~5m
-            altitude: 0.0,
-            altitudeAccuracy: 0.0,
-            heading: 0.0,
-            headingAccuracy: 0.0,
-            speed: (data.speed ?? 0.0) / 3.6, // km/h → m/s
-            speedAccuracy: 0.0,
-          );
-
+        if (data != null && mounted && _step == BuilderStep.positioning) {
           setState(() {
             _currentPosition = data.position;
             _currentSpeed = data.speed ?? 0.0;
-            _gpsTrack.add(position);
-            _displayPath.add(data.position);
+            _currentAccuracy = 5.0; // BLE GPS tipicamente ha accuratezza ~5m
           });
 
           // Auto-center map
@@ -162,24 +141,23 @@ class _CustomCircuitBuilderPageState extends State<CustomCircuitBuilderPage>
       }
     });
 
-    _startCellularTrackingIfNeeded();
+    _startCellularPositioningIfNeeded();
   }
 
-  void _startCellularTrackingIfNeeded() {
+  void _startCellularPositioningIfNeeded() {
     if (_isUsingBleDevice || _cellularGpsSubscription != null) return;
     _cellularGpsSubscription = Geolocator.getPositionStream(
       locationSettings: const LocationSettings(
         accuracy: LocationAccuracy.bestForNavigation,
-        distanceFilter: 0, // Nessun filtro: GPS grezzo completo
+        distanceFilter: 0,
       ),
     ).listen((position) {
-      if (mounted && !_isUsingBleDevice && _step == BuilderStep.tracking) {
+      if (mounted && !_isUsingBleDevice && _step == BuilderStep.positioning) {
         final newPosition = LatLng(position.latitude, position.longitude);
         setState(() {
           _currentPosition = newPosition;
           _currentSpeed = position.speed * 3.6; // m/s → km/h
-          _gpsTrack.add(position);
-          _displayPath.add(newPosition);
+          _currentAccuracy = position.accuracy;
         });
 
         // Auto-center map
@@ -190,15 +168,15 @@ class _CustomCircuitBuilderPageState extends State<CustomCircuitBuilderPage>
     });
   }
 
-  void _stopCellularTracking() {
+  void _stopCellularPositioning() {
     _cellularGpsSubscription?.cancel();
     _cellularGpsSubscription = null;
   }
 
-  /// Fine tracciamento → naviga a DrawFinishLinePage
-  Future<void> _finishTracking() async {
-    if (_gpsTrack.length < 50) {
-      _showErrorSnackBar('Traccia GPS troppo corta. Fai almeno 2-3 giri completi.');
+  /// Naviga direttamente a DrawFinishLinePage per selezione linea S/F
+  Future<void> _selectFinishLine() async {
+    if (_currentPosition == null) {
+      _showErrorSnackBar('Attendi il fix GPS prima di continuare.');
       return;
     }
 
@@ -206,28 +184,29 @@ class _CustomCircuitBuilderPageState extends State<CustomCircuitBuilderPage>
       _step = BuilderStep.finished;
     });
 
-    // Ferma GPS tracking
+    // Ferma aggiornamenti posizione
     _cellularGpsSubscription?.cancel();
     _bleGpsSubscription?.cancel();
 
-    // Naviga a DrawFinishLinePage
+    // Naviga a DrawFinishLinePage - senza traccia GPS pregressa
     final result = await Navigator.push<Map<String, dynamic>>(
       context,
       MaterialPageRoute(
         builder: (context) => DrawFinishLinePage(
-          gpsTrack: _gpsTrack,
+          gpsTrack: [], // Traccia vuota - l'utente selezionerà solo la linea
           trackName: 'Nuovo Circuito Custom',
           usedBleDevice: _isUsingBleDevice,
+          initialCenter: _currentPosition,
         ),
       ),
     );
 
     if (result == null) {
-      // Utente ha annullato → torna a tracking
+      // Utente ha annullato → torna a positioning
       setState(() {
-        _step = BuilderStep.tracking;
+        _step = BuilderStep.positioning;
       });
-      _startTracking();
+      _startPositioning();
       return;
     }
 
@@ -267,13 +246,13 @@ class _CustomCircuitBuilderPageState extends State<CustomCircuitBuilderPage>
     setState(() => _saving = true);
 
     try {
-      // Geocoding per city/country
+      // Geocoding per city/country dalla posizione corrente
       String city = '';
       String country = '';
       try {
         final placemarks = await placemarkFromCoordinates(
-          _displayPath.first.latitude,
-          _displayPath.first.longitude,
+          _currentPosition!.latitude,
+          _currentPosition!.longitude,
         );
         if (placemarks.isNotEmpty) {
           city = placemarks.first.locality ??
@@ -283,8 +262,9 @@ class _CustomCircuitBuilderPageState extends State<CustomCircuitBuilderPage>
         }
       } catch (_) {}
 
-      // Calcola lunghezza stimata dalla traccia
-      final length = _calculateLength(_displayPath);
+      // Calcola lunghezza stimata dalla linea di traguardo
+      final dist = Distance();
+      final length = dist(finishLineStart, finishLineEnd);
 
       // Mostra dialog per nome circuito
       final name = await _showNameDialog(city, country, length);
@@ -307,20 +287,20 @@ class _CustomCircuitBuilderPageState extends State<CustomCircuitBuilderPage>
 
       progressNotifier.value = 0.1;
 
-      // Crea CustomCircuitInfo (SENZA microsettori)
+      // Crea CustomCircuitInfo - solo con linea S/F, senza traccia GPS
       final circuit = CustomCircuitInfo(
         name: name,
         widthMeters: 0.0, // Non più usato
         city: city,
         country: country,
-        lengthMeters: length,
+        lengthMeters: 0.0, // Verrà calcolato durante le sessioni
         createdAt: DateTime.now(),
-        points: _displayPath,
+        points: [], // Vuoto: verrà popolato durante le sessioni
         microSectors: [], // Vuoto: non usiamo più microsettori
         usedBleDevice: _isUsingBleDevice,
         finishLineStart: finishLineStart,
         finishLineEnd: finishLineEnd,
-        gpsFrequencyHz: _estimateGpsFrequency(),
+        gpsFrequencyHz: _isUsingBleDevice ? 10.0 : 1.0,
       );
 
       progressNotifier.value = 0.3;
@@ -360,26 +340,6 @@ class _CustomCircuitBuilderPageState extends State<CustomCircuitBuilderPage>
         setState(() => _saving = false);
       }
     }
-  }
-
-  /// Stima frequenza GPS media (Hz)
-  double _estimateGpsFrequency() {
-    if (_gpsTrack.length < 10) return 1.0;
-
-    final intervals = <int>[];
-    for (int i = 1; i < _gpsTrack.length && i < 50; i++) {
-      final interval = _gpsTrack[i]
-          .timestamp!
-          .difference(_gpsTrack[i - 1].timestamp!)
-          .inMilliseconds;
-      if (interval > 0 && interval < 5000) {
-        intervals.add(interval);
-      }
-    }
-
-    if (intervals.isEmpty) return 1.0;
-    final avgInterval = intervals.reduce((a, b) => a + b) / intervals.length;
-    return 1000.0 / avgInterval;
   }
 
   /// Dialog per nome circuito - Premium style
@@ -470,15 +430,15 @@ class _CustomCircuitBuilderPageState extends State<CustomCircuitBuilderPage>
                 ),
                 child: Column(
                   children: [
-                    _dialogInfoRow(Icons.straighten, 'Lunghezza', '${(length / 1000).toStringAsFixed(2)} km', const Color(0xFF5AC8FA)),
+                    _dialogInfoRow(Icons.straighten, 'Linea S/F', '${length.toStringAsFixed(1)} m', const Color(0xFF5AC8FA)),
                     if (city.isNotEmpty || country.isNotEmpty) ...[
                       const SizedBox(height: 10),
                       _dialogInfoRow(Icons.place_outlined, 'Località', '$city $country'.trim(), const Color(0xFF4CD964)),
                     ],
                     const SizedBox(height: 10),
-                    _dialogInfoRow(Icons.gps_fixed, 'Punti GPS', '${_gpsTrack.length}', const Color(0xFFFF9500)),
+                    _dialogInfoRow(Icons.gps_fixed, 'Accuratezza GPS', '${_currentAccuracy.toStringAsFixed(1)} m', const Color(0xFFFF9500)),
                     const SizedBox(height: 10),
-                    _dialogInfoRow(Icons.speed, 'Frequenza', '${_estimateGpsFrequency().toStringAsFixed(1)} Hz', const Color(0xFFAF52DE)),
+                    _dialogInfoRow(Icons.speed, 'Frequenza GPS', '${_isUsingBleDevice ? "10.0" : "1.0"} Hz', const Color(0xFFAF52DE)),
                   ],
                 ),
               ),
@@ -652,24 +612,6 @@ class _CustomCircuitBuilderPageState extends State<CustomCircuitBuilderPage>
     );
   }
 
-  double _calculateLength(List<LatLng> pts) {
-    final dist = Distance();
-    double sum = 0.0;
-    for (int i = 1; i < pts.length; i++) {
-      sum += dist(pts[i - 1], pts[i]);
-    }
-    return sum;
-  }
-
-  /// Calcola tempo trascorso
-  String _getElapsedTime() {
-    if (_trackingStartTime == null) return '0:00';
-    final elapsed = DateTime.now().difference(_trackingStartTime!);
-    final minutes = elapsed.inMinutes;
-    final seconds = elapsed.inSeconds % 60;
-    return '$minutes:${seconds.toString().padLeft(2, '0')}';
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -701,13 +643,7 @@ class _CustomCircuitBuilderPageState extends State<CustomCircuitBuilderPage>
         children: [
           // Back button
           GestureDetector(
-            onTap: () {
-              if (_gpsTrack.isEmpty) {
-                Navigator.of(context).pop();
-              } else {
-                _showExitDialog();
-              }
-            },
+            onTap: () => Navigator.of(context).pop(),
             child: Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
@@ -726,7 +662,7 @@ class _CustomCircuitBuilderPageState extends State<CustomCircuitBuilderPage>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Tracciamento Circuito',
+                  'Nuovo Circuito Custom',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w900,
@@ -754,7 +690,7 @@ class _CustomCircuitBuilderPageState extends State<CustomCircuitBuilderPage>
                           const SizedBox(width: 4),
                           Text(
                             _isUsingBleDevice
-                                ? 'GPS BLE ${_estimateGpsFrequency().toStringAsFixed(0)}Hz'
+                                ? 'GPS BLE 10Hz'
                                 : 'GPS cellulare 1Hz',
                             style: const TextStyle(
                               fontSize: 10,
@@ -771,55 +707,52 @@ class _CustomCircuitBuilderPageState extends State<CustomCircuitBuilderPage>
             ),
           ),
 
-          // REC indicator
-          if (_step == BuilderStep.tracking)
-            AnimatedBuilder(
-              animation: _pulseAnimation,
-              builder: (context, child) => Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      Colors.red.withAlpha((60 * _pulseAnimation.value).toInt()),
-                      Colors.red.withAlpha((30 * _pulseAnimation.value).toInt()),
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: Colors.red.withAlpha((200 * _pulseAnimation.value).toInt()),
-                    width: 1.5,
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        color: Colors.red.withAlpha((255 * _pulseAnimation.value).toInt()),
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.red.withAlpha((100 * _pulseAnimation.value).toInt()),
-                            blurRadius: 8,
-                            spreadRadius: 2,
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    const Text(
-                      'REC',
-                      style: TextStyle(
-                        color: Colors.red,
-                        fontWeight: FontWeight.w900,
-                        fontSize: 12,
-                        letterSpacing: 1,
-                      ),
-                    ),
+          // GPS Status indicator
+          if (_currentPosition != null)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    const Color(0xFF4CD964).withAlpha(60),
+                    const Color(0xFF4CD964).withAlpha(30),
                   ],
                 ),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: const Color(0xFF4CD964).withAlpha(200),
+                  width: 1.5,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF4CD964),
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF4CD964).withAlpha(100),
+                          blurRadius: 8,
+                          spreadRadius: 2,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'GPS OK',
+                    style: TextStyle(
+                      color: Color(0xFF4CD964),
+                      fontWeight: FontWeight.w900,
+                      fontSize: 12,
+                      letterSpacing: 1,
+                    ),
+                  ),
+                ],
               ),
             ),
         ],
@@ -827,94 +760,8 @@ class _CustomCircuitBuilderPageState extends State<CustomCircuitBuilderPage>
     );
   }
 
-  void _showExitDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => Dialog(
-        backgroundColor: Colors.transparent,
-        child: Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [_kCardStart, _kCardEnd],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: _kBorderColor),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: Colors.red.withAlpha(25),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.warning_amber_rounded, color: Colors.red, size: 32),
-              ),
-              const SizedBox(height: 20),
-              const Text(
-                'Annullare tracciamento?',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w900,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                'Perderai tutti i ${_gpsTrack.length} punti GPS registrati.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: kMutedColor, fontSize: 14),
-              ),
-              const SizedBox(height: 24),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          side: BorderSide(color: _kBorderColor),
-                        ),
-                      ),
-                      child: Text('Continua', style: TextStyle(color: kMutedColor, fontWeight: FontWeight.w600)),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () {
-                        Navigator.pop(context);
-                        Navigator.pop(context);
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        elevation: 0,
-                      ),
-                      child: const Text('Annulla', style: TextStyle(fontWeight: FontWeight.w800)),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildTrackingView() {
-    final center = _displayPath.isNotEmpty
-        ? _displayPath.last
-        : (_currentPosition ?? const LatLng(45.0, 9.0));
+    final center = _currentPosition ?? const LatLng(45.0, 9.0);
 
     return Stack(
       children: [
@@ -937,27 +784,14 @@ class _CustomCircuitBuilderPageState extends State<CustomCircuitBuilderPage>
                     'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
                 userAgentPackageName: 'com.racesense.pulse',
               ),
-              // GPS Track
-              if (_displayPath.length > 1)
-                PolylineLayer(
-                  polylines: [
-                    Polyline(
-                      points: _displayPath,
-                      strokeWidth: 5,
-                      color: kBrandColor,
-                      borderStrokeWidth: 2,
-                      borderColor: Colors.black.withAlpha(150),
-                    ),
-                  ],
-                ),
               // Current position marker
-              if (_displayPath.isNotEmpty)
+              if (_currentPosition != null)
                 MarkerLayer(
                   markers: [
                     Marker(
-                      point: _displayPath.last,
-                      width: 20,
-                      height: 20,
+                      point: _currentPosition!,
+                      width: 24,
+                      height: 24,
                       child: Container(
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
@@ -1010,7 +844,7 @@ class _CustomCircuitBuilderPageState extends State<CustomCircuitBuilderPage>
                     color: kBrandColor.withAlpha(25),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(Icons.track_changes, color: kBrandColor, size: 22),
+                  child: const Icon(Icons.touch_app, color: kBrandColor, size: 22),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -1018,7 +852,7 @@ class _CustomCircuitBuilderPageState extends State<CustomCircuitBuilderPage>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        'Fai 2-3 giri completi',
+                        'Seleziona la linea Start/Finish',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 14,
@@ -1027,7 +861,7 @@ class _CustomCircuitBuilderPageState extends State<CustomCircuitBuilderPage>
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'Posizionerai la linea S/F dopo',
+                        'Premi il pulsante quando sei pronto',
                         style: TextStyle(
                           color: kMutedColor,
                           fontSize: 12,
@@ -1045,13 +879,12 @@ class _CustomCircuitBuilderPageState extends State<CustomCircuitBuilderPage>
   }
 
   Widget _buildBottomPanel() {
-    final length = _calculateLength(_displayPath);
-    final speedColor = (_currentSpeed >= 10 && _currentSpeed <= 80)
+    final hasGpsFix = _currentPosition != null;
+    final accuracyColor = _currentAccuracy <= 10
         ? const Color(0xFF4CD964)
-        : const Color(0xFFFF453A);
-    final minPoints = 50;
-    final hasEnoughPoints = _gpsTrack.length >= minPoints;
-    final progress = (_gpsTrack.length / minPoints).clamp(0.0, 1.0);
+        : _currentAccuracy <= 20
+            ? const Color(0xFFFF9500)
+            : const Color(0xFFFF453A);
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -1072,7 +905,7 @@ class _CustomCircuitBuilderPageState extends State<CustomCircuitBuilderPage>
       ),
       child: Column(
         children: [
-          // Stats row
+          // GPS Info row
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -1082,20 +915,50 @@ class _CustomCircuitBuilderPageState extends State<CustomCircuitBuilderPage>
             ),
             child: Row(
               children: [
-                Expanded(child: _buildStatTile(Icons.timer_outlined, 'Tempo', _getElapsedTime(), const Color(0xFF5AC8FA))),
+                Expanded(
+                  child: _buildStatTile(
+                    Icons.gps_fixed,
+                    'Lat',
+                    _currentPosition?.latitude.toStringAsFixed(6) ?? '---',
+                    const Color(0xFF5AC8FA)
+                  )
+                ),
                 _verticalDivider(),
-                Expanded(child: _buildStatTile(Icons.straighten, 'Distanza', '${(length / 1000).toStringAsFixed(2)} km', const Color(0xFF4CD964))),
+                Expanded(
+                  child: _buildStatTile(
+                    Icons.gps_not_fixed,
+                    'Lon',
+                    _currentPosition?.longitude.toStringAsFixed(6) ?? '---',
+                    const Color(0xFF4CD964)
+                  )
+                ),
                 _verticalDivider(),
-                Expanded(child: _buildStatTile(Icons.location_on_outlined, 'Punti', _gpsTrack.length.toString(), const Color(0xFFFF9500))),
+                Expanded(
+                  child: _buildStatTile(
+                    Icons.my_location,
+                    'Accuratezza',
+                    _currentAccuracy > 0 ? '${_currentAccuracy.toStringAsFixed(1)}' : '---',
+                    accuracyColor,
+                    suffix: 'm'
+                  )
+                ),
                 _verticalDivider(),
-                Expanded(child: _buildStatTile(Icons.speed, 'Velocità', '${_currentSpeed.toStringAsFixed(0)}', speedColor, suffix: 'km/h')),
+                Expanded(
+                  child: _buildStatTile(
+                    Icons.speed,
+                    'Velocità',
+                    '${_currentSpeed.toStringAsFixed(0)}',
+                    const Color(0xFFFF9500),
+                    suffix: 'km/h'
+                  )
+                ),
               ],
             ),
           ),
           const SizedBox(height: 16),
 
-          // Progress bar for minimum points
-          if (!hasEnoughPoints) ...[
+          // GPS status info
+          if (!hasGpsFix) ...[
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
@@ -1108,35 +971,17 @@ class _CustomCircuitBuilderPageState extends State<CustomCircuitBuilderPage>
                   Icon(Icons.info_outline, color: kMutedColor, size: 18),
                   const SizedBox(width: 10),
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Minimo ${minPoints} punti GPS richiesti',
-                          style: TextStyle(color: kMutedColor, fontSize: 11),
-                        ),
-                        const SizedBox(height: 6),
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(3),
-                          child: LinearProgressIndicator(
-                            value: progress,
-                            minHeight: 4,
-                            backgroundColor: _kBorderColor,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              progress < 0.5 ? Colors.red : (progress < 1.0 ? Colors.orange : kBrandColor),
-                            ),
-                          ),
-                        ),
-                      ],
+                    child: Text(
+                      'Attendi il fix GPS prima di continuare',
+                      style: TextStyle(color: kMutedColor, fontSize: 12),
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  Text(
-                    '${_gpsTrack.length}/$minPoints',
-                    style: TextStyle(
-                      color: hasEnoughPoints ? kBrandColor : kMutedColor,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 12,
+                  SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation(kMutedColor),
                     ),
                   ),
                 ],
@@ -1147,18 +992,18 @@ class _CustomCircuitBuilderPageState extends State<CustomCircuitBuilderPage>
 
           // Action button
           GestureDetector(
-            onTap: _saving || !hasEnoughPoints ? null : _finishTracking,
+            onTap: _saving || !hasGpsFix ? null : _selectFinishLine,
             child: Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 16),
               decoration: BoxDecoration(
-                gradient: hasEnoughPoints
+                gradient: hasGpsFix
                     ? const LinearGradient(colors: [kBrandColor, Color(0xFF00D4AA)])
                     : null,
-                color: hasEnoughPoints ? null : _kTileColor,
+                color: hasGpsFix ? null : _kTileColor,
                 borderRadius: BorderRadius.circular(14),
-                border: hasEnoughPoints ? null : Border.all(color: _kBorderColor),
-                boxShadow: hasEnoughPoints
+                border: hasGpsFix ? null : Border.all(color: _kBorderColor),
+                boxShadow: hasGpsFix
                     ? [
                         BoxShadow(
                           color: kBrandColor.withAlpha(60),
@@ -1172,15 +1017,15 @@ class _CustomCircuitBuilderPageState extends State<CustomCircuitBuilderPage>
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(
-                    hasEnoughPoints ? Icons.flag : Icons.hourglass_top,
-                    color: hasEnoughPoints ? Colors.black : kMutedColor,
+                    hasGpsFix ? Icons.flag_outlined : Icons.gps_off,
+                    color: hasGpsFix ? Colors.black : kMutedColor,
                     size: 20,
                   ),
                   const SizedBox(width: 10),
                   Text(
-                    hasEnoughPoints ? 'Fine tracciamento' : 'Continua tracciamento...',
+                    hasGpsFix ? 'Seleziona linea Start/Finish' : 'Attendi GPS...',
                     style: TextStyle(
-                      color: hasEnoughPoints ? Colors.black : kMutedColor,
+                      color: hasGpsFix ? Colors.black : kMutedColor,
                       fontWeight: FontWeight.w900,
                       fontSize: 15,
                     ),
