@@ -639,6 +639,14 @@ class _GrandPrixStatisticsPageState extends State<GrandPrixStatisticsPage>
     final mostLaps = validStats.reduce(
         (a, b) => a.totalLaps > b.totalLaps ? a : b);
 
+    // Statistiche "divertenti" - i peggiori
+    final slowestDriver = validStats.reduce(
+        (a, b) => (a.bestLap ?? double.infinity) > (b.bestLap ?? double.infinity) ? a : b);
+    final lowestGForce = validStats.reduce(
+        (a, b) => a.maxGForce < b.maxGForce ? a : b);
+    final slowestSpeed = validStats.reduce(
+        (a, b) => a.maxSpeed < b.maxSpeed ? a : b);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -739,6 +747,80 @@ class _GrandPrixStatisticsPageState extends State<GrandPrixStatisticsPage>
           accentColor: const Color(0xFFAB47BC),
           value: '${mostLaps.totalLaps} giri',
           description: 'Il pilota che ha completato il maggior numero di giri durante la sessione.',
+        ),
+
+        const SizedBox(height: 24),
+
+        // Sezione Divertenti
+        Padding(
+          padding: const EdgeInsets.only(bottom: 16),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [const Color(0xFFFF6B6B).withAlpha(50), const Color(0xFFFF6B6B).withAlpha(20)],
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFFF6B6B).withAlpha(80)),
+                ),
+                child: const Icon(Icons.sentiment_very_dissatisfied, color: Color(0xFFFF6B6B), size: 20),
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                'Hall of Shame',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: kFgColor,
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // Quarta riga - Statistiche divertenti
+        Row(
+          children: [
+            Expanded(
+              child: _buildPremiumAwardCard(
+                title: 'La Lumaca 🐌',
+                winner: slowestDriver.username,
+                icon: Icons.directions_walk,
+                gradient: const [Color(0xFF4A4A4A), Color(0xFF2A2A2A)],
+                accentColor: const Color(0xFF9E9E9E),
+                value: slowestDriver.bestLap != null
+                    ? _formatLapTime(slowestDriver.bestLap!)
+                    : '--',
+                description: 'Il pilota con il giro più lento. Forse è meglio andare a piedi?',
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildPremiumAwardCard(
+                title: 'Il Prudente',
+                winner: lowestGForce.username,
+                icon: Icons.elderly,
+                gradient: const [Color(0xFF8B4513), Color(0xFF654321)],
+                accentColor: const Color(0xFFD2691E),
+                value: '${lowestGForce.maxGForce.toStringAsFixed(2)}g',
+                description: 'Il pilota con la forza G più bassa. Guida come se portasse le uova!',
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+
+        // Quinta riga - Ancora statistiche divertenti
+        _buildPremiumAwardCardLarge(
+          title: 'Tartaruga Mode 🐢',
+          winner: slowestSpeed.username,
+          icon: Icons.snooze,
+          gradient: const [Color(0xFF556B2F), Color(0xFF2F4F2F)],
+          accentColor: const Color(0xFF8FBC8F),
+          value: '${slowestSpeed.maxSpeed.toStringAsFixed(1)} km/h',
+          description: 'La velocità massima più bassa. Sei sicuro che il motore fosse acceso?',
         ),
       ],
     );

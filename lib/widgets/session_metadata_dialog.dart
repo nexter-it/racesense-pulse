@@ -3,6 +3,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../theme.dart';
+import '../models/track_definition.dart';
 
 class SessionMetadata {
   final String trackName;
@@ -24,6 +25,7 @@ class SessionMetadataDialog extends StatefulWidget {
   final String? initialLocationName;
   final GeoPoint? initialLocationCoords;
   final bool? initialIsPublic;
+  final TrackDefinition? trackDefinition;
 
   const SessionMetadataDialog({
     super.key,
@@ -32,6 +34,7 @@ class SessionMetadataDialog extends StatefulWidget {
     this.initialLocationName,
     this.initialLocationCoords,
     this.initialIsPublic,
+    this.trackDefinition,
   });
 
   @override
@@ -48,9 +51,14 @@ class _SessionMetadataDialogState extends State<SessionMetadataDialog> {
   @override
   void initState() {
     super.initState();
-    if (widget.initialTrackName != null) {
+
+    // Se c'è un trackDefinition, usa il suo nome come default
+    if (widget.trackDefinition != null) {
+      _trackNameController.text = widget.trackDefinition!.name;
+    } else if (widget.initialTrackName != null) {
       _trackNameController.text = widget.initialTrackName!;
     }
+
     if (widget.initialLocationName != null) {
       _locationName = widget.initialLocationName!;
       _isLoadingLocation = false;
@@ -197,32 +205,94 @@ class _SessionMetadataDialogState extends State<SessionMetadataDialog> {
               ),
             ),
             const SizedBox(height: 8),
-            TextField(
-              controller: _trackNameController,
-              style: const TextStyle(
-                fontSize: 16,
-                color: kFgColor,
-              ),
-              decoration: InputDecoration(
-                hintText: 'es. Autodromo di Misano',
-                hintStyle: TextStyle(color: kMutedColor.withOpacity(0.5)),
-                filled: true,
-                fillColor: const Color(0xFF0d0d0d),
-                prefixIcon: const Icon(Icons.flag_outlined, color: kBrandColor),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: kBrandColor, width: 2),
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 16,
-                ),
-              ),
-            ),
+            // Se c'è un trackDefinition, mostra il campo come non modificabile
+            widget.trackDefinition != null
+                ? Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0d0d0d),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: kLineColor),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.flag_outlined, color: kBrandColor),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                widget.trackDefinition!.name,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                  color: kFgColor,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                widget.trackDefinition!.location,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: kMutedColor,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: kBrandColor.withAlpha(20),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: kBrandColor.withAlpha(80)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.check_circle, size: 14, color: kBrandColor),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Verificato',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: kBrandColor,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : TextField(
+                    controller: _trackNameController,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      color: kFgColor,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: 'es. Autodromo di Misano',
+                      hintStyle: TextStyle(color: kMutedColor.withOpacity(0.5)),
+                      filled: true,
+                      fillColor: const Color(0xFF0d0d0d),
+                      prefixIcon: const Icon(Icons.flag_outlined, color: kBrandColor),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: kBrandColor, width: 2),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 16,
+                      ),
+                    ),
+                  ),
 
             const SizedBox(height: 20),
 

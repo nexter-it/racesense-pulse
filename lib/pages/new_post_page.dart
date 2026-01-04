@@ -120,14 +120,14 @@ class _NewPostPageState extends State<NewPostPage>
                   _buildSectionHeader('Altre opzioni'),
                   const SizedBox(height: 14),
 
-                  // Options Row
+                  // Prima riga: Circuiti Custom + Circuiti Ufficiali
                   Row(
                     children: [
                       Expanded(
                         child: _buildOptionCard(
                           icon: Icons.edit_road,
                           title: 'Circuiti Custom',
-                          subtitle: 'Crea o gestisci tracciati',
+                          subtitle: 'Crea o gestisci tracciati custom',
                           color: kBrandColor,
                           onTap: () {
                             HapticFeedback.lightImpact();
@@ -142,9 +142,33 @@ class _NewPostPageState extends State<NewPostPage>
                       const SizedBox(width: 12),
                       Expanded(
                         child: _buildOptionCard(
+                          icon: Icons.stadium_rounded,
+                          title: 'Circuiti Ufficiali',
+                          subtitle: 'Autodromi con linea S/F verificata',
+                          color: const Color(0xFF29B6F6),
+                          onTap: () {
+                            HapticFeedback.lightImpact();
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const OfficialCircuitsPage(),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  // Seconda riga: Live Timing + Gran Premio
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildOptionCard(
                           icon: Icons.qr_code_scanner,
                           title: 'Live Timing',
-                          subtitle: 'Scansiona QR evento',
+                          subtitle: 'Scansiona QR evento Racesense Live',
                           color: kPulseColor,
                           onTap: () {
                             HapticFeedback.lightImpact();
@@ -156,43 +180,24 @@ class _NewPostPageState extends State<NewPostPage>
                           },
                         ),
                       ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildOptionCard(
+                          icon: Icons.emoji_events,
+                          title: 'Gran Premio',
+                          subtitle: 'Gareggia con fino a 20 piloti',
+                          color: Colors.amber,
+                          onTap: () {
+                            HapticFeedback.lightImpact();
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const GrandPrixPage(),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
                     ],
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  // Gran Premio Button
-                  _buildOptionCard(
-                    icon: Icons.emoji_events,
-                    title: 'Gran Premio',
-                    subtitle: 'Gareggia con fino a 20 piloti',
-                    color: Colors.amber,
-                    onTap: () {
-                      HapticFeedback.lightImpact();
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const GrandPrixPage(),
-                        ),
-                      );
-                    },
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  // Official Circuits Button
-                  _buildOptionCard(
-                    icon: Icons.stadium_rounded,
-                    title: 'Circuiti Ufficiali',
-                    subtitle: 'Autodromi con linea S/F verificata',
-                    color: const Color(0xFF29B6F6),
-                    onTap: () {
-                      HapticFeedback.lightImpact();
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const OfficialCircuitsPage(),
-                        ),
-                      );
-                    },
                   ),
 
                   const SizedBox(height: 24),

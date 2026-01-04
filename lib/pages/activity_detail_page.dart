@@ -1928,13 +1928,24 @@ class _MapCardState extends State<_MapCard> {
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(color: _showAllLaps ? kBrandColor.withAlpha(80) : kMutedColor.withAlpha(50)),
                       ),
-                      child: Text(
-                        _showAllLaps ? 'TUTTI' : 'GIRO',
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w800,
-                          color: _showAllLaps ? kBrandColor : kMutedColor,
-                        ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            _showAllLaps ? Icons.layers : Icons.filter_1,
+                            size: 12,
+                            color: _showAllLaps ? kBrandColor : kMutedColor,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            _showAllLaps ? 'TUTTI I GIRI' : 'GIRO',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                              color: _showAllLaps ? kBrandColor : kMutedColor,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
