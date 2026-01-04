@@ -13,6 +13,7 @@ import 'activity_detail_page.dart';
 import '../services/session_service.dart';
 import '../services/follow_service.dart';
 import '../services/feed_cache_service.dart';
+import '../services/engagement_service.dart';
 import '../models/session_model.dart';
 
 /// Converte il displayPath salvato nel doc sessione in una path 2D per il painter.
@@ -1290,7 +1291,9 @@ class _ActivityCard extends StatelessWidget {
                     const SizedBox(width: 10),
                     Expanded(child: _buildStatChip(Icons.route, '${distanceKm.toStringAsFixed(1)} km', 'Distanza', const Color(0xFF00E676))),
                     const SizedBox(width: 10),
-                    Expanded(child: _buildStatChip(Icons.favorite, '${session.likesCount}', 'Like', const Color(0xFFFF6B6B))),
+                    Expanded(
+                      child: _LikeStatChip(session: session),
+                    ),
                   ],
                 ),
               ),
@@ -1419,6 +1422,91 @@ class _ActivityCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+}
+
+/* ============================================================
+    LIKE STAT CHIP - Widget separato per gestire i like
+============================================================ */
+
+class _LikeStatChip extends StatefulWidget {
+  final SessionModel session;
+
+  const _LikeStatChip({required this.session});
+
+  @override
+  State<_LikeStatChip> createState() => _LikeStatChipState();
+}
+
+class _LikeStatChipState extends State<_LikeStatChip> {
+  final EngagementService _engagementService = EngagementService();
+  int _currentLikesCount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentLikesCount = widget.session.likesCount;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<Map<String, bool>>(
+      future: _engagementService.getUserReactions(widget.session.sessionId),
+      builder: (context, snapshot) {
+        final isLiked = snapshot.data?['like'] ?? false;
+        const color = Color(0xFFFF6B6B);
+
+        return GestureDetector(
+          onTap: () async {
+            HapticFeedback.lightImpact();
+            await _engagementService.toggleLike(widget.session.sessionId);
+            setState(() {
+              _currentLikesCount += isLiked ? -1 : 1;
+            });
+          },
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              color: isLiked ? color.withAlpha(30) : color.withAlpha(12),
+              border: Border.all(
+                color: isLiked ? color : color.withAlpha(50),
+                width: isLiked ? 1.5 : 1,
+              ),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  isLiked ? Icons.favorite : Icons.favorite_border,
+                  color: color,
+                  size: 16,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '$_currentLikesCount',
+                  style: const TextStyle(
+                    color: color,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Mi piace',
+                  style: TextStyle(
+                    color: color.withAlpha(180),
+                    fontSize: 9,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

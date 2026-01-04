@@ -1177,7 +1177,7 @@ class _StatChip extends StatelessWidget {
    TELEMETRY PANEL - Circuito + Grafico Sincronizzato
 ============================================================ */
 
-enum _MetricFocus { speed, gForce, accuracy }
+enum _MetricFocus { speed, gForce }
 
 class _TelemetryPanel extends StatefulWidget {
   final List<Position> gpsTrack;
@@ -1262,14 +1262,10 @@ class _TelemetryPanelState extends State<_TelemetryPanel> {
       final idx = indices[j];
       return FlSpot(xs[j], widget.gForceHistory[idx]);
     });
-    final List<FlSpot> accSpots = List.generate(len, (j) {
-      final idx = indices[j];
-      return FlSpot(xs[j], widget.gpsAccuracyHistory[idx]);
-    });
 
     double minY = speedSpots.first.y;
     double maxY = speedSpots.first.y;
-    for (final s in [...speedSpots, ...gSpots, ...accSpots]) {
+    for (final s in [...speedSpots, ...gSpots]) {
       if (s.y < minY) minY = s.y;
       if (s.y > maxY) maxY = s.y;
     }
@@ -1297,7 +1293,6 @@ class _TelemetryPanelState extends State<_TelemetryPanel> {
 
     final double curSpeed = widget.speedHistory[globalIdx];
     final double curG = widget.gForceHistory[globalIdx];
-    final double curAcc = widget.gpsAccuracyHistory[globalIdx];
 
     return Container(
       decoration: BoxDecoration(
@@ -1418,7 +1413,6 @@ class _TelemetryPanelState extends State<_TelemetryPanel> {
                   lineBarsData: [
                     _buildLine(speedSpots, const Color(0xFFFF4D4F), _focus == _MetricFocus.speed),
                     _buildLine(gSpots, const Color(0xFF4CD964), _focus == _MetricFocus.gForce),
-                    _buildLine(accSpots, const Color(0xFF5AC8FA), _focus == _MetricFocus.accuracy),
                   ],
                 ),
               ),
@@ -1439,10 +1433,6 @@ class _TelemetryPanelState extends State<_TelemetryPanel> {
                 _metricChip('G-Force', const Color(0xFF4CD964), _focus == _MetricFocus.gForce, () {
                   HapticFeedback.selectionClick();
                   setState(() => _focus = _MetricFocus.gForce);
-                }),
-                _metricChip('Accuracy', const Color(0xFF5AC8FA), _focus == _MetricFocus.accuracy, () {
-                  HapticFeedback.selectionClick();
-                  setState(() => _focus = _MetricFocus.accuracy);
                 }),
               ],
             ),
@@ -1467,7 +1457,7 @@ class _TelemetryPanelState extends State<_TelemetryPanel> {
                 Container(width: 1, height: 24, color: const Color(0xFF2A2A2A)),
                 _valueDisplay('g', '${curG.toStringAsFixed(2)} g', const Color(0xFF4CD964)),
                 Container(width: 1, height: 24, color: const Color(0xFF2A2A2A)),
-                _valueDisplay('acc', '${curAcc.toStringAsFixed(1)} m', const Color(0xFF5AC8FA)),
+                _valueDisplay('t', '${xs[_selectedIndex].toStringAsFixed(1)}s', kBrandColor),
               ],
             ),
           ),
@@ -1932,7 +1922,7 @@ class _MapCardState extends State<_MapCard> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
-                            _showAllLaps ? Icons.layers : Icons.filter_1,
+                            _showAllLaps ? Icons.touch_app : Icons.filter_1,
                             size: 12,
                             color: _showAllLaps ? kBrandColor : kMutedColor,
                           ),
@@ -2009,7 +1999,7 @@ class _MapCardState extends State<_MapCard> {
                           border: Border.all(color: Colors.white, width: 2),
                           boxShadow: [BoxShadow(color: Colors.black.withAlpha(100), blurRadius: 6)],
                         ),
-                        child: const Icon(Icons.play_arrow, size: 14, color: Colors.white),
+                        child: const Icon(Icons.trip_origin, size: 10, color: Colors.white),
                       ),
                     ),
                     if (path.length > 1)
@@ -2024,7 +2014,7 @@ class _MapCardState extends State<_MapCard> {
                             border: Border.all(color: Colors.white, width: 2),
                             boxShadow: [BoxShadow(color: Colors.black.withAlpha(100), blurRadius: 6)],
                           ),
-                          child: const Icon(Icons.stop, size: 14, color: Colors.white),
+                          child: const Icon(Icons.adjust, size: 14, color: Colors.white),
                         ),
                       ),
                   ]),
