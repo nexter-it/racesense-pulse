@@ -380,8 +380,6 @@ class _OfficialCircuitsPageState extends State<OfficialCircuitsPage> {
   }
 
   Widget _buildCircuitCard(OfficialCircuitInfo circuit) {
-    final lengthKm = circuit.lengthKm.toStringAsFixed(2);
-
     return GestureDetector(
       onTap: () => _onCircuitTap(circuit),
       child: Container(
@@ -497,26 +495,9 @@ class _OfficialCircuitsPageState extends State<OfficialCircuitsPage> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
-                  // Stats row
-                  Row(
-                    children: [
-                      _buildStatChip(
-                        icon: Icons.straighten_rounded,
-                        value: '$lengthKm km',
-                        color: const Color(0xFF00E676),
-                      ),
-                      const SizedBox(width: 10),
-                      if (circuit.category != null)
-                        _buildStatChip(
-                          icon: Icons.emoji_events_rounded,
-                          value: circuit.category!,
-                          color: const Color(0xFFFFB74D),
-                        ),
-                      if (circuit.category != null) const SizedBox(width: 10),
-                      _buildOfficialBadge(),
-                    ],
-                  ),
+                  // const SizedBox(height: 16),
+                  // // Badge ufficiale
+                  // _buildOfficialBadge(),
                 ],
               ),
             ),
@@ -569,62 +550,28 @@ class _OfficialCircuitsPageState extends State<OfficialCircuitsPage> {
     );
   }
 
-  Widget _buildStatChip({
-    required IconData icon,
-    required String value,
-    required Color color,
-  }) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          color: color.withAlpha(12),
-          border: Border.all(color: color.withAlpha(40)),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: color, size: 15),
-            const SizedBox(width: 6),
-            Text(
-              value,
-              style: TextStyle(
-                color: color,
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildOfficialBadge() {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          color: _kOfficialColor.withAlpha(12),
-          border: Border.all(color: _kOfficialColor.withAlpha(40)),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.verified_rounded, color: _kOfficialColor, size: 15),
-            const SizedBox(width: 6),
-            Text(
-              'Ufficiale',
-              style: TextStyle(
-                color: _kOfficialColor,
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-              ),
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        color: _kOfficialColor.withAlpha(12),
+        border: Border.all(color: _kOfficialColor.withAlpha(40)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.verified_rounded, color: _kOfficialColor, size: 15),
+          const SizedBox(width: 8),
+          Text(
+            'Circuito Ufficiale',
+            style: TextStyle(
+              color: _kOfficialColor,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

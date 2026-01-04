@@ -1,0 +1,8066 @@
+[
+  {
+    "file": "05b5a7b6.tkk",
+    "name": "Ottobiano Motorsport",
+    "city": "OttobianoK",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 45.1646928,
+        "lon": 8.8162098
+      },
+      "point1": {
+        "lat": 45.1647267,
+        "lon": 8.8162477
+      },
+      "point2": {
+        "lat": 45.1646589,
+        "lon": 8.8161719
+      },
+      "track_direction_deg": 128.24,
+      "line_direction_deg": 218.24,
+      "track_width_m": 9.6,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "05b5a7er.tkk",
+    "name": "Pista d'Oro",
+    "city": "Pista Oro",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 41.9524284,
+        "lon": 12.688228
+      },
+      "point1": {
+        "lat": 41.9524054,
+        "lon": 12.6882335
+      },
+      "point2": {
+        "lat": 41.9524514,
+        "lon": 12.6882225
+      },
+      "track_direction_deg": 260.0,
+      "line_direction_deg": 350.0,
+      "track_width_m": 5.2,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "05b5a7sk.tkk",
+    "name": "Pista GoKart BIG Rozzano",
+    "city": "RozzanoK",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 45.3874601,
+        "lon": 9.1733095
+      },
+      "point1": {
+        "lat": 45.3875049,
+        "lon": 9.1733202
+      },
+      "point2": {
+        "lat": 45.3874153,
+        "lon": 9.1732988
+      },
+      "track_direction_deg": 99.55,
+      "line_direction_deg": 189.55,
+      "track_width_m": 10.1,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "05b5a7sw.tkk",
+    "name": "Safety-Park",
+    "city": "Safety-Park",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 46.4366388,
+        "lon": 11.3142005
+      },
+      "point1": {
+        "lat": 46.4367346,
+        "lon": 11.3141423
+      },
+      "point2": {
+        "lat": 46.436543,
+        "lon": 11.3142587
+      },
+      "track_direction_deg": 67.29,
+      "line_direction_deg": 157.29,
+      "track_width_m": 23.1,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "09n27jyl.tkk",
+    "name": "84 Next Generation Circuit",
+    "city": "84NG",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 42.1295038,
+        "lon": 11.7664739
+      },
+      "point1": {
+        "lat": 42.1295062,
+        "lon": 11.7665223
+      },
+      "point2": {
+        "lat": 42.1295014,
+        "lon": 11.7664255
+      },
+      "track_direction_deg": 176.23,
+      "line_direction_deg": 266.23,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "09nncx92.tkk",
+    "name": "Club Des Miles",
+    "city": "MONCALIERI",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 44.9807396,
+        "lon": 7.6898273
+      },
+      "point1": {
+        "lat": 44.9807262,
+        "lon": 7.68969
+      },
+      "point2": {
+        "lat": 44.980753,
+        "lon": 7.6899646
+      },
+      "track_direction_deg": 352.16,
+      "line_direction_deg": 82.16,
+      "track_width_m": 21.8,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "0cyvnw1x.tkk",
+    "name": "Pista Motocross Denore",
+    "city": "Denore",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 44.8105543,
+        "lon": 11.8251274
+      },
+      "point1": {
+        "lat": 44.8105503,
+        "lon": 11.8251778
+      },
+      "point2": {
+        "lat": 44.8105583,
+        "lon": 11.825077
+      },
+      "track_direction_deg": 186.46,
+      "line_direction_deg": 276.46,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "0kr57wq7.tkk",
+    "name": "Pista 2 Mari",
+    "city": "Pista 2 Mari",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 38.9137632,
+        "lon": 16.41677
+      },
+      "point1": {
+        "lat": 38.9138008,
+        "lon": 16.4167652
+      },
+      "point2": {
+        "lat": 38.9137256,
+        "lon": 16.4167748
+      },
+      "track_direction_deg": 84.3,
+      "line_direction_deg": 174.3,
+      "track_width_m": 8.4,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "0lde8qu9.tkk",
+    "name": "Pista di Cattolica - Jeepers Kart",
+    "city": "Cattolica",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 43.9520478,
+        "lon": 12.7241239
+      },
+      "point1": {
+        "lat": 43.9521163,
+        "lon": 12.7242048
+      },
+      "point2": {
+        "lat": 43.9519793,
+        "lon": 12.724043
+      },
+      "track_direction_deg": 130.37,
+      "line_direction_deg": 220.37,
+      "track_width_m": 20.0,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "0qs29hdz.tkk",
+    "name": "Tirreno Karting",
+    "city": "Tirreno",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 41.343305,
+        "lon": 13.7521464
+      },
+      "point1": {
+        "lat": 41.343317,
+        "lon": 13.7521012
+      },
+      "point2": {
+        "lat": 41.343293,
+        "lon": 13.7521916
+      },
+      "track_direction_deg": 19.48,
+      "line_direction_deg": 109.48,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "0si7s3o2.tkk",
+    "name": "Maggiora Offroad Arena Rallycross",
+    "city": "Maggiora Ral",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 45.7031197,
+        "lon": 8.4170551
+      },
+      "point1": {
+        "lat": 45.703115,
+        "lon": 8.4171062
+      },
+      "point2": {
+        "lat": 45.7031244,
+        "lon": 8.417004
+      },
+      "track_direction_deg": 187.47,
+      "line_direction_deg": 277.47,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "0si7trrk.tkk",
+    "name": "Minimotodromo di Oreglia",
+    "city": "Oreglia C",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 44.5768071,
+        "lon": 7.8153029
+      },
+      "point1": {
+        "lat": 44.5767879,
+        "lon": 7.8153456
+      },
+      "point2": {
+        "lat": 44.5768263,
+        "lon": 7.8152602
+      },
+      "track_direction_deg": 212.18,
+      "line_direction_deg": 302.18,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "0si7uihq.tkk",
+    "name": "Minimotodromo di Oreglia",
+    "city": "Oreglia L",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 44.5767973,
+        "lon": 7.8153281
+      },
+      "point1": {
+        "lat": 44.5767793,
+        "lon": 7.8153718
+      },
+      "point2": {
+        "lat": 44.5768153,
+        "lon": 7.8152844
+      },
+      "track_direction_deg": 210.03,
+      "line_direction_deg": 300.03,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "0sofpkwk.tkk",
+    "name": "Kartodromo 2000 Lucera",
+    "city": "2000 Lucera",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 41.5013241,
+        "lon": 15.3643127
+      },
+      "point1": {
+        "lat": 41.501402,
+        "lon": 15.3643271
+      },
+      "point2": {
+        "lat": 41.5012462,
+        "lon": 15.3642983
+      },
+      "track_direction_deg": 97.87,
+      "line_direction_deg": 187.87,
+      "track_width_m": 17.5,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "0sofucdb.tkk",
+    "name": "Pista dei Saraceni",
+    "city": "SaraceniK",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 40.6225829,
+        "lon": 17.7440244
+      },
+      "point1": {
+        "lat": 40.6225558,
+        "lon": 17.7439941
+      },
+      "point2": {
+        "lat": 40.62261,
+        "lon": 17.7440547
+      },
+      "track_direction_deg": 310.29,
+      "line_direction_deg": 40.29,
+      "track_width_m": 7.9,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "0sw45rj0.tkk",
+    "name": "Pista Caudina",
+    "city": "Caudina V1",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 41.0528205,
+        "lon": 14.642561
+      },
+      "point1": {
+        "lat": 41.052804,
+        "lon": 14.6426034
+      },
+      "point2": {
+        "lat": 41.052837,
+        "lon": 14.6425186
+      },
+      "track_direction_deg": 207.29,
+      "line_direction_deg": 297.29,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "0sw48cm9.tkk",
+    "name": "Pista Karting Arcobaleno",
+    "city": "ArcobalenoK",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 42.8492525,
+        "lon": 12.7101246
+      },
+      "point1": {
+        "lat": 42.8492745,
+        "lon": 12.7099956
+      },
+      "point2": {
+        "lat": 42.8492305,
+        "lon": 12.7102536
+      },
+      "track_direction_deg": 13.07,
+      "line_direction_deg": 103.07,
+      "track_width_m": 21.6,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "0sw4ffmw.tkk",
+    "name": "Park Cross Ferrara",
+    "city": "Ferrara",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 44.8531095,
+        "lon": 11.5785837
+      },
+      "point1": {
+        "lat": 44.853131,
+        "lon": 11.5786243
+      },
+      "point2": {
+        "lat": 44.853088,
+        "lon": 11.5785431
+      },
+      "track_direction_deg": 143.21,
+      "line_direction_deg": 233.21,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "0sw6e3we.tkk",
+    "name": "Pista Caudina",
+    "city": "Caudina V2",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 41.0527746,
+        "lon": 14.6422888
+      },
+      "point1": {
+        "lat": 41.0527949,
+        "lon": 14.6422494
+      },
+      "point2": {
+        "lat": 41.0527543,
+        "lon": 14.6423282
+      },
+      "track_direction_deg": 34.39,
+      "line_direction_deg": 124.39,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "0sw6nz5m.tkk",
+    "name": "Galliano Park",
+    "city": "Galliano",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 44.1964995,
+        "lon": 12.0953961
+      },
+      "point1": {
+        "lat": 44.1964549,
+        "lon": 12.0954827
+      },
+      "point2": {
+        "lat": 44.1965441,
+        "lon": 12.0953095
+      },
+      "track_direction_deg": 215.71,
+      "line_direction_deg": 305.71,
+      "track_width_m": 17.0,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "0sw741v5.tkk",
+    "name": "Kartodromo Pista Paradiso",
+    "city": "ParadisoK",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 41.5344664,
+        "lon": 14.3536315
+      },
+      "point1": {
+        "lat": 41.5344342,
+        "lon": 14.353653
+      },
+      "point2": {
+        "lat": 41.5344986,
+        "lon": 14.35361
+      },
+      "track_direction_deg": 243.48,
+      "line_direction_deg": 333.48,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "0sxsf8ly.tkk",
+    "name": "Pista Degli Oleandri Taggia",
+    "city": "Taggia",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 43.8552238,
+        "lon": 7.8389558
+      },
+      "point1": {
+        "lat": 43.8551539,
+        "lon": 7.8389145
+      },
+      "point2": {
+        "lat": 43.8552937,
+        "lon": 7.8389971
+      },
+      "track_direction_deg": 293.08,
+      "line_direction_deg": 23.08,
+      "track_width_m": 16.9,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "0vy0jhxz.tkk",
+    "name": "Karting Club Messina",
+    "city": "MessinaK",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 38.1617575,
+        "lon": 15.5272155
+      },
+      "point1": {
+        "lat": 38.1617075,
+        "lon": 15.5271716
+      },
+      "point2": {
+        "lat": 38.1618075,
+        "lon": 15.5272594
+      },
+      "track_direction_deg": 304.62,
+      "line_direction_deg": 34.62,
+      "track_width_m": 13.5,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "0vy2f3v5.tkk",
+    "name": "A.S.D. Moto Club Ceriano Laghetto",
+    "city": "Ceriano Lagh",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 45.6330592,
+        "lon": 9.1022728
+      },
+      "point1": {
+        "lat": 45.6330841,
+        "lon": 9.1024177
+      },
+      "point2": {
+        "lat": 45.6330343,
+        "lon": 9.1021279
+      },
+      "track_direction_deg": 166.22,
+      "line_direction_deg": 256.22,
+      "track_width_m": 23.2,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "0vy2i60x.tkk",
+    "name": "Racing Park Viadana",
+    "city": "Viadana",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 44.941089,
+        "lon": 10.5427765
+      },
+      "point1": {
+        "lat": 44.9410082,
+        "lon": 10.5428322
+      },
+      "point2": {
+        "lat": 44.9411698,
+        "lon": 10.5427208
+      },
+      "track_direction_deg": 244.0,
+      "line_direction_deg": 334.0,
+      "track_width_m": 20.0,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "0y2n9ddu.tkk",
+    "name": "Pista dei Campioni",
+    "city": "Campioni",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 41.0766846,
+        "lon": 9.4562253
+      },
+      "point1": {
+        "lat": 41.076714,
+        "lon": 9.4561978
+      },
+      "point2": {
+        "lat": 41.0766552,
+        "lon": 9.4562528
+      },
+      "track_direction_deg": 54.8,
+      "line_direction_deg": 144.8,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "0y6g5d4w.tkk",
+    "name": "Moto Club Cremona",
+    "city": "MCCremona",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 45.1355208,
+        "lon": 9.9812869
+      },
+      "point1": {
+        "lat": 45.1355115,
+        "lon": 9.9813362
+      },
+      "point2": {
+        "lat": 45.1355301,
+        "lon": 9.9812376
+      },
+      "track_direction_deg": 194.96,
+      "line_direction_deg": 284.96,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "0y6h24di.tkk",
+    "name": "Circuito di Pomposa",
+    "city": "Pomposa AuMo",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 44.7101816,
+        "lon": 12.2149019
+      },
+      "point1": {
+        "lat": 44.7101695,
+        "lon": 12.214841
+      },
+      "point2": {
+        "lat": 44.7101937,
+        "lon": 12.2149628
+      },
+      "track_direction_deg": 344.42,
+      "line_direction_deg": 74.42,
+      "track_width_m": 10.0,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "0y6hcm1s.tkk",
+    "name": "Circuito di Pomposa",
+    "city": "Pomposa Long",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 44.7101807,
+        "lon": 12.2148888
+      },
+      "point1": {
+        "lat": 44.7101713,
+        "lon": 12.2148399
+      },
+      "point2": {
+        "lat": 44.7101901,
+        "lon": 12.2149377
+      },
+      "track_direction_deg": 344.85,
+      "line_direction_deg": 74.85,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka5uh9.tkk",
+    "name": "Adria Karting Raceway",
+    "city": "Adria Kart",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 45.046075,
+        "lon": 12.1497812
+      },
+      "point1": {
+        "lat": 45.0460819,
+        "lon": 12.1497312
+      },
+      "point2": {
+        "lat": 45.0460681,
+        "lon": 12.1498312
+      },
+      "track_direction_deg": 10.99,
+      "line_direction_deg": 100.99,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka5xqk.tkk",
+    "name": "Ala Karting Circuit",
+    "city": "AlaK",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 45.7864029,
+        "lon": 11.0119671
+      },
+      "point1": {
+        "lat": 45.7864403,
+        "lon": 11.0118685
+      },
+      "point2": {
+        "lat": 45.7863655,
+        "lon": 11.0120657
+      },
+      "track_direction_deg": 28.52,
+      "line_direction_deg": 118.52,
+      "track_width_m": 17.4,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka5xrm.tkk",
+    "name": "Circuito Internazionale di Aprilia",
+    "city": "Aprilia",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 41.6068927,
+        "lon": 12.6381157
+      },
+      "point1": {
+        "lat": 41.6068584,
+        "lon": 12.6380906
+      },
+      "point2": {
+        "lat": 41.606927,
+        "lon": 12.6381408
+      },
+      "track_direction_deg": 298.64,
+      "line_direction_deg": 28.64,
+      "track_width_m": 8.7,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka5xz2.tkk",
+    "name": "Pista Go Kart Artena",
+    "city": "Artena",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 41.7288891,
+        "lon": 12.869618
+      },
+      "point1": {
+        "lat": 41.7289206,
+        "lon": 12.8696412
+      },
+      "point2": {
+        "lat": 41.7288576,
+        "lon": 12.8695948
+      },
+      "track_direction_deg": 118.75,
+      "line_direction_deg": 208.75,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka5xz9.tkk",
+    "name": "Circuito Valle del Liri",
+    "city": "LiriK",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 41.5734461,
+        "lon": 13.5362976
+      },
+      "point1": {
+        "lat": 41.5734969,
+        "lon": 13.5363658
+      },
+      "point2": {
+        "lat": 41.5733953,
+        "lon": 13.5362294
+      },
+      "track_direction_deg": 135.13,
+      "line_direction_deg": 225.13,
+      "track_width_m": 16.0,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka5ysr.tkk",
+    "name": "Castelletto Circuit",
+    "city": "Branduzzo V2",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 45.0709158,
+        "lon": 9.1056015
+      },
+      "point1": {
+        "lat": 45.0708901,
+        "lon": 9.1055847
+      },
+      "point2": {
+        "lat": 45.0709415,
+        "lon": 9.1056183
+      },
+      "track_direction_deg": 294.7,
+      "line_direction_deg": 24.7,
+      "track_width_m": 6.3,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka5yum.tkk",
+    "name": "Kart Planet",
+    "city": "Planet V2",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 44.495636,
+        "lon": 7.5038211
+      },
+      "point1": {
+        "lat": 44.4956424,
+        "lon": 7.5038707
+      },
+      "point2": {
+        "lat": 44.4956296,
+        "lon": 7.5037715
+      },
+      "track_direction_deg": 169.8,
+      "line_direction_deg": 259.8,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka5yww.tkk",
+    "name": "7 Laghi Kart",
+    "city": "Branduzzo",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 45.063993,
+        "lon": 9.0999197
+      },
+      "point1": {
+        "lat": 45.0639793,
+        "lon": 9.0999533
+      },
+      "point2": {
+        "lat": 45.0640067,
+        "lon": 9.0998861
+      },
+      "track_direction_deg": 210.04,
+      "line_direction_deg": 300.04,
+      "track_width_m": 6.1,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka5yzs.tkk",
+    "name": "Kartodromo Happy Valley",
+    "city": "Cervia",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 44.2377204,
+        "lon": 12.3556619
+      },
+      "point1": {
+        "lat": 44.237695,
+        "lon": 12.3556975
+      },
+      "point2": {
+        "lat": 44.2377458,
+        "lon": 12.3556263
+      },
+      "track_direction_deg": 224.84,
+      "line_direction_deg": 314.84,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka5z0i.tkk",
+    "name": "Cogiskart Corridonia",
+    "city": "Corridonia",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 43.2603402,
+        "lon": 13.5042155
+      },
+      "point1": {
+        "lat": 43.2603228,
+        "lon": 13.5041382
+      },
+      "point2": {
+        "lat": 43.2603576,
+        "lon": 13.5042928
+      },
+      "track_direction_deg": 342.79,
+      "line_direction_deg": 72.79,
+      "track_width_m": 13.1,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka5zjf.tkk",
+    "name": "Kartodromo Boggia Park & Sport",
+    "city": "BoggiaK",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 46.2803678,
+        "lon": 9.3701484
+      },
+      "point1": {
+        "lat": 46.2802744,
+        "lon": 9.3700798
+      },
+      "point2": {
+        "lat": 46.2804612,
+        "lon": 9.370217
+      },
+      "track_direction_deg": 296.93,
+      "line_direction_deg": 26.93,
+      "track_width_m": 23.3,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka5zkg.tkk",
+    "name": "Franciacorta Karting Track",
+    "city": "F.Corta Var2",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 45.5132613,
+        "lon": 10.0050884
+      },
+      "point1": {
+        "lat": 45.513317,
+        "lon": 10.0050861
+      },
+      "point2": {
+        "lat": 45.5132056,
+        "lon": 10.0050907
+      },
+      "track_direction_deg": 88.36,
+      "line_direction_deg": 178.36,
+      "track_width_m": 12.4,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka5zpw.tkk",
+    "name": "Autodromo Enzo e Dino Ferrari",
+    "city": "Imola Auto",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 44.3444043,
+        "lon": 11.7140095
+      },
+      "point1": {
+        "lat": 44.344369,
+        "lon": 11.7139997
+      },
+      "point2": {
+        "lat": 44.3444396,
+        "lon": 11.7140193
+      },
+      "track_direction_deg": 281.2,
+      "line_direction_deg": 11.2,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka5zt1.tkk",
+    "name": "Pista Azzurra",
+    "city": "Azzurra Var2",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 45.5061573,
+        "lon": 12.6261755
+      },
+      "point1": {
+        "lat": 45.5061263,
+        "lon": 12.6262015
+      },
+      "point2": {
+        "lat": 45.5061883,
+        "lon": 12.6261495
+      },
+      "track_direction_deg": 239.5,
+      "line_direction_deg": 329.5,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka5zt8.tkk",
+    "name": "Autodromo Enzo e Dino Ferrari",
+    "city": "Imola",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 44.3443999,
+        "lon": 11.7140172
+      },
+      "point1": {
+        "lat": 44.3443643,
+        "lon": 11.7140101
+      },
+      "point2": {
+        "lat": 44.3444355,
+        "lon": 11.7140243
+      },
+      "track_direction_deg": 278.15,
+      "line_direction_deg": 8.15,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka5zwd.tkk",
+    "name": "Istituto sperimentale Auto e Motori",
+    "city": "ISAM",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 41.7011467,
+        "lon": 13.1428796
+      },
+      "point1": {
+        "lat": 41.7011673,
+        "lon": 13.1427531
+      },
+      "point2": {
+        "lat": 41.7011261,
+        "lon": 13.1430061
+      },
+      "track_direction_deg": 12.28,
+      "line_direction_deg": 102.28,
+      "track_width_m": 21.5,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka605h.tkk",
+    "name": "Autodromo dell'Umbria - Magione",
+    "city": "Magione",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 43.1312633,
+        "lon": 12.2391172
+      },
+      "point1": {
+        "lat": 43.1312118,
+        "lon": 12.2389936
+      },
+      "point2": {
+        "lat": 43.1313148,
+        "lon": 12.2392408
+      },
+      "track_direction_deg": 330.28,
+      "line_direction_deg": 60.28,
+      "track_width_m": 23.1,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka60aa.tkk",
+    "name": "South Garda Karting",
+    "city": "SouthGardaK",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 45.4245709,
+        "lon": 10.5053163
+      },
+      "point1": {
+        "lat": 45.4245852,
+        "lon": 10.5052362
+      },
+      "point2": {
+        "lat": 45.4245566,
+        "lon": 10.5053964
+      },
+      "track_direction_deg": 14.32,
+      "line_direction_deg": 104.32,
+      "track_width_m": 12.9,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka60ba.tkk",
+    "name": "Pista Go kart Acquaparco",
+    "city": "Migliarino",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 44.7727647,
+        "lon": 11.987552
+      },
+      "point1": {
+        "lat": 44.7727927,
+        "lon": 11.9875838
+      },
+      "point2": {
+        "lat": 44.7727367,
+        "lon": 11.9875202
+      },
+      "track_direction_deg": 128.82,
+      "line_direction_deg": 218.82,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka60go.tkk",
+    "name": "Autodromo di Modena",
+    "city": "Modena",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 44.6341622,
+        "lon": 10.8146269
+      },
+      "point1": {
+        "lat": 44.6341805,
+        "lon": 10.8146463
+      },
+      "point2": {
+        "lat": 44.6341439,
+        "lon": 10.8146075
+      },
+      "track_direction_deg": 127.0,
+      "line_direction_deg": 217.0,
+      "track_width_m": 5.1,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka60gq.tkk",
+    "name": "Autodromo di Modena",
+    "city": "Modena V4",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 44.6341447,
+        "lon": 10.8146082
+      },
+      "point1": {
+        "lat": 44.634163,
+        "lon": 10.8146276
+      },
+      "point2": {
+        "lat": 44.6341264,
+        "lon": 10.8145888
+      },
+      "track_direction_deg": 127.08,
+      "line_direction_deg": 217.08,
+      "track_width_m": 5.1,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka60j9.tkk",
+    "name": "Misano World Circuit Marco Simoncelli",
+    "city": "Misano Long",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 43.9618725,
+        "lon": 12.6839705
+      },
+      "point1": {
+        "lat": 43.9618373,
+        "lon": 12.6840855
+      },
+      "point2": {
+        "lat": 43.9619077,
+        "lon": 12.6838555
+      },
+      "track_direction_deg": 203.04,
+      "line_direction_deg": 293.04,
+      "track_width_m": 20.0,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka60r1.tkk",
+    "name": "Kartodromo La Conca",
+    "city": "LaConcaK",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 40.1293423,
+        "lon": 18.3498915
+      },
+      "point1": {
+        "lat": 40.1293007,
+        "lon": 18.3498974
+      },
+      "point2": {
+        "lat": 40.1293839,
+        "lon": 18.3498856
+      },
+      "track_direction_deg": 263.78,
+      "line_direction_deg": 353.78,
+      "track_width_m": 9.3,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka60ru.tkk",
+    "name": "Autodromo di Modena",
+    "city": "Modena V2",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 44.6341237,
+        "lon": 10.8145832
+      },
+      "point1": {
+        "lat": 44.6341416,
+        "lon": 10.8146033
+      },
+      "point2": {
+        "lat": 44.6341058,
+        "lon": 10.8145631
+      },
+      "track_direction_deg": 128.53,
+      "line_direction_deg": 218.53,
+      "track_width_m": 5.1,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka60wv.tkk",
+    "name": "Circuito Tazio Nuvolari",
+    "city": "Nuvolari V1",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 45.0723678,
+        "lon": 8.9918758
+      },
+      "point1": {
+        "lat": 45.0723864,
+        "lon": 8.9919085
+      },
+      "point2": {
+        "lat": 45.0723492,
+        "lon": 8.9918431
+      },
+      "track_direction_deg": 141.11,
+      "line_direction_deg": 231.11,
+      "track_width_m": 6.6,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka60z2.tkk",
+    "name": "Autodromo Nazionale di Monza",
+    "city": "Monza Bike",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 45.6189809,
+        "lon": 9.2811335
+      },
+      "point1": {
+        "lat": 45.6189897,
+        "lon": 9.2810075
+      },
+      "point2": {
+        "lat": 45.6189721,
+        "lon": 9.2812595
+      },
+      "track_direction_deg": 5.73,
+      "line_direction_deg": 95.73,
+      "track_width_m": 19.7,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka60zx.tkk",
+    "name": "Pista Winner",
+    "city": "Pista Winner",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 44.7848308,
+        "lon": 8.3753306
+      },
+      "point1": {
+        "lat": 44.7848814,
+        "lon": 8.3753778
+      },
+      "point2": {
+        "lat": 44.7847802,
+        "lon": 8.3752834
+      },
+      "track_direction_deg": 123.5,
+      "line_direction_deg": 213.5,
+      "track_width_m": 13.5,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka611r.tkk",
+    "name": "Mugello Circuit",
+    "city": "Mugello",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 43.9975983,
+        "lon": 11.3715183
+      },
+      "point1": {
+        "lat": 43.9976137,
+        "lon": 11.3714731
+      },
+      "point2": {
+        "lat": 43.9975829,
+        "lon": 11.3715635
+      },
+      "track_direction_deg": 25.37,
+      "line_direction_deg": 115.37,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka614o.tkk",
+    "name": "Circuito Internazionale d'Abruzzo",
+    "city": "Ortona VarM",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 42.3054035,
+        "lon": 14.3799655
+      },
+      "point1": {
+        "lat": 42.3054232,
+        "lon": 14.3800489
+      },
+      "point2": {
+        "lat": 42.3053838,
+        "lon": 14.3798821
+      },
+      "track_direction_deg": 162.31,
+      "line_direction_deg": 252.31,
+      "track_width_m": 14.4,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka6152.tkk",
+    "name": "Circuito di Pomposa",
+    "city": "Pomposa K1",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 44.7111936,
+        "lon": 12.2167781
+      },
+      "point1": {
+        "lat": 44.7111871,
+        "lon": 12.2167283
+      },
+      "point2": {
+        "lat": 44.7112001,
+        "lon": 12.2168279
+      },
+      "track_direction_deg": 349.62,
+      "line_direction_deg": 79.62,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka61b8.tkk",
+    "name": "Autodromo Valle dei Templi",
+    "city": "Racalmuto",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 37.3859613,
+        "lon": 13.7530361
+      },
+      "point1": {
+        "lat": 37.3859534,
+        "lon": 13.7529919
+      },
+      "point2": {
+        "lat": 37.3859692,
+        "lon": 13.7530803
+      },
+      "track_direction_deg": 347.26,
+      "line_direction_deg": 77.26,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka61c1.tkk",
+    "name": "La Mola Rambo Motorsport",
+    "city": "La Mola Cort",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 42.3497094,
+        "lon": 12.854982
+      },
+      "point1": {
+        "lat": 42.349717,
+        "lon": 12.8550296
+      },
+      "point2": {
+        "lat": 42.3497018,
+        "lon": 12.8549344
+      },
+      "track_direction_deg": 167.81,
+      "line_direction_deg": 257.81,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka61ck.tkk",
+    "name": "Pista Rioveggio",
+    "city": "Rioveggio",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 44.2867736,
+        "lon": 11.2088637
+      },
+      "point1": {
+        "lat": 44.2868387,
+        "lon": 11.2087665
+      },
+      "point2": {
+        "lat": 44.2867085,
+        "lon": 11.2089609
+      },
+      "track_direction_deg": 43.09,
+      "line_direction_deg": 133.09,
+      "track_width_m": 21.2,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka61fw.tkk",
+    "name": "La Mola Rambo Motorsport",
+    "city": "LaMola Lungo",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 42.3497096,
+        "lon": 12.8549819
+      },
+      "point1": {
+        "lat": 42.3497148,
+        "lon": 12.8550301
+      },
+      "point2": {
+        "lat": 42.3497044,
+        "lon": 12.8549337
+      },
+      "track_direction_deg": 171.7,
+      "line_direction_deg": 261.7,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka61i7.tkk",
+    "name": "Circuito di Siena",
+    "city": "Siena",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 43.3086019,
+        "lon": 11.4759274
+      },
+      "point1": {
+        "lat": 43.3086923,
+        "lon": 11.4759389
+      },
+      "point2": {
+        "lat": 43.3085115,
+        "lon": 11.4759159
+      },
+      "track_direction_deg": 95.28,
+      "line_direction_deg": 185.28,
+      "track_width_m": 20.2,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka61r6.tkk",
+    "name": "Circuito Internazionale Il Sagittario",
+    "city": "SagittarioV1",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 41.4056309,
+        "lon": 12.9844048
+      },
+      "point1": {
+        "lat": 41.405539,
+        "lon": 12.9844335
+      },
+      "point2": {
+        "lat": 41.4057228,
+        "lon": 12.9843761
+      },
+      "track_direction_deg": 256.83,
+      "line_direction_deg": 346.83,
+      "track_width_m": 21.0,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka61xb.tkk",
+    "name": "Autodromo di Vallelunga",
+    "city": "VallelungaSe",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 42.157713,
+        "lon": 12.3690033
+      },
+      "point1": {
+        "lat": 42.1576994,
+        "lon": 12.3688895
+      },
+      "point2": {
+        "lat": 42.1577266,
+        "lon": 12.3691171
+      },
+      "track_direction_deg": 350.87,
+      "line_direction_deg": 80.87,
+      "track_width_m": 19.0,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka6254.tkk",
+    "name": "ASC - Vairano",
+    "city": "Vairano",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 45.2724041,
+        "lon": 9.2558901
+      },
+      "point1": {
+        "lat": 45.2724267,
+        "lon": 9.2559315
+      },
+      "point2": {
+        "lat": 45.2723815,
+        "lon": 9.2558487
+      },
+      "track_direction_deg": 142.23,
+      "line_direction_deg": 232.23,
+      "track_width_m": 8.2,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka6257.tkk",
+    "name": "Autodromo Riccardo Paletti - Varano de' Melegari",
+    "city": "Varano",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 44.6806637,
+        "lon": 10.0210368
+      },
+      "point1": {
+        "lat": 44.6807437,
+        "lon": 10.0210398
+      },
+      "point2": {
+        "lat": 44.6805837,
+        "lon": 10.0210338
+      },
+      "track_direction_deg": 91.52,
+      "line_direction_deg": 181.52,
+      "track_width_m": 17.8,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka626f.tkk",
+    "name": "Autodromo di Vallelunga",
+    "city": "Vallelunga",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 42.1577026,
+        "lon": 12.3689145
+      },
+      "point1": {
+        "lat": 42.1576908,
+        "lon": 12.3688004
+      },
+      "point2": {
+        "lat": 42.1577144,
+        "lon": 12.3690286
+      },
+      "track_direction_deg": 352.04,
+      "line_direction_deg": 82.04,
+      "track_width_m": 19.0,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka62cq.tkk",
+    "name": "Kartodromo Val Vibrata",
+    "city": "Val Vibrata",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 42.810228,
+        "lon": 13.6883619
+      },
+      "point1": {
+        "lat": 42.810256,
+        "lon": 13.6883311
+      },
+      "point2": {
+        "lat": 42.8102,
+        "lon": 13.6883927
+      },
+      "track_direction_deg": 51.06,
+      "line_direction_deg": 141.06,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka63hh.tkk",
+    "name": "Le Sirene",
+    "city": "Le Sirene",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 45.4092361,
+        "lon": 8.0756008
+      },
+      "point1": {
+        "lat": 45.4092005,
+        "lon": 8.0755934
+      },
+      "point2": {
+        "lat": 45.4092717,
+        "lon": 8.0756082
+      },
+      "track_direction_deg": 278.26,
+      "line_direction_deg": 8.26,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka63j9.tkk",
+    "name": "Autodromo Del Levante",
+    "city": "Binetto",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 40.9952772,
+        "lon": 16.7432772
+      },
+      "point1": {
+        "lat": 40.9952438,
+        "lon": 16.7433846
+      },
+      "point2": {
+        "lat": 40.9953106,
+        "lon": 16.7431698
+      },
+      "track_direction_deg": 202.4,
+      "line_direction_deg": 292.4,
+      "track_width_m": 19.5,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka63jp.tkk",
+    "name": "Circuito Internazionale Viterbo",
+    "city": "Viterbo",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 42.4848479,
+        "lon": 12.069661
+      },
+      "point1": {
+        "lat": 42.4848827,
+        "lon": 12.0696487
+      },
+      "point2": {
+        "lat": 42.4848131,
+        "lon": 12.0696733
+      },
+      "track_direction_deg": 75.34,
+      "line_direction_deg": 165.34,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka63k8.tkk",
+    "name": "Circuito Del Sele",
+    "city": "SeleVarLong",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 40.604829,
+        "lon": 14.949538
+      },
+      "point1": {
+        "lat": 40.6048076,
+        "lon": 14.9495761
+      },
+      "point2": {
+        "lat": 40.6048504,
+        "lon": 14.9494999
+      },
+      "track_direction_deg": 216.56,
+      "line_direction_deg": 306.56,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka63vg.tkk",
+    "name": "Kartodromo La Maddalena",
+    "city": "La Maddalena",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 42.1108295,
+        "lon": 13.3087642
+      },
+      "point1": {
+        "lat": 42.1108544,
+        "lon": 13.3087292
+      },
+      "point2": {
+        "lat": 42.1108046,
+        "lon": 13.3087992
+      },
+      "track_direction_deg": 43.87,
+      "line_direction_deg": 133.87,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka63vv.tkk",
+    "name": "Cremona Circuit",
+    "city": "Cremona",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 45.0853586,
+        "lon": 10.3124695
+      },
+      "point1": {
+        "lat": 45.0852517,
+        "lon": 10.3124203
+      },
+      "point2": {
+        "lat": 45.0854655,
+        "lon": 10.3125187
+      },
+      "track_direction_deg": 288.01,
+      "line_direction_deg": 18.01,
+      "track_width_m": 25.0,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka63wb.tkk",
+    "name": "Circuito Internazionale Friuli - Lignano Circuit",
+    "city": "Lignano",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 45.7327987,
+        "lon": 13.0732238
+      },
+      "point1": {
+        "lat": 45.7328346,
+        "lon": 13.073221
+      },
+      "point2": {
+        "lat": 45.7327628,
+        "lon": 13.0732266
+      },
+      "track_direction_deg": 86.84,
+      "line_direction_deg": 176.84,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka645m.tkk",
+    "name": "Pista del Corallo",
+    "city": "CRLLO BIANCO",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 40.658566,
+        "lon": 8.2990021
+      },
+      "point1": {
+        "lat": 40.6586441,
+        "lon": 8.2988955
+      },
+      "point2": {
+        "lat": 40.6584879,
+        "lon": 8.2991087
+      },
+      "track_direction_deg": 44.0,
+      "line_direction_deg": 134.0,
+      "track_width_m": 25.0,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka6460.tkk",
+    "name": "Pista del Corallo",
+    "city": "CRLLO ROSSO",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 40.6585607,
+        "lon": 8.2990062
+      },
+      "point1": {
+        "lat": 40.6586376,
+        "lon": 8.2988981
+      },
+      "point2": {
+        "lat": 40.6584838,
+        "lon": 8.2991143
+      },
+      "track_direction_deg": 43.13,
+      "line_direction_deg": 133.13,
+      "track_width_m": 25.0,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka6481.tkk",
+    "name": "Polenta & Motori - circuito Riccardo Borile",
+    "city": "Vo' Euganeo",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 45.3226745,
+        "lon": 11.6167804
+      },
+      "point1": {
+        "lat": 45.3227128,
+        "lon": 11.616762
+      },
+      "point2": {
+        "lat": 45.3226362,
+        "lon": 11.6167988
+      },
+      "track_direction_deg": 71.33,
+      "line_direction_deg": 161.33,
+      "track_width_m": 9.0,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka64ex.tkk",
+    "name": "KCE Misanino",
+    "city": "Misanino",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 43.966331,
+        "lon": 12.6863249
+      },
+      "point1": {
+        "lat": 43.9664043,
+        "lon": 12.6863859
+      },
+      "point2": {
+        "lat": 43.9662577,
+        "lon": 12.6862639
+      },
+      "track_direction_deg": 120.93,
+      "line_direction_deg": 210.93,
+      "track_width_m": 19.0,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka64g4.tkk",
+    "name": "Kartodromo Vebekart Lunga",
+    "city": "VeBeKartL",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 41.3466775,
+        "lon": 16.1919315
+      },
+      "point1": {
+        "lat": 41.3467112,
+        "lon": 16.1919146
+      },
+      "point2": {
+        "lat": 41.3466438,
+        "lon": 16.1919484
+      },
+      "track_direction_deg": 69.4,
+      "line_direction_deg": 159.4,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka64ic.tkk",
+    "name": "Kartodromo Vebekart Corta",
+    "city": "VeBeKartC",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 41.3466775,
+        "lon": 16.1919315
+      },
+      "point1": {
+        "lat": 41.3467111,
+        "lon": 16.1919145
+      },
+      "point2": {
+        "lat": 41.3466439,
+        "lon": 16.1919485
+      },
+      "track_direction_deg": 69.2,
+      "line_direction_deg": 159.2,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka64ka.tkk",
+    "name": "Kartodromo Pista Fluida",
+    "city": "Pista Fluida",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 42.0269128,
+        "lon": 14.7427476
+      },
+      "point1": {
+        "lat": 42.0270221,
+        "lon": 14.7427121
+      },
+      "point2": {
+        "lat": 42.0268035,
+        "lon": 14.7427831
+      },
+      "track_direction_deg": 76.42,
+      "line_direction_deg": 166.42,
+      "track_width_m": 25.0,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka64md.tkk",
+    "name": "Cooperativa sportiva sole luna",
+    "city": "VittoriaSole",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 36.965817,
+        "lon": 14.4613653
+      },
+      "point1": {
+        "lat": 36.9657719,
+        "lon": 14.4613048
+      },
+      "point2": {
+        "lat": 36.9658621,
+        "lon": 14.4614258
+      },
+      "track_direction_deg": 316.95,
+      "line_direction_deg": 46.95,
+      "track_width_m": 14.7,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka64sd.tkk",
+    "name": "Autodromo Gianni De Luca",
+    "city": "Airola",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 41.0613897,
+        "lon": 14.5922366
+      },
+      "point1": {
+        "lat": 41.0614215,
+        "lon": 14.5922143
+      },
+      "point2": {
+        "lat": 41.0613579,
+        "lon": 14.5922589
+      },
+      "track_direction_deg": 62.12,
+      "line_direction_deg": 152.12,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka64tl.tkk",
+    "name": "Autodromo Di Pergusa",
+    "city": "Pergusa",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 37.5201165,
+        "lon": 14.305339
+      },
+      "point1": {
+        "lat": 37.5201476,
+        "lon": 14.3053162
+      },
+      "point2": {
+        "lat": 37.5200854,
+        "lon": 14.3053618
+      },
+      "track_direction_deg": 59.79,
+      "line_direction_deg": 149.79,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka64uu.tkk",
+    "name": "Parco Motori La Chiusa",
+    "city": "La Chiusa",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 43.5603741,
+        "lon": 13.3261658
+      },
+      "point1": {
+        "lat": 43.5603491,
+        "lon": 13.3262015
+      },
+      "point2": {
+        "lat": 43.5603991,
+        "lon": 13.3261301
+      },
+      "track_direction_deg": 224.0,
+      "line_direction_deg": 314.0,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka64vz.tkk",
+    "name": "Raceland",
+    "city": "Raceland",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 45.5179481,
+        "lon": 11.4615148
+      },
+      "point1": {
+        "lat": 45.5179791,
+        "lon": 11.4614886
+      },
+      "point2": {
+        "lat": 45.5179171,
+        "lon": 11.461541
+      },
+      "track_direction_deg": 59.37,
+      "line_direction_deg": 149.37,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka64wd.tkk",
+    "name": "Kartodromo Città della Speranza",
+    "city": "Arzignano",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 45.5076606,
+        "lon": 11.3627483
+      },
+      "point1": {
+        "lat": 45.5076235,
+        "lon": 11.3627697
+      },
+      "point2": {
+        "lat": 45.5076977,
+        "lon": 11.3627269
+      },
+      "track_direction_deg": 248.02,
+      "line_direction_deg": 338.02,
+      "track_width_m": 8.9,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka64wu.tkk",
+    "name": "Kartodromo Iscaro",
+    "city": "Iscaro",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 41.0499684,
+        "lon": 14.7762901
+      },
+      "point1": {
+        "lat": 41.049918,
+        "lon": 14.7762085
+      },
+      "point2": {
+        "lat": 41.0500188,
+        "lon": 14.7763717
+      },
+      "track_direction_deg": 320.68,
+      "line_direction_deg": 50.68,
+      "track_width_m": 17.7,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka64x6.tkk",
+    "name": "Kartodromo Orsoleo",
+    "city": "Roccanova",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 40.2411933,
+        "lon": 16.2335032
+      },
+      "point1": {
+        "lat": 40.2411875,
+        "lon": 16.2335497
+      },
+      "point2": {
+        "lat": 40.2411991,
+        "lon": 16.2334567
+      },
+      "track_direction_deg": 189.21,
+      "line_direction_deg": 279.21,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka650y.tkk",
+    "name": "Pista dell'Adriatico",
+    "city": "Adriatico",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 42.4706556,
+        "lon": 14.0943283
+      },
+      "point1": {
+        "lat": 42.4706756,
+        "lon": 14.0942878
+      },
+      "point2": {
+        "lat": 42.4706356,
+        "lon": 14.0943688
+      },
+      "track_direction_deg": 33.76,
+      "line_direction_deg": 123.76,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka6517.tkk",
+    "name": "Karting Torraca",
+    "city": "Torraca",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 40.1148329,
+        "lon": 15.6520232
+      },
+      "point1": {
+        "lat": 40.114807,
+        "lon": 15.6519905
+      },
+      "point2": {
+        "lat": 40.1148588,
+        "lon": 15.6520559
+      },
+      "track_direction_deg": 313.97,
+      "line_direction_deg": 43.97,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka651k.tkk",
+    "name": "Pista Green Valley",
+    "city": "GreenValleyK",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 38.1460552,
+        "lon": 14.819805
+      },
+      "point1": {
+        "lat": 38.1460808,
+        "lon": 14.8197338
+      },
+      "point2": {
+        "lat": 38.1460296,
+        "lon": 14.8198762
+      },
+      "track_direction_deg": 24.58,
+      "line_direction_deg": 114.58,
+      "track_width_m": 13.7,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka6539.tkk",
+    "name": "Karting Club Morcone",
+    "city": "Morcone",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 41.3658401,
+        "lon": 14.7041013
+      },
+      "point1": {
+        "lat": 41.3658536,
+        "lon": 14.7040569
+      },
+      "point2": {
+        "lat": 41.3658266,
+        "lon": 14.7041457
+      },
+      "track_direction_deg": 22.0,
+      "line_direction_deg": 112.0,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka65fl.tkk",
+    "name": "Oasi Kart",
+    "city": "Pista Oasi",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 46.1450459,
+        "lon": 8.3068841
+      },
+      "point1": {
+        "lat": 46.1450122,
+        "lon": 8.3068659
+      },
+      "point2": {
+        "lat": 46.1450796,
+        "lon": 8.3069023
+      },
+      "track_direction_deg": 290.49,
+      "line_direction_deg": 20.49,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka65tf.tkk",
+    "name": "Autocross Torchiarolo - Autodromo del Salento",
+    "city": "Torchiarolo",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 40.4742382,
+        "lon": 18.0624975
+      },
+      "point1": {
+        "lat": 40.4741631,
+        "lon": 18.0625994
+      },
+      "point2": {
+        "lat": 40.4743133,
+        "lon": 18.0623956
+      },
+      "track_direction_deg": 224.07,
+      "line_direction_deg": 314.07,
+      "track_width_m": 24.0,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka65th.tkk",
+    "name": "Pista autocross Veronella",
+    "city": "Veronella",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 45.3463033,
+        "lon": 11.3035462
+      },
+      "point1": {
+        "lat": 45.3463234,
+        "lon": 11.3033888
+      },
+      "point2": {
+        "lat": 45.3462832,
+        "lon": 11.3037036
+      },
+      "track_direction_deg": 10.3,
+      "line_direction_deg": 100.3,
+      "track_width_m": 25.0,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka669g.tkk",
+    "name": "Pista Fanelli",
+    "city": "Torricella",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 40.3704,
+        "lon": 17.5190021
+      },
+      "point1": {
+        "lat": 40.3704223,
+        "lon": 17.5190312
+      },
+      "point2": {
+        "lat": 40.3703777,
+        "lon": 17.518973
+      },
+      "track_direction_deg": 134.86,
+      "line_direction_deg": 224.86,
+      "track_width_m": 7.0,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka669v.tkk",
+    "name": "Codogno Circuit",
+    "city": "Codogno",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 45.1543787,
+        "lon": 9.6810901
+      },
+      "point1": {
+        "lat": 45.1543522,
+        "lon": 9.6810928
+      },
+      "point2": {
+        "lat": 45.1544052,
+        "lon": 9.6810874
+      },
+      "track_direction_deg": 265.87,
+      "line_direction_deg": 355.87,
+      "track_width_m": 5.9,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka66c1.tkk",
+    "name": "Kartodromo Dino Ferrari",
+    "city": "Dino Ferrari",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 43.1515142,
+        "lon": 13.7688998
+      },
+      "point1": {
+        "lat": 43.1514397,
+        "lon": 13.768923
+      },
+      "point2": {
+        "lat": 43.1515887,
+        "lon": 13.7688766
+      },
+      "track_direction_deg": 257.21,
+      "line_direction_deg": 347.21,
+      "track_width_m": 17.0,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka66cd.tkk",
+    "name": "Autodromo di Vallelunga",
+    "city": "VallelungaCl",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 42.1577014,
+        "lon": 12.3689057
+      },
+      "point1": {
+        "lat": 42.1576876,
+        "lon": 12.368792
+      },
+      "point2": {
+        "lat": 42.1577152,
+        "lon": 12.3690194
+      },
+      "track_direction_deg": 350.69,
+      "line_direction_deg": 80.69,
+      "track_width_m": 19.0,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka66cw.tkk",
+    "name": "Karting Stella",
+    "city": "StellaK",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 42.8756833,
+        "lon": 13.8067761
+      },
+      "point1": {
+        "lat": 42.875648,
+        "lon": 13.8066566
+      },
+      "point2": {
+        "lat": 42.8757186,
+        "lon": 13.8068956
+      },
+      "track_direction_deg": 338.05,
+      "line_direction_deg": 68.05,
+      "track_width_m": 21.0,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka66cz.tkk",
+    "name": "Kartodromo delle Zolfare",
+    "city": "Zolfare",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 37.5166783,
+        "lon": 14.1060947
+      },
+      "point1": {
+        "lat": 37.5166886,
+        "lon": 14.1060512
+      },
+      "point2": {
+        "lat": 37.516668,
+        "lon": 14.1061382
+      },
+      "track_direction_deg": 16.57,
+      "line_direction_deg": 106.57,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka66d2.tkk",
+    "name": "Autodromo di Lombardore",
+    "city": "Lombardore",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 45.2368367,
+        "lon": 7.7247554
+      },
+      "point1": {
+        "lat": 45.236945,
+        "lon": 7.7247399
+      },
+      "point2": {
+        "lat": 45.2367284,
+        "lon": 7.7247709
+      },
+      "track_direction_deg": 84.26,
+      "line_direction_deg": 174.26,
+      "track_width_m": 24.2,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka66ho.tkk",
+    "name": "Sardinia Circuit WS98 - Pista di Tramatza",
+    "city": "Tramatza",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 39.9873691,
+        "lon": 8.6464589
+      },
+      "point1": {
+        "lat": 39.9874304,
+        "lon": 8.6465676
+      },
+      "point2": {
+        "lat": 39.9873078,
+        "lon": 8.6463502
+      },
+      "track_direction_deg": 143.62,
+      "line_direction_deg": 233.62,
+      "track_width_m": 23.0,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka66hz.tkk",
+    "name": "Poggio Karting Club",
+    "city": "Poggiomarino",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 40.8051676,
+        "lon": 14.5535591
+      },
+      "point1": {
+        "lat": 40.8051128,
+        "lon": 14.5536607
+      },
+      "point2": {
+        "lat": 40.8052224,
+        "lon": 14.5534575
+      },
+      "track_direction_deg": 215.51,
+      "line_direction_deg": 305.51,
+      "track_width_m": 21.0,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka66i3.tkk",
+    "name": "Kartodromo Warriors",
+    "city": "Bagheria",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 38.0729599,
+        "lon": 13.4987588
+      },
+      "point1": {
+        "lat": 38.0729894,
+        "lon": 13.4987164
+      },
+      "point2": {
+        "lat": 38.0729304,
+        "lon": 13.4988012
+      },
+      "track_direction_deg": 41.42,
+      "line_direction_deg": 131.42,
+      "track_width_m": 9.9,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka66if.tkk",
+    "name": "Pista Tito",
+    "city": "Tito",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 40.5978259,
+        "lon": 15.7246208
+      },
+      "point1": {
+        "lat": 40.5978301,
+        "lon": 15.7245738
+      },
+      "point2": {
+        "lat": 40.5978217,
+        "lon": 15.7246678
+      },
+      "track_direction_deg": 6.78,
+      "line_direction_deg": 96.78,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka66jk.tkk",
+    "name": "Circuito Kinisia",
+    "city": "Kinisia V1",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 37.8981513,
+        "lon": 12.5792757
+      },
+      "point1": {
+        "lat": 37.898166,
+        "lon": 12.5793204
+      },
+      "point2": {
+        "lat": 37.8981366,
+        "lon": 12.579231
+      },
+      "track_direction_deg": 157.39,
+      "line_direction_deg": 247.39,
+      "track_width_m": 8.5,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka66kk.tkk",
+    "name": "Kart Show",
+    "city": "Torrette",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 43.7968857,
+        "lon": 13.0962729
+      },
+      "point1": {
+        "lat": 43.7968654,
+        "lon": 13.0962318
+      },
+      "point2": {
+        "lat": 43.796906,
+        "lon": 13.096314
+      },
+      "track_direction_deg": 325.56,
+      "line_direction_deg": 55.56,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka66nx.tkk",
+    "name": "Autodromo Riccardo Paletti - Varano de' Melegari",
+    "city": "Varano CIV",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 44.6806702,
+        "lon": 10.021037
+      },
+      "point1": {
+        "lat": 44.6807502,
+        "lon": 10.0210396
+      },
+      "point2": {
+        "lat": 44.6805902,
+        "lon": 10.0210344
+      },
+      "track_direction_deg": 91.31,
+      "line_direction_deg": 181.31,
+      "track_width_m": 17.8,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka66p6.tkk",
+    "name": "Pista Ayrton Senna Marigliano",
+    "city": "Marigliano",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 40.9421713,
+        "lon": 14.4387288
+      },
+      "point1": {
+        "lat": 40.9420733,
+        "lon": 14.4386559
+      },
+      "point2": {
+        "lat": 40.9422693,
+        "lon": 14.4388017
+      },
+      "track_direction_deg": 299.35,
+      "line_direction_deg": 29.35,
+      "track_width_m": 25.0,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka66po.tkk",
+    "name": "Pista il Geko",
+    "city": "Geko",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 43.903802,
+        "lon": 11.0248581
+      },
+      "point1": {
+        "lat": 43.903766,
+        "lon": 11.0248595
+      },
+      "point2": {
+        "lat": 43.903838,
+        "lon": 11.0248567
+      },
+      "track_direction_deg": 268.35,
+      "line_direction_deg": 358.35,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka66rs.tkk",
+    "name": "Franciacorta Karting Track",
+    "city": "F.Corta Var1",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 45.5132433,
+        "lon": 10.0050887
+      },
+      "point1": {
+        "lat": 45.513299,
+        "lon": 10.0050859
+      },
+      "point2": {
+        "lat": 45.5131876,
+        "lon": 10.0050915
+      },
+      "track_direction_deg": 88.02,
+      "line_direction_deg": 178.02,
+      "track_width_m": 12.4,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka66sl.tkk",
+    "name": "Autodromo Riccardo Paletti - Varano de' Melegari",
+    "city": "Varano Short",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 44.6806453,
+        "lon": 10.0210362
+      },
+      "point1": {
+        "lat": 44.6807253,
+        "lon": 10.0210387
+      },
+      "point2": {
+        "lat": 44.6805653,
+        "lon": 10.0210337
+      },
+      "track_direction_deg": 91.25,
+      "line_direction_deg": 181.25,
+      "track_width_m": 17.8,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka66t4.tkk",
+    "name": "Kartodromo Touch & Go",
+    "city": "TouchGoK",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 40.6726338,
+        "lon": 17.2758129
+      },
+      "point1": {
+        "lat": 40.6726564,
+        "lon": 17.275776
+      },
+      "point2": {
+        "lat": 40.6726112,
+        "lon": 17.2758498
+      },
+      "track_direction_deg": 38.89,
+      "line_direction_deg": 128.89,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka66vg.tkk",
+    "name": "Pista KART Mondovì",
+    "city": "Mondovi",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 44.4098586,
+        "lon": 7.8107295
+      },
+      "point1": {
+        "lat": 44.4098639,
+        "lon": 7.8106797
+      },
+      "point2": {
+        "lat": 44.4098533,
+        "lon": 7.8107793
+      },
+      "track_direction_deg": 8.51,
+      "line_direction_deg": 98.51,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka66vy.tkk",
+    "name": "Autodromo MBR Vincenzo Florio",
+    "city": "Florio",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 38.1068652,
+        "lon": 13.2294785
+      },
+      "point1": {
+        "lat": 38.1068308,
+        "lon": 13.2294917
+      },
+      "point2": {
+        "lat": 38.1068996,
+        "lon": 13.2294653
+      },
+      "track_direction_deg": 253.19,
+      "line_direction_deg": 343.19,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka66xe.tkk",
+    "name": "Circuito Internazionale Il Sagittario",
+    "city": "SagittarioV2",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 41.4056631,
+        "lon": 12.9843967
+      },
+      "point1": {
+        "lat": 41.4055736,
+        "lon": 12.984437
+      },
+      "point2": {
+        "lat": 41.4057526,
+        "lon": 12.9843564
+      },
+      "track_direction_deg": 251.33,
+      "line_direction_deg": 341.33,
+      "track_width_m": 21.0,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka67tr.tkk",
+    "name": "Pilastri Moto Club Cà Noa",
+    "city": "Pilastri",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 44.9371614,
+        "lon": 11.2960271
+      },
+      "point1": {
+        "lat": 44.93718,
+        "lon": 11.2959913
+      },
+      "point2": {
+        "lat": 44.9371428,
+        "lon": 11.2960629
+      },
+      "track_direction_deg": 36.3,
+      "line_direction_deg": 126.3,
+      "track_width_m": 7.0,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka67uj.tkk",
+    "name": "Kartodromo della Murgia",
+    "city": "Murgia",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 40.8656748,
+        "lon": 16.750923
+      },
+      "point1": {
+        "lat": 40.8656784,
+        "lon": 16.7508757
+      },
+      "point2": {
+        "lat": 40.8656712,
+        "lon": 16.7509703
+      },
+      "track_direction_deg": 5.81,
+      "line_direction_deg": 95.81,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka67vw.tkk",
+    "name": "MX Park La Barbaiola",
+    "city": "Barbaiola",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 44.4627765,
+        "lon": 10.9100274
+      },
+      "point1": {
+        "lat": 44.4627769,
+        "lon": 10.909977
+      },
+      "point2": {
+        "lat": 44.4627761,
+        "lon": 10.9100778
+      },
+      "track_direction_deg": 0.6,
+      "line_direction_deg": 90.6,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka67yh.tkk",
+    "name": "Kartodromo Bormio",
+    "city": "Bormio",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 46.4499305,
+        "lon": 10.3593386
+      },
+      "point1": {
+        "lat": 46.4499415,
+        "lon": 10.3593883
+      },
+      "point2": {
+        "lat": 46.4499195,
+        "lon": 10.3592889
+      },
+      "track_direction_deg": 162.21,
+      "line_direction_deg": 252.21,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka67z1.tkk",
+    "name": "Kartodromo Lorisanna Grammichele",
+    "city": "Lorisanna",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 37.2092032,
+        "lon": 14.5821434
+      },
+      "point1": {
+        "lat": 37.2092101,
+        "lon": 14.5821877
+      },
+      "point2": {
+        "lat": 37.2091963,
+        "lon": 14.5820991
+      },
+      "track_direction_deg": 168.88,
+      "line_direction_deg": 258.88,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka6802.tkk",
+    "name": "Maggiora Offroad Arena Autocross",
+    "city": "Maggiora Aut",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 45.7031186,
+        "lon": 8.4170317
+      },
+      "point1": {
+        "lat": 45.7031207,
+        "lon": 8.4170831
+      },
+      "point2": {
+        "lat": 45.7031165,
+        "lon": 8.4169803
+      },
+      "track_direction_deg": 176.68,
+      "line_direction_deg": 266.68,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka682k.tkk",
+    "name": "Circuito Internazionale Le Colline Corta",
+    "city": "Chignolo PoC",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 45.1528457,
+        "lon": 9.473695
+      },
+      "point1": {
+        "lat": 45.1528167,
+        "lon": 9.4737038
+      },
+      "point2": {
+        "lat": 45.1528747,
+        "lon": 9.4736862
+      },
+      "track_direction_deg": 257.95,
+      "line_direction_deg": 347.95,
+      "track_width_m": 6.6,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka684c.tkk",
+    "name": "Autocross Club Romano Canavese",
+    "city": "RomanoCross",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 45.4250377,
+        "lon": 7.8990043
+      },
+      "point1": {
+        "lat": 45.4251278,
+        "lon": 7.8989416
+      },
+      "point2": {
+        "lat": 45.4249476,
+        "lon": 7.899067
+      },
+      "track_direction_deg": 63.95,
+      "line_direction_deg": 153.95,
+      "track_width_m": 22.3,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka684f.tkk",
+    "name": "Pista ICE Pragelato",
+    "city": "Pragelato",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 45.0149303,
+        "lon": 6.9453575
+      },
+      "point1": {
+        "lat": 45.0149426,
+        "lon": 6.9453097
+      },
+      "point2": {
+        "lat": 45.014918,
+        "lon": 6.9454053
+      },
+      "track_direction_deg": 20.02,
+      "line_direction_deg": 110.02,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka684g.tkk",
+    "name": "Centro Guida Sicura \"Alle Cave\"",
+    "city": "Vittorio Cav",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 45.9545265,
+        "lon": 12.3318566
+      },
+      "point1": {
+        "lat": 45.9545513,
+        "lon": 12.3318074
+      },
+      "point2": {
+        "lat": 45.9545017,
+        "lon": 12.3319058
+      },
+      "track_direction_deg": 36.0,
+      "line_direction_deg": 126.0,
+      "track_width_m": 9.4,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka6869.tkk",
+    "name": "Kartodromo Fasano",
+    "city": "Fasano",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 40.8623708,
+        "lon": 17.3775598
+      },
+      "point1": {
+        "lat": 40.8623906,
+        "lon": 17.3775995
+      },
+      "point2": {
+        "lat": 40.862351,
+        "lon": 17.3775201
+      },
+      "track_direction_deg": 146.56,
+      "line_direction_deg": 236.56,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka686o.tkk",
+    "name": "Pista di Tolmezzo 58 Motor Sport",
+    "city": "Tolmezzo",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 46.395247,
+        "lon": 13.0074342
+      },
+      "point1": {
+        "lat": 46.3952219,
+        "lon": 13.0073968
+      },
+      "point2": {
+        "lat": 46.3952721,
+        "lon": 13.0074716
+      },
+      "track_direction_deg": 315.75,
+      "line_direction_deg": 45.75,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka68bq.tkk",
+    "name": "Pista Jonica",
+    "city": "JonicaK",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 40.6148025,
+        "lon": 17.0331111
+      },
+      "point1": {
+        "lat": 40.6147945,
+        "lon": 17.0330354
+      },
+      "point2": {
+        "lat": 40.6148105,
+        "lon": 17.0331868
+      },
+      "track_direction_deg": 352.1,
+      "line_direction_deg": 82.1,
+      "track_width_m": 12.9,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka68dm.tkk",
+    "name": "Kartodromo di Cavalletto",
+    "city": "Cavalletto",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 42.3026844,
+        "lon": 13.452895
+      },
+      "point1": {
+        "lat": 42.3026942,
+        "lon": 13.4528482
+      },
+      "point2": {
+        "lat": 42.3026746,
+        "lon": 13.4529418
+      },
+      "track_direction_deg": 15.8,
+      "line_direction_deg": 105.8,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka68dy.tkk",
+    "name": "Pista Moscufo - DBM Race",
+    "city": "Moscufo",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 42.4593496,
+        "lon": 14.0829542
+      },
+      "point1": {
+        "lat": 42.4593335,
+        "lon": 14.0829106
+      },
+      "point2": {
+        "lat": 42.4593657,
+        "lon": 14.0829978
+      },
+      "track_direction_deg": 333.34,
+      "line_direction_deg": 63.34,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka68h4.tkk",
+    "name": "Kartodromo Dino Falco",
+    "city": "Dino Falco",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 39.6567605,
+        "lon": 16.521654
+      },
+      "point1": {
+        "lat": 39.6567761,
+        "lon": 16.5216961
+      },
+      "point2": {
+        "lat": 39.6567449,
+        "lon": 16.5216119
+      },
+      "track_direction_deg": 154.26,
+      "line_direction_deg": 244.26,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka68hh.tkk",
+    "name": "Extrema Kart",
+    "city": "Extrema",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 44.8316789,
+        "lon": 11.223851
+      },
+      "point1": {
+        "lat": 44.8317221,
+        "lon": 11.2238849
+      },
+      "point2": {
+        "lat": 44.8316357,
+        "lon": 11.2238171
+      },
+      "track_direction_deg": 119.07,
+      "line_direction_deg": 209.07,
+      "track_width_m": 11.0,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka68kc.tkk",
+    "name": "Kartodromo Palazzo",
+    "city": "Palazzo",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 40.0323456,
+        "lon": 15.7713724
+      },
+      "point1": {
+        "lat": 40.0323166,
+        "lon": 15.7714003
+      },
+      "point2": {
+        "lat": 40.0323746,
+        "lon": 15.7713445
+      },
+      "track_direction_deg": 233.62,
+      "line_direction_deg": 323.62,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka68nk.tkk",
+    "name": "Nardò - Circle Track",
+    "city": "Nardo Circle",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 40.3190774,
+        "lon": 17.8053887
+      },
+      "point1": {
+        "lat": 40.3190668,
+        "lon": 17.8053574
+      },
+      "point2": {
+        "lat": 40.319088,
+        "lon": 17.80542
+      },
+      "track_direction_deg": 336.01,
+      "line_direction_deg": 66.01,
+      "track_width_m": 5.8,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka68ou.tkk",
+    "name": "Kartodromo Di Salandra",
+    "city": "Salandra",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 40.5607489,
+        "lon": 16.3119021
+      },
+      "point1": {
+        "lat": 40.5607573,
+        "lon": 16.3119482
+      },
+      "point2": {
+        "lat": 40.5607405,
+        "lon": 16.311856
+      },
+      "track_direction_deg": 166.57,
+      "line_direction_deg": 256.57,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka68px.tkk",
+    "name": "Nardò - Handling Track",
+    "city": "Nardo Handle",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 40.3183126,
+        "lon": 17.8240443
+      },
+      "point1": {
+        "lat": 40.3182775,
+        "lon": 17.8240549
+      },
+      "point2": {
+        "lat": 40.3183477,
+        "lon": 17.8240337
+      },
+      "track_direction_deg": 257.05,
+      "line_direction_deg": 347.05,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka68q6.tkk",
+    "name": "Kartodromo della Palomba",
+    "city": "Palomba",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 40.6805691,
+        "lon": 16.6240464
+      },
+      "point1": {
+        "lat": 40.6806049,
+        "lon": 16.6240514
+      },
+      "point2": {
+        "lat": 40.6805333,
+        "lon": 16.6240414
+      },
+      "track_direction_deg": 95.99,
+      "line_direction_deg": 185.99,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka6978.tkk",
+    "name": "Pista E.Mainenti di Ramacca",
+    "city": "Ramacca",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 37.3940921,
+        "lon": 14.6225053
+      },
+      "point1": {
+        "lat": 37.3940695,
+        "lon": 14.6225877
+      },
+      "point2": {
+        "lat": 37.3941147,
+        "lon": 14.6224229
+      },
+      "track_direction_deg": 199.02,
+      "line_direction_deg": 289.02,
+      "track_width_m": 15.4,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka698y.tkk",
+    "name": "Pista di Camatrice",
+    "city": "Camatrice",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 37.4284197,
+        "lon": 14.2072371
+      },
+      "point1": {
+        "lat": 37.4284256,
+        "lon": 14.2072818
+      },
+      "point2": {
+        "lat": 37.4284138,
+        "lon": 14.2071924
+      },
+      "track_direction_deg": 170.53,
+      "line_direction_deg": 260.53,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka69bb.tkk",
+    "name": "Kartodromo Elio de Angelis",
+    "city": "E.AngelisK",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 37.2445677,
+        "lon": 13.9137877
+      },
+      "point1": {
+        "lat": 37.2446031,
+        "lon": 13.9137959
+      },
+      "point2": {
+        "lat": 37.2445323,
+        "lon": 13.9137795
+      },
+      "track_direction_deg": 100.5,
+      "line_direction_deg": 190.5,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka69bh.tkk",
+    "name": "Pista Kart Ragusa",
+    "city": "RagusaK",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 36.9384929,
+        "lon": 14.5282843
+      },
+      "point1": {
+        "lat": 36.9385479,
+        "lon": 14.5282289
+      },
+      "point2": {
+        "lat": 36.9384379,
+        "lon": 14.5283397
+      },
+      "track_direction_deg": 51.19,
+      "line_direction_deg": 141.19,
+      "track_width_m": 15.7,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka69d8.tkk",
+    "name": "Centro Sportivo Dinamic",
+    "city": "Banzi",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 40.9295467,
+        "lon": 16.0152834
+      },
+      "point1": {
+        "lat": 40.929535,
+        "lon": 16.0153284
+      },
+      "point2": {
+        "lat": 40.9295584,
+        "lon": 16.0152384
+      },
+      "track_direction_deg": 199.04,
+      "line_direction_deg": 289.04,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka69d9.tkk",
+    "name": "Pista Go Kart Lupetti Frigole",
+    "city": "Frigole",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 40.4335026,
+        "lon": 18.2288855
+      },
+      "point1": {
+        "lat": 40.433538,
+        "lon": 18.2288597
+      },
+      "point2": {
+        "lat": 40.4334672,
+        "lon": 18.2289113
+      },
+      "track_direction_deg": 60.92,
+      "line_direction_deg": 150.92,
+      "track_width_m": 9.0,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka69fn.tkk",
+    "name": "Karting Sporting Fraigas",
+    "city": "Ozieri",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 40.6199061,
+        "lon": 8.9744631
+      },
+      "point1": {
+        "lat": 40.6199094,
+        "lon": 8.9745845
+      },
+      "point2": {
+        "lat": 40.6199028,
+        "lon": 8.9743417
+      },
+      "track_direction_deg": 177.97,
+      "line_direction_deg": 267.97,
+      "track_width_m": 20.5,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka69kt.tkk",
+    "name": "Karting Club Schumacher Junior",
+    "city": "Acerra",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 40.9670467,
+        "lon": 14.3683014
+      },
+      "point1": {
+        "lat": 40.9671339,
+        "lon": 14.3683855
+      },
+      "point2": {
+        "lat": 40.9669595,
+        "lon": 14.3682173
+      },
+      "track_direction_deg": 126.07,
+      "line_direction_deg": 216.07,
+      "track_width_m": 24.0,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka69mg.tkk",
+    "name": "Safety-Park Cross",
+    "city": "Safety Cross",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 46.4316384,
+        "lon": 11.3108202
+      },
+      "point1": {
+        "lat": 46.4315463,
+        "lon": 11.310752
+      },
+      "point2": {
+        "lat": 46.4317305,
+        "lon": 11.3108884
+      },
+      "track_direction_deg": 297.05,
+      "line_direction_deg": 27.05,
+      "track_width_m": 23.0,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka69nr.tkk",
+    "name": "Minimotodromo G.B. Schiatti",
+    "city": "Montecchio",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 43.3086879,
+        "lon": 11.9243061
+      },
+      "point1": {
+        "lat": 43.3086546,
+        "lon": 11.9241585
+      },
+      "point2": {
+        "lat": 43.3087212,
+        "lon": 11.9244537
+      },
+      "track_direction_deg": 342.78,
+      "line_direction_deg": 72.78,
+      "track_width_m": 25.0,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka69nz.tkk",
+    "name": "Club Armerina 4x4",
+    "city": "Piazza Armer",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 37.4901455,
+        "lon": 14.3023181
+      },
+      "point1": {
+        "lat": 37.4901723,
+        "lon": 14.3023483
+      },
+      "point2": {
+        "lat": 37.4901187,
+        "lon": 14.3022879
+      },
+      "track_direction_deg": 131.77,
+      "line_direction_deg": 221.77,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka69u3.tkk",
+    "name": "Motocross Dorno",
+    "city": "Dorno Main",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 45.1604907,
+        "lon": 8.9699462
+      },
+      "point1": {
+        "lat": 45.160495,
+        "lon": 8.9700026
+      },
+      "point2": {
+        "lat": 45.1604864,
+        "lon": 8.9698898
+      },
+      "track_direction_deg": 173.78,
+      "line_direction_deg": 263.78,
+      "track_width_m": 8.9,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka69v4.tkk",
+    "name": "Circuito Internazionale Del Volturno",
+    "city": "Limatola",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 41.156879,
+        "lon": 14.3721058
+      },
+      "point1": {
+        "lat": 41.1569149,
+        "lon": 14.3721033
+      },
+      "point2": {
+        "lat": 41.1568431,
+        "lon": 14.3721083
+      },
+      "track_direction_deg": 86.96,
+      "line_direction_deg": 176.96,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka69y8.tkk",
+    "name": "Kartodromo Fiumefreddo",
+    "city": "Fiumefreddo",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 37.8010511,
+        "lon": 15.2126773
+      },
+      "point1": {
+        "lat": 37.8010189,
+        "lon": 15.2126736
+      },
+      "point2": {
+        "lat": 37.8010833,
+        "lon": 15.212681
+      },
+      "track_direction_deg": 275.23,
+      "line_direction_deg": 5.23,
+      "track_width_m": 7.2,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka6a6v.tkk",
+    "name": "Cerrina Race Track Lungo",
+    "city": "CerrinaLungo",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 45.0003469,
+        "lon": 7.4884051
+      },
+      "point1": {
+        "lat": 45.0003803,
+        "lon": 7.4884241
+      },
+      "point2": {
+        "lat": 45.0003135,
+        "lon": 7.4883861
+      },
+      "track_direction_deg": 111.89,
+      "line_direction_deg": 201.89,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka6a75.tkk",
+    "name": "Cerrina Race Track",
+    "city": "Cerrina",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 45.0002787,
+        "lon": 7.4886452
+      },
+      "point1": {
+        "lat": 45.0003121,
+        "lon": 7.4886642
+      },
+      "point2": {
+        "lat": 45.0002453,
+        "lon": 7.4886262
+      },
+      "track_direction_deg": 111.91,
+      "line_direction_deg": 201.91,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka6a93.tkk",
+    "name": "Pista minimoto San Mauro Mare",
+    "city": "San Mauro",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 44.1579467,
+        "lon": 12.4380639
+      },
+      "point1": {
+        "lat": 44.1579703,
+        "lon": 12.4381017
+      },
+      "point2": {
+        "lat": 44.1579231,
+        "lon": 12.4380261
+      },
+      "track_direction_deg": 138.94,
+      "line_direction_deg": 228.94,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka6aaz.tkk",
+    "name": "Mondokart Racing",
+    "city": "Mondokart",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 45.5389734,
+        "lon": 9.0067065
+      },
+      "point1": {
+        "lat": 45.5390433,
+        "lon": 9.006688
+      },
+      "point2": {
+        "lat": 45.5389035,
+        "lon": 9.006725
+      },
+      "track_direction_deg": 79.51,
+      "line_direction_deg": 169.51,
+      "track_width_m": 15.8,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka6ab8.tkk",
+    "name": "Cerrina Race Track Corto",
+    "city": "CerrinaCorto",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 45.0003469,
+        "lon": 7.4884051
+      },
+      "point1": {
+        "lat": 45.0003802,
+        "lon": 7.4884245
+      },
+      "point2": {
+        "lat": 45.0003136,
+        "lon": 7.4883857
+      },
+      "track_direction_deg": 112.39,
+      "line_direction_deg": 202.39,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka6ac0.tkk",
+    "name": "Cerrina Race Track",
+    "city": "Cerrina IT",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 45.0003471,
+        "lon": 7.4884045
+      },
+      "point1": {
+        "lat": 45.0003805,
+        "lon": 7.4884235
+      },
+      "point2": {
+        "lat": 45.0003137,
+        "lon": 7.4883855
+      },
+      "track_direction_deg": 111.9,
+      "line_direction_deg": 201.9,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka6ac2.tkk",
+    "name": "Cerrina Motard",
+    "city": "Cerrina Mot",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 45.0003337,
+        "lon": 7.4884516
+      },
+      "point1": {
+        "lat": 45.0003671,
+        "lon": 7.4884706
+      },
+      "point2": {
+        "lat": 45.0003003,
+        "lon": 7.4884326
+      },
+      "track_direction_deg": 111.9,
+      "line_direction_deg": 201.9,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka6afo.tkk",
+    "name": "Xbikes",
+    "city": "X Bikes",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 44.8580702,
+        "lon": 11.5542727
+      },
+      "point1": {
+        "lat": 44.85804,
+        "lon": 11.55426
+      },
+      "point2": {
+        "lat": 44.8581004,
+        "lon": 11.5542854
+      },
+      "track_direction_deg": 286.68,
+      "line_direction_deg": 16.68,
+      "track_width_m": 7.0,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka6ak4.tkk",
+    "name": "Ravenna International Off Road Circuit",
+    "city": "RavennaOffRd",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 44.3563069,
+        "lon": 12.2311324
+      },
+      "point1": {
+        "lat": 44.3563421,
+        "lon": 12.2311217
+      },
+      "point2": {
+        "lat": 44.3562717,
+        "lon": 12.2311431
+      },
+      "track_direction_deg": 77.73,
+      "line_direction_deg": 167.73,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka6dkn.tkk",
+    "name": "Franciacorta Karting Track",
+    "city": "F.Corta Var5",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 45.5143618,
+        "lon": 10.0069664
+      },
+      "point1": {
+        "lat": 45.514417,
+        "lon": 10.0069551
+      },
+      "point2": {
+        "lat": 45.5143066,
+        "lon": 10.0069777
+      },
+      "track_direction_deg": 81.84,
+      "line_direction_deg": 171.84,
+      "track_width_m": 12.4,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka6dup.tkk",
+    "name": "Franciacorta Karting Track",
+    "city": "F.Corta Var3",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 45.5143609,
+        "lon": 10.0069648
+      },
+      "point1": {
+        "lat": 45.5144163,
+        "lon": 10.0069553
+      },
+      "point2": {
+        "lat": 45.5143055,
+        "lon": 10.0069743
+      },
+      "track_direction_deg": 83.14,
+      "line_direction_deg": 173.14,
+      "track_width_m": 12.4,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka6dv7.tkk",
+    "name": "Castelletto Circuit",
+    "city": "Branduzzo V1",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 45.0708912,
+        "lon": 9.1055952
+      },
+      "point1": {
+        "lat": 45.0708646,
+        "lon": 9.1055814
+      },
+      "point2": {
+        "lat": 45.0709178,
+        "lon": 9.105609
+      },
+      "track_direction_deg": 290.05,
+      "line_direction_deg": 20.05,
+      "track_width_m": 6.3,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka6dva.tkk",
+    "name": "Kart Planet",
+    "city": "Planet V1",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 44.4956439,
+        "lon": 7.5038668
+      },
+      "point1": {
+        "lat": 44.49565,
+        "lon": 7.5039165
+      },
+      "point2": {
+        "lat": 44.4956378,
+        "lon": 7.5038171
+      },
+      "track_direction_deg": 170.16,
+      "line_direction_deg": 260.16,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka6dw2.tkk",
+    "name": "Pista del Mare",
+    "city": "Mare V2",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 43.2841588,
+        "lon": 10.5250989
+      },
+      "point1": {
+        "lat": 43.2841929,
+        "lon": 10.5250832
+      },
+      "point2": {
+        "lat": 43.2841247,
+        "lon": 10.5251146
+      },
+      "track_direction_deg": 71.53,
+      "line_direction_deg": 161.53,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka6dwe.tkk",
+    "name": "Franciacorta Karting Track",
+    "city": "F.Corta Var4",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 45.5143499,
+        "lon": 10.0069664
+      },
+      "point1": {
+        "lat": 45.5144048,
+        "lon": 10.0069527
+      },
+      "point2": {
+        "lat": 45.514295,
+        "lon": 10.0069801
+      },
+      "track_direction_deg": 80.1,
+      "line_direction_deg": 170.1,
+      "track_width_m": 12.4,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka6e0w.tkk",
+    "name": "Autodromo di Vallelunga",
+    "city": "VallelungaLo",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 42.1576997,
+        "lon": 12.3688909
+      },
+      "point1": {
+        "lat": 42.1576863,
+        "lon": 12.3687771
+      },
+      "point2": {
+        "lat": 42.1577131,
+        "lon": 12.3690047
+      },
+      "track_direction_deg": 350.96,
+      "line_direction_deg": 80.96,
+      "track_width_m": 19.0,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka6e1l.tkk",
+    "name": "Pista del Corallo",
+    "city": "CRLLO VERDE",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 40.658572,
+        "lon": 8.2990206
+      },
+      "point1": {
+        "lat": 40.6586489,
+        "lon": 8.2989126
+      },
+      "point2": {
+        "lat": 40.6584951,
+        "lon": 8.2991286
+      },
+      "track_direction_deg": 43.19,
+      "line_direction_deg": 133.19,
+      "track_width_m": 25.0,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka6e8t.tkk",
+    "name": "Autodromo Valle del Sele",
+    "city": "SeleVar2",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 40.6049193,
+        "lon": 14.949016
+      },
+      "point1": {
+        "lat": 40.6048836,
+        "lon": 14.9490214
+      },
+      "point2": {
+        "lat": 40.604955,
+        "lon": 14.9490106
+      },
+      "track_direction_deg": 263.49,
+      "line_direction_deg": 353.49,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka6ed0.tkk",
+    "name": "Circuito Internazionale d'Abruzzo",
+    "city": "Ortona VarK",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 42.3053938,
+        "lon": 14.3799423
+      },
+      "point1": {
+        "lat": 42.3054126,
+        "lon": 14.3800261
+      },
+      "point2": {
+        "lat": 42.305375,
+        "lon": 14.3798585
+      },
+      "track_direction_deg": 163.08,
+      "line_direction_deg": 253.08,
+      "track_width_m": 14.4,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka6ehw.tkk",
+    "name": "Circuito di Pomposa",
+    "city": "Pomposa K2",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 44.7111936,
+        "lon": 12.2167781
+      },
+      "point1": {
+        "lat": 44.7111871,
+        "lon": 12.2167283
+      },
+      "point2": {
+        "lat": 44.7112001,
+        "lon": 12.2168279
+      },
+      "track_direction_deg": 349.62,
+      "line_direction_deg": 79.62,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka6epa.tkk",
+    "name": "Circuito Kinisia",
+    "city": "Kinisia V2",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 37.8981624,
+        "lon": 12.5792941
+      },
+      "point1": {
+        "lat": 37.8981777,
+        "lon": 12.5793385
+      },
+      "point2": {
+        "lat": 37.8981471,
+        "lon": 12.5792497
+      },
+      "track_direction_deg": 156.35,
+      "line_direction_deg": 246.35,
+      "track_width_m": 8.5,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka6jxu.tkk",
+    "name": "Alberone Karting Club",
+    "city": "AlberoneK",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 46.1350338,
+        "lon": 13.5057359
+      },
+      "point1": {
+        "lat": 46.1350519,
+        "lon": 13.5058344
+      },
+      "point2": {
+        "lat": 46.1350157,
+        "lon": 13.5056374
+      },
+      "track_direction_deg": 165.13,
+      "line_direction_deg": 255.13,
+      "track_width_m": 15.7,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka6jzt.tkk",
+    "name": "Kartodromo Orobico",
+    "city": "OrobicoK",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 45.6798899,
+        "lon": 9.603668
+      },
+      "point1": {
+        "lat": 45.6799932,
+        "lon": 9.6036741
+      },
+      "point2": {
+        "lat": 45.6797866,
+        "lon": 9.6036619
+      },
+      "track_direction_deg": 92.38,
+      "line_direction_deg": 182.38,
+      "track_width_m": 23.0,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka6k2i.tkk",
+    "name": "Pista Azzurra - Borgo Ticino",
+    "city": "Borgo Ticino",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 45.7012962,
+        "lon": 8.5933886
+      },
+      "point1": {
+        "lat": 45.7013401,
+        "lon": 8.5932425
+      },
+      "point2": {
+        "lat": 45.7012523,
+        "lon": 8.5935347
+      },
+      "track_direction_deg": 23.28,
+      "line_direction_deg": 113.28,
+      "track_width_m": 24.7,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka6k47.tkk",
+    "name": "Pista Italia",
+    "city": "Pista Italia",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 41.0169135,
+        "lon": 13.9741092
+      },
+      "point1": {
+        "lat": 41.0168896,
+        "lon": 13.9740736
+      },
+      "point2": {
+        "lat": 41.0169374,
+        "lon": 13.9741448
+      },
+      "track_direction_deg": 318.36,
+      "line_direction_deg": 48.36,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka6k67.tkk",
+    "name": "Kartodromo Is Arenadas",
+    "city": "ArenadasK",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 39.9566992,
+        "lon": 9.6346633
+      },
+      "point1": {
+        "lat": 39.9566545,
+        "lon": 9.6345482
+      },
+      "point2": {
+        "lat": 39.9567439,
+        "lon": 9.6347784
+      },
+      "track_direction_deg": 333.14,
+      "line_direction_deg": 63.14,
+      "track_width_m": 22.0,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka6kak.tkk",
+    "name": "Kartodromo 90",
+    "city": "90K",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 40.897351,
+        "lon": 17.0344448
+      },
+      "point1": {
+        "lat": 40.8973727,
+        "lon": 17.0344828
+      },
+      "point2": {
+        "lat": 40.8973293,
+        "lon": 17.0344068
+      },
+      "track_direction_deg": 142.91,
+      "line_direction_deg": 232.91,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka6kcp.tkk",
+    "name": "Pista Karting Fondi",
+    "city": "Fondi",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 41.3430222,
+        "lon": 13.4130629
+      },
+      "point1": {
+        "lat": 41.3430559,
+        "lon": 13.4130461
+      },
+      "point2": {
+        "lat": 41.3429885,
+        "lon": 13.4130797
+      },
+      "track_direction_deg": 69.47,
+      "line_direction_deg": 159.47,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka6kh3.tkk",
+    "name": "KARTODROMO - MINIMOTODROMO DI CASALUCE",
+    "city": "CASALUCE",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 41.0150946,
+        "lon": 14.1951745
+      },
+      "point1": {
+        "lat": 41.0150595,
+        "lon": 14.1952777
+      },
+      "point2": {
+        "lat": 41.0151297,
+        "lon": 14.1950713
+      },
+      "track_direction_deg": 204.26,
+      "line_direction_deg": 294.26,
+      "track_width_m": 19.0,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka6ktp.tkk",
+    "name": "Kartodromo Lascari",
+    "city": "Lascari",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 37.9982912,
+        "lon": 13.9229937
+      },
+      "point1": {
+        "lat": 37.9983242,
+        "lon": 13.9229851
+      },
+      "point2": {
+        "lat": 37.9982582,
+        "lon": 13.9230023
+      },
+      "track_direction_deg": 78.47,
+      "line_direction_deg": 168.47,
+      "track_width_m": 7.5,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka6lg6.tkk",
+    "name": "Pista Salentina",
+    "city": "SalentinaK",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 39.8912234,
+        "lon": 18.133633
+      },
+      "point1": {
+        "lat": 39.8912272,
+        "lon": 18.1335805
+      },
+      "point2": {
+        "lat": 39.8912196,
+        "lon": 18.1336855
+      },
+      "track_direction_deg": 5.4,
+      "line_direction_deg": 95.4,
+      "track_width_m": 9.0,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka6lsu.tkk",
+    "name": "Riccione Kart e Moto",
+    "city": "RiccioneK",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 44.008032,
+        "lon": 12.63255
+      },
+      "point1": {
+        "lat": 44.0080895,
+        "lon": 12.6325355
+      },
+      "point2": {
+        "lat": 44.0079745,
+        "lon": 12.6325645
+      },
+      "track_direction_deg": 79.75,
+      "line_direction_deg": 169.75,
+      "track_width_m": 13.0,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka6m0u.tkk",
+    "name": "Pista del Lago Partinico",
+    "city": "Partinico",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 38.0086944,
+        "lon": 13.0946158
+      },
+      "point1": {
+        "lat": 38.0085889,
+        "lon": 13.0946386
+      },
+      "point2": {
+        "lat": 38.0087999,
+        "lon": 13.094593
+      },
+      "track_direction_deg": 260.34,
+      "line_direction_deg": 350.34,
+      "track_width_m": 23.8,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka6m25.tkk",
+    "name": "Circuito Internazionale di Triscina",
+    "city": "Triscina",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 37.5916642,
+        "lon": 12.7645523
+      },
+      "point1": {
+        "lat": 37.5916874,
+        "lon": 12.7645869
+      },
+      "point2": {
+        "lat": 37.591641,
+        "lon": 12.7645177
+      },
+      "track_direction_deg": 139.74,
+      "line_direction_deg": 229.74,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka6m4z.tkk",
+    "name": "Savignano - Pista di Motocross",
+    "city": "Savignano Pa",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 44.4701129,
+        "lon": 11.0423659
+      },
+      "point1": {
+        "lat": 44.4701335,
+        "lon": 11.0422726
+      },
+      "point2": {
+        "lat": 44.4700923,
+        "lon": 11.0424592
+      },
+      "track_direction_deg": 17.22,
+      "line_direction_deg": 107.22,
+      "track_width_m": 15.5,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka6m80.tkk",
+    "name": "Pista Verde",
+    "city": "Pista Verde",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 45.7370428,
+        "lon": 11.9969072
+      },
+      "point1": {
+        "lat": 45.737038,
+        "lon": 11.9968581
+      },
+      "point2": {
+        "lat": 45.7370476,
+        "lon": 11.9969563
+      },
+      "track_direction_deg": 351.96,
+      "line_direction_deg": 81.96,
+      "track_width_m": 7.7,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka6mbs.tkk",
+    "name": "Kartodromo River Karting",
+    "city": "RiverKart",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 38.1107478,
+        "lon": 14.7199066
+      },
+      "point1": {
+        "lat": 38.1107602,
+        "lon": 14.7200486
+      },
+      "point2": {
+        "lat": 38.1107354,
+        "lon": 14.7197646
+      },
+      "track_direction_deg": 173.68,
+      "line_direction_deg": 263.68,
+      "track_width_m": 25.0,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka6me1.tkk",
+    "name": "Kartodromo San Lorenzo",
+    "city": "San Lorenzo",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 39.6298402,
+        "lon": 8.9946598
+      },
+      "point1": {
+        "lat": 39.6298761,
+        "lon": 8.9946561
+      },
+      "point2": {
+        "lat": 39.6298043,
+        "lon": 8.9946635
+      },
+      "track_direction_deg": 85.5,
+      "line_direction_deg": 175.5,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka6mfn.tkk",
+    "name": "Pista del Sole",
+    "city": "SoleK",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 37.2369904,
+        "lon": 15.1175732
+      },
+      "point1": {
+        "lat": 37.2370137,
+        "lon": 15.117635
+      },
+      "point2": {
+        "lat": 37.2369671,
+        "lon": 15.1175114
+      },
+      "track_direction_deg": 154.64,
+      "line_direction_deg": 244.64,
+      "track_width_m": 12.1,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka6mi0.tkk",
+    "name": "Pista Motoclub Arborea",
+    "city": "Arborea",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 39.7861724,
+        "lon": 8.6243743
+      },
+      "point1": {
+        "lat": 39.7861636,
+        "lon": 8.6244197
+      },
+      "point2": {
+        "lat": 39.7861812,
+        "lon": 8.6243289
+      },
+      "track_direction_deg": 194.08,
+      "line_direction_deg": 284.08,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka6mk4.tkk",
+    "name": "Sicilia Karting",
+    "city": "SiciliaK",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 37.6203362,
+        "lon": 14.1906735
+      },
+      "point1": {
+        "lat": 37.6203037,
+        "lon": 14.190654
+      },
+      "point2": {
+        "lat": 37.6203687,
+        "lon": 14.190693
+      },
+      "track_direction_deg": 295.42,
+      "line_direction_deg": 25.42,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka6mk9.tkk",
+    "name": "Le Querce Karting",
+    "city": "LeQuerceK",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 42.7501466,
+        "lon": 13.0369579
+      },
+      "point1": {
+        "lat": 42.7501107,
+        "lon": 13.0369553
+      },
+      "point2": {
+        "lat": 42.7501825,
+        "lon": 13.0369605
+      },
+      "track_direction_deg": 273.1,
+      "line_direction_deg": 3.1,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka6mmy.tkk",
+    "name": "Circuito Vincenza Ispica",
+    "city": "Ispica",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 36.7761657,
+        "lon": 14.9274743
+      },
+      "point1": {
+        "lat": 36.7761455,
+        "lon": 14.9274991
+      },
+      "point2": {
+        "lat": 36.7761859,
+        "lon": 14.9274495
+      },
+      "track_direction_deg": 225.55,
+      "line_direction_deg": 315.55,
+      "track_width_m": 6.3,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka6mri.tkk",
+    "name": "Pista Santa Venera",
+    "city": "SantaVenere",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 37.6520917,
+        "lon": 15.1516723
+      },
+      "point1": {
+        "lat": 37.6521378,
+        "lon": 15.1518012
+      },
+      "point2": {
+        "lat": 37.6520456,
+        "lon": 15.1515434
+      },
+      "track_direction_deg": 155.67,
+      "line_direction_deg": 245.67,
+      "track_width_m": 24.9,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka6mrr.tkk",
+    "name": "Kartodromo Santa Cecilia",
+    "city": "SantaCecilia",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 41.4302247,
+        "lon": 15.4698916
+      },
+      "point1": {
+        "lat": 41.4301799,
+        "lon": 15.4698547
+      },
+      "point2": {
+        "lat": 41.4302695,
+        "lon": 15.4699285
+      },
+      "track_direction_deg": 301.69,
+      "line_direction_deg": 31.69,
+      "track_width_m": 11.7,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka6mtb.tkk",
+    "name": "Kartodromo Minoa",
+    "city": "Minoa",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 37.4170091,
+        "lon": 13.3079941
+      },
+      "point1": {
+        "lat": 37.417066,
+        "lon": 13.3079139
+      },
+      "point2": {
+        "lat": 37.4169522,
+        "lon": 13.3080743
+      },
+      "track_direction_deg": 41.76,
+      "line_direction_deg": 131.76,
+      "track_width_m": 19.0,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka6n9t.tkk",
+    "name": "Circuito del Sele 2",
+    "city": "SeleVar1",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 40.6054364,
+        "lon": 14.947242
+      },
+      "point1": {
+        "lat": 40.6054193,
+        "lon": 14.9472003
+      },
+      "point2": {
+        "lat": 40.6054535,
+        "lon": 14.9472837
+      },
+      "track_direction_deg": 331.7,
+      "line_direction_deg": 61.7,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15ka6nax.tkk",
+    "name": "Euro Kart Porto Cesareo - Circuito Nazionale",
+    "city": "EuroKart",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 40.3019752,
+        "lon": 17.8029051
+      },
+      "point1": {
+        "lat": 40.3019261,
+        "lon": 17.8028968
+      },
+      "point2": {
+        "lat": 40.3020243,
+        "lon": 17.8029134
+      },
+      "track_direction_deg": 277.32,
+      "line_direction_deg": 7.32,
+      "track_width_m": 11.0,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka6nh0.tkk",
+    "name": "Franciacorta Karting Track",
+    "city": "F.Corta Var7",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 45.5143499,
+        "lon": 10.0069664
+      },
+      "point1": {
+        "lat": 45.5144048,
+        "lon": 10.0069527
+      },
+      "point2": {
+        "lat": 45.514295,
+        "lon": 10.0069801
+      },
+      "track_direction_deg": 80.1,
+      "line_direction_deg": 170.1,
+      "track_width_m": 12.4,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "15ka6nj8.tkk",
+    "name": "Pista del Mare",
+    "city": "Mare V1",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 43.284145,
+        "lon": 10.525097
+      },
+      "point1": {
+        "lat": 43.2841785,
+        "lon": 10.5250791
+      },
+      "point2": {
+        "lat": 43.2841115,
+        "lon": 10.5251149
+      },
+      "track_direction_deg": 68.71,
+      "line_direction_deg": 158.71,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "15kvuu3g.tkk",
+    "name": "Kartdromo - Circuito Internazionale Le Colline",
+    "city": "Chignolo Po",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 45.1536871,
+        "lon": 9.4754314
+      },
+      "point1": {
+        "lat": 45.1536978,
+        "lon": 9.4753928
+      },
+      "point2": {
+        "lat": 45.1536764,
+        "lon": 9.47547
+      },
+      "track_direction_deg": 21.48,
+      "line_direction_deg": 111.48,
+      "track_width_m": 6.5,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "177l8k3a.tkk",
+    "name": "Circuito la Scintilla",
+    "city": "ScintillaV1",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 42.4198146,
+        "lon": 12.7810054
+      },
+      "point1": {
+        "lat": 42.4198348,
+        "lon": 12.7810457
+      },
+      "point2": {
+        "lat": 42.4197944,
+        "lon": 12.7809651
+      },
+      "track_direction_deg": 145.76,
+      "line_direction_deg": 235.76,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "177laptb.tkk",
+    "name": "Circuito la Scintilla",
+    "city": "ScintillaV2",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 42.4198104,
+        "lon": 12.7809978
+      },
+      "point1": {
+        "lat": 42.4198303,
+        "lon": 12.7810384
+      },
+      "point2": {
+        "lat": 42.4197905,
+        "lon": 12.7809572
+      },
+      "track_direction_deg": 146.35,
+      "line_direction_deg": 236.35,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "177lixz6.tkk",
+    "name": "Pista Kart Sulmona",
+    "city": "SulmonaK",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 42.087131,
+        "lon": 13.9293054
+      },
+      "point1": {
+        "lat": 42.0871111,
+        "lon": 13.9293458
+      },
+      "point2": {
+        "lat": 42.0871509,
+        "lon": 13.929265
+      },
+      "track_direction_deg": 213.52,
+      "line_direction_deg": 303.52,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "177loakz.tkk",
+    "name": "SestuGO!",
+    "city": "SestuK",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 39.3386468,
+        "lon": 9.0966642
+      },
+      "point1": {
+        "lat": 39.3386637,
+        "lon": 9.0966985
+      },
+      "point2": {
+        "lat": 39.3386299,
+        "lon": 9.0966299
+      },
+      "track_direction_deg": 147.56,
+      "line_direction_deg": 237.56,
+      "track_width_m": 7.0,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "179vt6ix.tkk",
+    "name": "Rivanazzano Dragway",
+    "city": "Rivanazzano",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 44.9554653,
+        "lon": 9.0148651
+      },
+      "point1": {
+        "lat": 44.9554841,
+        "lon": 9.0149379
+      },
+      "point2": {
+        "lat": 44.9554465,
+        "lon": 9.0147923
+      },
+      "track_direction_deg": 159.96,
+      "line_direction_deg": 249.96,
+      "track_width_m": 12.2,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "179wbna2.tkk",
+    "name": "Marzaglia Dragway",
+    "city": "Marzaglia",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 44.6300937,
+        "lon": 10.8133455
+      },
+      "point1": {
+        "lat": 44.6300719,
+        "lon": 10.8133337
+      },
+      "point2": {
+        "lat": 44.6301155,
+        "lon": 10.8133573
+      },
+      "track_direction_deg": 291.08,
+      "line_direction_deg": 21.08,
+      "track_width_m": 5.2,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "17c22x78.tkk",
+    "name": "Top Kart Experience",
+    "city": "T.Experience",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 44.0886638,
+        "lon": 9.9521203
+      },
+      "point1": {
+        "lat": 44.0886248,
+        "lon": 9.9521891
+      },
+      "point2": {
+        "lat": 44.0887028,
+        "lon": 9.9520515
+      },
+      "track_direction_deg": 218.26,
+      "line_direction_deg": 308.26,
+      "track_width_m": 14.0,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "17c2xzft.tkk",
+    "name": "Pista Gialla Giulianova",
+    "city": "PistaGialla",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 42.773184,
+        "lon": 13.9511924
+      },
+      "point1": {
+        "lat": 42.7731512,
+        "lon": 13.9512125
+      },
+      "point2": {
+        "lat": 42.7732168,
+        "lon": 13.9511723
+      },
+      "track_direction_deg": 245.76,
+      "line_direction_deg": 335.76,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "17ckn22t.tkk",
+    "name": "FIA Hill Climb Masters - Trofeo Luigi Fagioli",
+    "city": "Fagioli",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 43.35721,
+        "lon": 12.57638
+      },
+      "point1": {
+        "lat": 43.3572245,
+        "lon": 12.5763347
+      },
+      "point2": {
+        "lat": 43.3571955,
+        "lon": 12.5764253
+      },
+      "track_direction_deg": 23.75,
+      "line_direction_deg": 113.75,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "17ckugp9.tkk",
+    "name": "Autodromo Calabria Corse",
+    "city": "Tarsia",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 39.6195611,
+        "lon": 16.3100549
+      },
+      "point1": {
+        "lat": 39.6195378,
+        "lon": 16.3100807
+      },
+      "point2": {
+        "lat": 39.6195844,
+        "lon": 16.3100291
+      },
+      "track_direction_deg": 229.55,
+      "line_direction_deg": 319.55,
+      "track_width_m": 6.8,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "17rjle85.tkk",
+    "name": "Franciacorta Karting Track",
+    "city": "F.Corta Var6",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 45.5162127,
+        "lon": 10.0038005
+      },
+      "point1": {
+        "lat": 45.5162464,
+        "lon": 10.0037339
+      },
+      "point2": {
+        "lat": 45.516179,
+        "lon": 10.0038671
+      },
+      "track_direction_deg": 35.79,
+      "line_direction_deg": 125.79,
+      "track_width_m": 12.8,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "1cihvjx3.tkk",
+    "name": "Ittiri Arena",
+    "city": "Ittiri",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 40.5856757,
+        "lon": 8.5647407
+      },
+      "point1": {
+        "lat": 40.5856764,
+        "lon": 8.5646933
+      },
+      "point2": {
+        "lat": 40.585675,
+        "lon": 8.5647881
+      },
+      "track_direction_deg": 1.12,
+      "line_direction_deg": 91.12,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "1d6lsb49.tkk",
+    "name": "Circuito Internazionale Napoli",
+    "city": "Sarno2021",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 40.8370406,
+        "lon": 14.5659206
+      },
+      "point1": {
+        "lat": 40.8370737,
+        "lon": 14.5657911
+      },
+      "point2": {
+        "lat": 40.8370075,
+        "lon": 14.5660501
+      },
+      "track_direction_deg": 18.68,
+      "line_direction_deg": 108.68,
+      "track_width_m": 23.0,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "1dmftnur.tkk",
+    "name": "Pista Azzurra",
+    "city": "Azzurra Var1",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 45.5061626,
+        "lon": 12.6261883
+      },
+      "point1": {
+        "lat": 45.5061316,
+        "lon": 12.6262144
+      },
+      "point2": {
+        "lat": 45.5061936,
+        "lon": 12.6261622
+      },
+      "track_direction_deg": 239.48,
+      "line_direction_deg": 329.48,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "1dmfztp9.tkk",
+    "name": "Circuito Internazionale d'Abruzzo",
+    "city": "Ortona VarMM",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 42.3053705,
+        "lon": 14.3799248
+      },
+      "point1": {
+        "lat": 42.3053875,
+        "lon": 14.3800093
+      },
+      "point2": {
+        "lat": 42.3053535,
+        "lon": 14.3798403
+      },
+      "track_direction_deg": 164.78,
+      "line_direction_deg": 254.78,
+      "track_width_m": 14.4,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "1dmg29m4.tkk",
+    "name": "Circuito Internazionale d'Abruzzo",
+    "city": "Ortona VarNK",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 42.3053775,
+        "lon": 14.379949
+      },
+      "point1": {
+        "lat": 42.3053967,
+        "lon": 14.3800345
+      },
+      "point2": {
+        "lat": 42.3053583,
+        "lon": 14.3798635
+      },
+      "track_direction_deg": 163.08,
+      "line_direction_deg": 253.08,
+      "track_width_m": 14.7,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "1dmg6o2s.tkk",
+    "name": "Circuito Internazionale d'Abruzzo",
+    "city": "Ortona VarSP",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 42.3054035,
+        "lon": 14.3799655
+      },
+      "point1": {
+        "lat": 42.3054232,
+        "lon": 14.3800489
+      },
+      "point2": {
+        "lat": 42.3053838,
+        "lon": 14.3798821
+      },
+      "track_direction_deg": 162.31,
+      "line_direction_deg": 252.31,
+      "track_width_m": 14.4,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "1dmgumxj.tkk",
+    "name": "Pista Mini Speed",
+    "city": "MiniSpeed",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 42.3123566,
+        "lon": 14.3706454
+      },
+      "point1": {
+        "lat": 42.3123912,
+        "lon": 14.3705628
+      },
+      "point2": {
+        "lat": 42.312322,
+        "lon": 14.370728
+      },
+      "track_direction_deg": 29.51,
+      "line_direction_deg": 119.51,
+      "track_width_m": 15.6,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "1dmhii2o.tkk",
+    "name": "Kartodromo Santa Giulia Lanciano",
+    "city": "LancianoK",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 42.2239191,
+        "lon": 14.4186513
+      },
+      "point1": {
+        "lat": 42.2239265,
+        "lon": 14.4187888
+      },
+      "point2": {
+        "lat": 42.2239117,
+        "lon": 14.4185138
+      },
+      "track_direction_deg": 175.86,
+      "line_direction_deg": 265.86,
+      "track_width_m": 22.7,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "1dmi0t26.tkk",
+    "name": "ValPista Karting Raceway",
+    "city": "ValPista",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 40.4244572,
+        "lon": 15.5273203
+      },
+      "point1": {
+        "lat": 40.4244408,
+        "lon": 15.5272782
+      },
+      "point2": {
+        "lat": 40.4244736,
+        "lon": 15.5273624
+      },
+      "track_direction_deg": 332.89,
+      "line_direction_deg": 62.89,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "1dmikar8.tkk",
+    "name": "SUNDAY CLUB TALAO - A.S.D. Raceway Karting Riviera dei Cedri",
+    "city": "SundayK",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 39.8178057,
+        "lon": 15.8315161
+      },
+      "point1": {
+        "lat": 39.8177384,
+        "lon": 15.8314924
+      },
+      "point2": {
+        "lat": 39.817873,
+        "lon": 15.8315398
+      },
+      "track_direction_deg": 285.15,
+      "line_direction_deg": 15.15,
+      "track_width_m": 15.5,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "1dmip43s.tkk",
+    "name": "Circuito La Torre",
+    "city": "LaTorreK",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 40.7183663,
+        "lon": 15.2402839
+      },
+      "point1": {
+        "lat": 40.7183977,
+        "lon": 15.2403791
+      },
+      "point2": {
+        "lat": 40.7183349,
+        "lon": 15.2401887
+      },
+      "track_direction_deg": 156.46,
+      "line_direction_deg": 246.46,
+      "track_width_m": 17.5,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "1dmj0ueu.tkk",
+    "name": "Kartodromo Rastellino",
+    "city": "RastellinoK",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 44.6306291,
+        "lon": 11.1036874
+      },
+      "point1": {
+        "lat": 44.6305773,
+        "lon": 11.1038276
+      },
+      "point2": {
+        "lat": 44.6306809,
+        "lon": 11.1035472
+      },
+      "track_direction_deg": 207.43,
+      "line_direction_deg": 297.43,
+      "track_width_m": 25.0,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "1dmjo735.tkk",
+    "name": "Pista Kartroma",
+    "city": "Kartroma V1",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 41.8163592,
+        "lon": 12.3272628
+      },
+      "point1": {
+        "lat": 41.8163378,
+        "lon": 12.327224
+      },
+      "point2": {
+        "lat": 41.8163806,
+        "lon": 12.3273016
+      },
+      "track_direction_deg": 323.52,
+      "line_direction_deg": 53.52,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "1dmjotvd.tkk",
+    "name": "Pista Kartroma",
+    "city": "Kartroma V2",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 41.8163592,
+        "lon": 12.3272628
+      },
+      "point1": {
+        "lat": 41.8163378,
+        "lon": 12.327224
+      },
+      "point2": {
+        "lat": 41.8163806,
+        "lon": 12.3273016
+      },
+      "track_direction_deg": 323.52,
+      "line_direction_deg": 53.52,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "1dnjqeeh.tkk",
+    "name": "Circuito Kart Carasco",
+    "city": "Carasco CW",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 44.3519437,
+        "lon": 9.3579424
+      },
+      "point1": {
+        "lat": 44.3518484,
+        "lon": 9.3580258
+      },
+      "point2": {
+        "lat": 44.352039,
+        "lon": 9.357859
+      },
+      "track_direction_deg": 237.97,
+      "line_direction_deg": 327.97,
+      "track_width_m": 25.0,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "1dnjub3b.tkk",
+    "name": "Circuito Kart Carasco",
+    "city": "Carasco ACW",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 44.3519423,
+        "lon": 9.357944
+      },
+      "point1": {
+        "lat": 44.3520373,
+        "lon": 9.3578599
+      },
+      "point2": {
+        "lat": 44.3518473,
+        "lon": 9.3580281
+      },
+      "track_direction_deg": 57.65,
+      "line_direction_deg": 147.65,
+      "track_width_m": 25.0,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "1dnk3fhf.tkk",
+    "name": "Pista Kart Vittoria",
+    "city": "VittoriaK",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 44.4466927,
+        "lon": 8.4267858
+      },
+      "point1": {
+        "lat": 44.4466645,
+        "lon": 8.4268171
+      },
+      "point2": {
+        "lat": 44.4467209,
+        "lon": 8.4267545
+      },
+      "track_direction_deg": 231.65,
+      "line_direction_deg": 321.65,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "1dnl37fr.tkk",
+    "name": "Kartodromo Sinarca",
+    "city": "SinarcaK",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 41.9853646,
+        "lon": 14.9357179
+      },
+      "point1": {
+        "lat": 41.9854132,
+        "lon": 14.9356308
+      },
+      "point2": {
+        "lat": 41.985316,
+        "lon": 14.935805
+      },
+      "track_direction_deg": 36.91,
+      "line_direction_deg": 126.91,
+      "track_width_m": 18.0,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "1dnl99u2.tkk",
+    "name": "Salento Kart - La Cava",
+    "city": "LaCavaK V1",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 40.2665098,
+        "lon": 17.9199616
+      },
+      "point1": {
+        "lat": 40.2664562,
+        "lon": 17.9198526
+      },
+      "point2": {
+        "lat": 40.2665634,
+        "lon": 17.9200706
+      },
+      "track_direction_deg": 327.21,
+      "line_direction_deg": 57.21,
+      "track_width_m": 22.0,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "1dnlakp6.tkk",
+    "name": "Salento Kart - La Cava",
+    "city": "LaCavaK V2",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 40.2665098,
+        "lon": 17.9199616
+      },
+      "point1": {
+        "lat": 40.2664562,
+        "lon": 17.9198526
+      },
+      "point2": {
+        "lat": 40.2665634,
+        "lon": 17.9200706
+      },
+      "track_direction_deg": 327.21,
+      "line_direction_deg": 57.21,
+      "track_width_m": 22.0,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "1dnlh3rr.tkk",
+    "name": "imola2",
+    "city": "imola2",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 39.8337027,
+        "lon": 18.2953542
+      },
+      "point1": {
+        "lat": 39.8337291,
+        "lon": 18.2953987
+      },
+      "point2": {
+        "lat": 39.8336763,
+        "lon": 18.2953097
+      },
+      "track_direction_deg": 142.27,
+      "line_direction_deg": 232.27,
+      "track_width_m": 9.6,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "1dnlqll9.tkk",
+    "name": "MotoKartodromo Adriatico",
+    "city": "AdriaticoK",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 40.9853903,
+        "lon": 17.2064367
+      },
+      "point1": {
+        "lat": 40.9854075,
+        "lon": 17.2064687
+      },
+      "point2": {
+        "lat": 40.9853731,
+        "lon": 17.2064047
+      },
+      "track_direction_deg": 144.56,
+      "line_direction_deg": 234.56,
+      "track_width_m": 6.6,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "1dnlxbok.tkk",
+    "name": "Kartodromo 106 Reverse",
+    "city": "106 CW",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 40.4479305,
+        "lon": 16.8592968
+      },
+      "point1": {
+        "lat": 40.4479112,
+        "lon": 16.8592641
+      },
+      "point2": {
+        "lat": 40.4479498,
+        "lon": 16.8593295
+      },
+      "track_direction_deg": 322.25,
+      "line_direction_deg": 52.25,
+      "track_width_m": 7.0,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "1dnm0r32.tkk",
+    "name": "Kartodromo 106 Reverse",
+    "city": "106 ACW",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 40.4479316,
+        "lon": 16.8592979
+      },
+      "point1": {
+        "lat": 40.447951,
+        "lon": 16.8593305
+      },
+      "point2": {
+        "lat": 40.4479122,
+        "lon": 16.8592653
+      },
+      "track_direction_deg": 141.92,
+      "line_direction_deg": 231.92,
+      "track_width_m": 7.0,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "1dnmmfpu.tkk",
+    "name": "Pista del Corallo",
+    "city": "CRLLO GIALLA",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 40.6585607,
+        "lon": 8.2990062
+      },
+      "point1": {
+        "lat": 40.6585853,
+        "lon": 8.2989716
+      },
+      "point2": {
+        "lat": 40.6585361,
+        "lon": 8.2990408
+      },
+      "track_direction_deg": 43.13,
+      "line_direction_deg": 133.13,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "1dnmwu38.tkk",
+    "name": "Kartodromo di Mondello",
+    "city": "MondelloK",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 38.1885132,
+        "lon": 13.3141748
+      },
+      "point1": {
+        "lat": 38.188556,
+        "lon": 13.3142883
+      },
+      "point2": {
+        "lat": 38.1884704,
+        "lon": 13.3140613
+      },
+      "track_direction_deg": 154.36,
+      "line_direction_deg": 244.36,
+      "track_width_m": 22.0,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "1dnn03fb.tkk",
+    "name": "Kartodromo di Marsala",
+    "city": "MarsalaK",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 37.7467172,
+        "lon": 12.5207717
+      },
+      "point1": {
+        "lat": 37.746697,
+        "lon": 12.5208093
+      },
+      "point2": {
+        "lat": 37.7467374,
+        "lon": 12.5207341
+      },
+      "track_direction_deg": 214.15,
+      "line_direction_deg": 304.15,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "1dnnmalt.tkk",
+    "name": "Circuito Andrea Antonelli - Trackfire",
+    "city": "Trackfire",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 43.002252,
+        "lon": 12.1734196
+      },
+      "point1": {
+        "lat": 43.0022778,
+        "lon": 12.1735534
+      },
+      "point2": {
+        "lat": 43.0022262,
+        "lon": 12.1732858
+      },
+      "track_direction_deg": 165.24,
+      "line_direction_deg": 255.24,
+      "track_width_m": 22.5,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "1do3g2f8.tkk",
+    "name": "BI Karting",
+    "city": "BiK",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 45.602635,
+        "lon": 11.798879
+      },
+      "point1": {
+        "lat": 45.6026234,
+        "lon": 11.7988303
+      },
+      "point2": {
+        "lat": 45.6026466,
+        "lon": 11.7989277
+      },
+      "track_direction_deg": 341.19,
+      "line_direction_deg": 71.19,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "1do3ks6o.tkk",
+    "name": "Chioggia Kart",
+    "city": "Chiog Fast",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 45.1782944,
+        "lon": 12.2750902
+      },
+      "point1": {
+        "lat": 45.1783051,
+        "lon": 12.2750415
+      },
+      "point2": {
+        "lat": 45.1782837,
+        "lon": 12.2751389
+      },
+      "track_direction_deg": 17.3,
+      "line_direction_deg": 107.3,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "1do3m3uz.tkk",
+    "name": "Chioggia Kart",
+    "city": "Chiog Full",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 45.1782944,
+        "lon": 12.2750902
+      },
+      "point1": {
+        "lat": 45.1783051,
+        "lon": 12.2750415
+      },
+      "point2": {
+        "lat": 45.1782837,
+        "lon": 12.2751389
+      },
+      "track_direction_deg": 17.3,
+      "line_direction_deg": 107.3,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "1do3q3mv.tkk",
+    "name": "Chioggia Kart",
+    "city": "Chiog REVERS",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 45.1782954,
+        "lon": 12.275088
+      },
+      "point1": {
+        "lat": 45.1782847,
+        "lon": 12.2751367
+      },
+      "point2": {
+        "lat": 45.1783061,
+        "lon": 12.2750393
+      },
+      "track_direction_deg": 197.29,
+      "line_direction_deg": 287.29,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "1do40gpp.tkk",
+    "name": "Circuito Tazio Nuvolari",
+    "city": "Nuvolari V2",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 45.0723409,
+        "lon": 8.9918295
+      },
+      "point1": {
+        "lat": 45.0723592,
+        "lon": 8.9918634
+      },
+      "point2": {
+        "lat": 45.0723226,
+        "lon": 8.9917956
+      },
+      "track_direction_deg": 142.52,
+      "line_direction_deg": 232.52,
+      "track_width_m": 6.7,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "1do45763.tkk",
+    "name": "Circuito Tazio Nuvolari",
+    "city": "NuvolariK",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 45.0720545,
+        "lon": 8.9932268
+      },
+      "point1": {
+        "lat": 45.0720687,
+        "lon": 8.9932645
+      },
+      "point2": {
+        "lat": 45.0720403,
+        "lon": 8.9931891
+      },
+      "track_direction_deg": 151.98,
+      "line_direction_deg": 241.98,
+      "track_width_m": 6.7,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "1do4qa04.tkk",
+    "name": "Forte Village",
+    "city": "ForteK",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 38.9373359,
+        "lon": 8.9284005
+      },
+      "point1": {
+        "lat": 38.9372684,
+        "lon": 8.9284769
+      },
+      "point2": {
+        "lat": 38.9374034,
+        "lon": 8.9283241
+      },
+      "track_direction_deg": 228.61,
+      "line_direction_deg": 318.61,
+      "track_width_m": 20.0,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "1do5gxc7.tkk",
+    "name": "Concordia Karting",
+    "city": "Concordia V2",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 37.2531405,
+        "lon": 13.6691091
+      },
+      "point1": {
+        "lat": 37.2531203,
+        "lon": 13.6691409
+      },
+      "point2": {
+        "lat": 37.2531607,
+        "lon": 13.6690773
+      },
+      "track_direction_deg": 218.56,
+      "line_direction_deg": 308.56,
+      "track_width_m": 7.2,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "1do5hjxn.tkk",
+    "name": "Concordia Karting",
+    "city": "Concordia V1",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 37.2531374,
+        "lon": 13.6691137
+      },
+      "point1": {
+        "lat": 37.2531169,
+        "lon": 13.6691452
+      },
+      "point2": {
+        "lat": 37.2531579,
+        "lon": 13.6690822
+      },
+      "track_direction_deg": 219.29,
+      "line_direction_deg": 309.29,
+      "track_width_m": 7.2,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "1do5xtqu.tkk",
+    "name": "Pista Feggiani",
+    "city": "FeggianiK",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 43.2155459,
+        "lon": 13.0468786
+      },
+      "point1": {
+        "lat": 43.2155441,
+        "lon": 13.0469279
+      },
+      "point2": {
+        "lat": 43.2155477,
+        "lon": 13.0468293
+      },
+      "track_direction_deg": 182.88,
+      "line_direction_deg": 272.88,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "1do6asl6.tkk",
+    "name": "Demakart",
+    "city": "Demakart",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 38.062237,
+        "lon": 15.0759984
+      },
+      "point1": {
+        "lat": 38.0622182,
+        "lon": 15.0760374
+      },
+      "point2": {
+        "lat": 38.0622558,
+        "lon": 15.0759594
+      },
+      "track_direction_deg": 211.49,
+      "line_direction_deg": 301.49,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "1do6iyvr.tkk",
+    "name": "Sbiello Park",
+    "city": "Sbiello CW",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 45.4913571,
+        "lon": 8.8587964
+      },
+      "point1": {
+        "lat": 45.491424,
+        "lon": 8.858802
+      },
+      "point2": {
+        "lat": 45.4912902,
+        "lon": 8.8587908
+      },
+      "track_direction_deg": 93.35,
+      "line_direction_deg": 183.35,
+      "track_width_m": 14.9,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "1dx06eaa.tkk",
+    "name": "Circuito Internazionale Napoli",
+    "city": "Sarno Auto",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 40.8376427,
+        "lon": 14.5676229
+      },
+      "point1": {
+        "lat": 40.8377444,
+        "lon": 14.5676479
+      },
+      "point2": {
+        "lat": 40.837541,
+        "lon": 14.5675979
+      },
+      "track_direction_deg": 100.53,
+      "line_direction_deg": 190.53,
+      "track_width_m": 23.0,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "1e0duni0.tkk",
+    "name": "Kartodromo Val Vibrata",
+    "city": "Vibrata Full",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 42.8102254,
+        "lon": 13.6883642
+      },
+      "point1": {
+        "lat": 42.810253,
+        "lon": 13.6883327
+      },
+      "point2": {
+        "lat": 42.8101978,
+        "lon": 13.6883957
+      },
+      "track_direction_deg": 50.04,
+      "line_direction_deg": 140.04,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "1eri3gnf.tkk",
+    "name": "MX Park Montagnana",
+    "city": "Montagnana 1",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 45.2415741,
+        "lon": 11.4339618
+      },
+      "point1": {
+        "lat": 45.2415304,
+        "lon": 11.4339769
+      },
+      "point2": {
+        "lat": 45.2416178,
+        "lon": 11.4339467
+      },
+      "track_direction_deg": 256.3,
+      "line_direction_deg": 346.3,
+      "track_width_m": 10.0,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "1erjem7k.tkk",
+    "name": "Moto Club Mantovano \"Tazio Nuvolari\"",
+    "city": "MCM Nuvolari",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 45.1372779,
+        "lon": 10.8009691
+      },
+      "point1": {
+        "lat": 45.1372281,
+        "lon": 10.8009257
+      },
+      "point2": {
+        "lat": 45.1373277,
+        "lon": 10.8010125
+      },
+      "track_direction_deg": 301.56,
+      "line_direction_deg": 31.56,
+      "track_width_m": 13.0,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "1erjgvng.tkk",
+    "name": "Canneto Cross",
+    "city": "Canneto",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 45.1790503,
+        "lon": 10.4041896
+      },
+      "point1": {
+        "lat": 45.1790286,
+        "lon": 10.4042303
+      },
+      "point2": {
+        "lat": 45.179072,
+        "lon": 10.4041489
+      },
+      "track_direction_deg": 217.12,
+      "line_direction_deg": 307.12,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "1erji3bt.tkk",
+    "name": "Pista Motocross Foresto",
+    "city": "Foresto",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 45.1845199,
+        "lon": 12.0649857
+      },
+      "point1": {
+        "lat": 45.1845068,
+        "lon": 12.0650332
+      },
+      "point2": {
+        "lat": 45.184533,
+        "lon": 12.0649382
+      },
+      "track_direction_deg": 201.38,
+      "line_direction_deg": 291.38,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "1erlf43s.tkk",
+    "name": "Concordia Karting",
+    "city": "Concordia V3",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 37.2530972,
+        "lon": 13.6691757
+      },
+      "point1": {
+        "lat": 37.2530756,
+        "lon": 13.669206
+      },
+      "point2": {
+        "lat": 37.2531188,
+        "lon": 13.6691454
+      },
+      "track_direction_deg": 221.81,
+      "line_direction_deg": 311.81,
+      "track_width_m": 7.2,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "1gl2vj5w.tkk",
+    "name": "Pista Go-Kart Miramare",
+    "city": "Miramare",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 44.0235481,
+        "lon": 12.6301251
+      },
+      "point1": {
+        "lat": 44.0235227,
+        "lon": 12.6301605
+      },
+      "point2": {
+        "lat": 44.0235735,
+        "lon": 12.6300897
+      },
+      "track_direction_deg": 225.01,
+      "line_direction_deg": 315.01,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "1goxf26d.tkk",
+    "name": "Autodromo di Cellole",
+    "city": "Cellole",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 41.185663,
+        "lon": 13.8534687
+      },
+      "point1": {
+        "lat": 41.185659,
+        "lon": 13.8535582
+      },
+      "point2": {
+        "lat": 41.185667,
+        "lon": 13.8533792
+      },
+      "track_direction_deg": 183.43,
+      "line_direction_deg": 273.43,
+      "track_width_m": 15.0,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "1goy80i3.tkk",
+    "name": "Autodromo Mores",
+    "city": "Mores",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 40.5082917,
+        "lon": 8.8321056
+      },
+      "point1": {
+        "lat": 40.5082578,
+        "lon": 8.8321215
+      },
+      "point2": {
+        "lat": 40.5083256,
+        "lon": 8.8320897
+      },
+      "track_direction_deg": 250.3,
+      "line_direction_deg": 340.3,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "1gstrnjs.tkk",
+    "name": "Kartodromo Cremona Circuit",
+    "city": "CremonaK",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 45.0866937,
+        "lon": 10.3121823
+      },
+      "point1": {
+        "lat": 45.0865885,
+        "lon": 10.3121262
+      },
+      "point2": {
+        "lat": 45.0867989,
+        "lon": 10.3122384
+      },
+      "track_direction_deg": 290.61,
+      "line_direction_deg": 20.61,
+      "track_width_m": 25.0,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "1gtd0s1b.tkk",
+    "name": "Autodromo Riccardo Paletti - Varano de' Melegari",
+    "city": "Varano Oval",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 44.6819046,
+        "lon": 10.0268911
+      },
+      "point1": {
+        "lat": 44.6818283,
+        "lon": 10.026904
+      },
+      "point2": {
+        "lat": 44.6819809,
+        "lon": 10.0268782
+      },
+      "track_direction_deg": 263.16,
+      "line_direction_deg": 353.16,
+      "track_width_m": 17.1,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "1gtfdt38.tkk",
+    "name": "Coppa Nissena",
+    "city": "Nissena",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 37.4947297,
+        "lon": 14.1450395
+      },
+      "point1": {
+        "lat": 37.4947374,
+        "lon": 14.1450838
+      },
+      "point2": {
+        "lat": 37.494722,
+        "lon": 14.1449952
+      },
+      "track_direction_deg": 167.62,
+      "line_direction_deg": 257.62,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "1gtfietm.tkk",
+    "name": "Cronoscalata Trento - Bondone",
+    "city": "Bondone",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 46.0769205,
+        "lon": 11.098159
+      },
+      "point1": {
+        "lat": 46.0769128,
+        "lon": 11.0982097
+      },
+      "point2": {
+        "lat": 46.0769282,
+        "lon": 11.0981083
+      },
+      "track_direction_deg": 192.34,
+      "line_direction_deg": 282.34,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "1gtfxaus.tkk",
+    "name": "Cronoscalata Sarnano - Sassotetto",
+    "city": "Scarfiotti",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 43.0174105,
+        "lon": 13.276179
+      },
+      "point1": {
+        "lat": 43.0174001,
+        "lon": 13.2762261
+      },
+      "point2": {
+        "lat": 43.0174209,
+        "lon": 13.2761319
+      },
+      "track_direction_deg": 196.85,
+      "line_direction_deg": 286.85,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "1gtvyhcw.tkk",
+    "name": "Cronoscalata Verzegnis - Sella Chianzutan",
+    "city": "Verzegnis",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 46.3628277,
+        "lon": 12.9487814
+      },
+      "point1": {
+        "lat": 46.3628605,
+        "lon": 12.9487601
+      },
+      "point2": {
+        "lat": 46.3627949,
+        "lon": 12.9488027
+      },
+      "track_direction_deg": 65.82,
+      "line_direction_deg": 155.82,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "1gtwcmmw.tkk",
+    "name": "Trofeo Vallecamonica",
+    "city": "Camonica",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 45.9495888,
+        "lon": 10.2718449
+      },
+      "point1": {
+        "lat": 45.9495639,
+        "lon": 10.2718822
+      },
+      "point2": {
+        "lat": 45.9496137,
+        "lon": 10.2718076
+      },
+      "track_direction_deg": 223.88,
+      "line_direction_deg": 313.88,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "1gtwth6n.tkk",
+    "name": "Coppa Paolino Teodori",
+    "city": "Teodori",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 42.8296262,
+        "lon": 13.5784972
+      },
+      "point1": {
+        "lat": 42.8295905,
+        "lon": 13.5785038
+      },
+      "point2": {
+        "lat": 42.8296619,
+        "lon": 13.5784906
+      },
+      "track_direction_deg": 262.32,
+      "line_direction_deg": 352.32,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "1gtxq9xy.tkk",
+    "name": "Cronoscalata Alghero - Scala Piccada",
+    "city": "S.Piccada",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 40.5384526,
+        "lon": 8.3560594
+      },
+      "point1": {
+        "lat": 40.5385139,
+        "lon": 8.3561067
+      },
+      "point2": {
+        "lat": 40.5383913,
+        "lon": 8.3560121
+      },
+      "track_direction_deg": 120.39,
+      "line_direction_deg": 210.39,
+      "track_width_m": 15.8,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "1gtz0q83.tkk",
+    "name": "Salita Morano – Campotenese",
+    "city": "Morano",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 39.8464555,
+        "lon": 16.1270563
+      },
+      "point1": {
+        "lat": 39.8464197,
+        "lon": 16.1270602
+      },
+      "point2": {
+        "lat": 39.8464913,
+        "lon": 16.1270524
+      },
+      "track_direction_deg": 265.26,
+      "line_direction_deg": 355.26,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "1gtzj708.tkk",
+    "name": "Cronoscalata Luzzi - Sambucina",
+    "city": "Sambucina",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 39.4476899,
+        "lon": 16.2911461
+      },
+      "point1": {
+        "lat": 39.4476828,
+        "lon": 16.2911918
+      },
+      "point2": {
+        "lat": 39.447697,
+        "lon": 16.2911004
+      },
+      "track_direction_deg": 191.33,
+      "line_direction_deg": 281.33,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "1gufc550.tkk",
+    "name": "Cronoscalata Monte Erice",
+    "city": "Erice",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 38.0420927,
+        "lon": 12.6012846
+      },
+      "point1": {
+        "lat": 38.0420585,
+        "lon": 12.6012706
+      },
+      "point2": {
+        "lat": 38.0421269,
+        "lon": 12.6012986
+      },
+      "track_direction_deg": 287.91,
+      "line_direction_deg": 17.91,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "1gug4vw0.tkk",
+    "name": "Cronoscalata Cividale - Castelmonte",
+    "city": "Cividale",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 46.0918953,
+        "lon": 13.4470882
+      },
+      "point1": {
+        "lat": 46.0919957,
+        "lon": 13.4470408
+      },
+      "point2": {
+        "lat": 46.0917949,
+        "lon": 13.4471356
+      },
+      "track_direction_deg": 71.86,
+      "line_direction_deg": 161.86,
+      "track_width_m": 23.5,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "1guhm35z.tkk",
+    "name": "Salita del Costo",
+    "city": "Costo",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 45.7811091,
+        "lon": 11.4434161
+      },
+      "point1": {
+        "lat": 45.7810791,
+        "lon": 11.4433876
+      },
+      "point2": {
+        "lat": 45.7811391,
+        "lon": 11.4434446
+      },
+      "track_direction_deg": 303.48,
+      "line_direction_deg": 33.48,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "1gui0jvq.tkk",
+    "name": "Cronoscalata Alpe del Nevegal",
+    "city": "Nevegal",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 46.1209479,
+        "lon": 12.2485313
+      },
+      "point1": {
+        "lat": 46.1209766,
+        "lon": 12.2485627
+      },
+      "point2": {
+        "lat": 46.1209192,
+        "lon": 12.2484999
+      },
+      "track_direction_deg": 127.18,
+      "line_direction_deg": 217.18,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "1gujq7x5.tkk",
+    "name": "Salita dei Monti Iblei",
+    "city": "Iblei",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 37.0331352,
+        "lon": 14.6704176
+      },
+      "point1": {
+        "lat": 37.0331653,
+        "lon": 14.6703929
+      },
+      "point2": {
+        "lat": 37.0331051,
+        "lon": 14.6704423
+      },
+      "track_direction_deg": 56.7,
+      "line_direction_deg": 146.7,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "1gw5i5ic.tkk",
+    "name": "Cronoscalata Lo Spino",
+    "city": "Spino_Moto",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 43.6700259,
+        "lon": 12.0381659
+      },
+      "point1": {
+        "lat": 43.669996,
+        "lon": 12.0381382
+      },
+      "point2": {
+        "lat": 43.6700558,
+        "lon": 12.0381936
+      },
+      "track_direction_deg": 303.89,
+      "line_direction_deg": 33.89,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "1gwp4128.tkk",
+    "name": "Cronoscalata Pedavena – Croce D’Aune",
+    "city": "Pedavena",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 46.0423064,
+        "lon": 11.8733797
+      },
+      "point1": {
+        "lat": 46.0422758,
+        "lon": 11.8733525
+      },
+      "point2": {
+        "lat": 46.042337,
+        "lon": 11.8734069
+      },
+      "track_direction_deg": 301.61,
+      "line_direction_deg": 31.61,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "1gwplyc3.tkk",
+    "name": "Cronoscalata Svolte di Popoli",
+    "city": "Popoli",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 42.176673,
+        "lon": 13.8245387
+      },
+      "point1": {
+        "lat": 42.176675,
+        "lon": 13.8244902
+      },
+      "point2": {
+        "lat": 42.176671,
+        "lon": 13.8245872
+      },
+      "track_direction_deg": 3.16,
+      "line_direction_deg": 93.16,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "1gwqtwpo.tkk",
+    "name": "Cronoscalata della Castellana",
+    "city": "Castellana",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 42.7426807,
+        "lon": 12.1485325
+      },
+      "point1": {
+        "lat": 42.7426873,
+        "lon": 12.1484843
+      },
+      "point2": {
+        "lat": 42.7426741,
+        "lon": 12.1485807
+      },
+      "track_direction_deg": 10.56,
+      "line_direction_deg": 100.56,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "1gwr2737.tkk",
+    "name": "Cronoscalata Lo Spino",
+    "city": "Spino_Auto",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 43.6700259,
+        "lon": 12.0381659
+      },
+      "point1": {
+        "lat": 43.669996,
+        "lon": 12.0381382
+      },
+      "point2": {
+        "lat": 43.6700558,
+        "lon": 12.0381936
+      },
+      "track_direction_deg": 303.89,
+      "line_direction_deg": 33.89,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "1gx87f0r.tkk",
+    "name": "Cronoscalata Rieti - Terminillo",
+    "city": "Terminillo1",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 42.4447765,
+        "lon": 12.9162705
+      },
+      "point1": {
+        "lat": 42.4447926,
+        "lon": 12.9162269
+      },
+      "point2": {
+        "lat": 42.4447604,
+        "lon": 12.9163141
+      },
+      "track_direction_deg": 26.53,
+      "line_direction_deg": 116.53,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "1gx882k4.tkk",
+    "name": "Cronoscalata Rieti - Terminillo",
+    "city": "Terminillo2",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 42.4447765,
+        "lon": 12.9162705
+      },
+      "point1": {
+        "lat": 42.4447926,
+        "lon": 12.9162269
+      },
+      "point2": {
+        "lat": 42.4447604,
+        "lon": 12.9163141
+      },
+      "track_direction_deg": 26.53,
+      "line_direction_deg": 116.53,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "1gx9limp.tkk",
+    "name": "Coppa Val d'Anapo Sortino",
+    "city": "Sortino",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 37.1480578,
+        "lon": 15.0555932
+      },
+      "point1": {
+        "lat": 37.1480232,
+        "lon": 15.0555808
+      },
+      "point2": {
+        "lat": 37.1480924,
+        "lon": 15.0556056
+      },
+      "track_direction_deg": 285.95,
+      "line_direction_deg": 15.95,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "1gxrdz6d.tkk",
+    "name": "Speedway Marche",
+    "city": "Marche",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 43.390748,
+        "lon": 13.639759
+      },
+      "point1": {
+        "lat": 43.3907225,
+        "lon": 13.6397007
+      },
+      "point2": {
+        "lat": 43.3907735,
+        "lon": 13.6398173
+      },
+      "track_direction_deg": 328.99,
+      "line_direction_deg": 58.99,
+      "track_width_m": 11.0,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "1gxrgyvs.tkk",
+    "name": "Racing Kart Laureana",
+    "city": "Laureana",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 38.4995718,
+        "lon": 16.1322456
+      },
+      "point1": {
+        "lat": 38.4995361,
+        "lon": 16.1322513
+      },
+      "point2": {
+        "lat": 38.4996075,
+        "lon": 16.1322399
+      },
+      "track_direction_deg": 262.82,
+      "line_direction_deg": 352.82,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "1gxrsmwj.tkk",
+    "name": "Motocross Bergantino - Moto Club Le Giare",
+    "city": "Bergantino",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 45.0906873,
+        "lon": 11.2673782
+      },
+      "point1": {
+        "lat": 45.0906575,
+        "lon": 11.2673638
+      },
+      "point2": {
+        "lat": 45.0907171,
+        "lon": 11.2673926
+      },
+      "track_direction_deg": 288.85,
+      "line_direction_deg": 18.85,
+      "track_width_m": 7.0,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "1gxteyru.tkk",
+    "name": "Circuito Christel Village",
+    "city": "Christel V1",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 41.5553554,
+        "lon": 12.6362629
+      },
+      "point1": {
+        "lat": 41.5553922,
+        "lon": 12.6362592
+      },
+      "point2": {
+        "lat": 41.5553186,
+        "lon": 12.6362666
+      },
+      "track_direction_deg": 85.66,
+      "line_direction_deg": 175.66,
+      "track_width_m": 8.2,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "1gxtfw5k.tkk",
+    "name": "Circuito Christel Village",
+    "city": "Christel V2",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 41.5553554,
+        "lon": 12.6362629
+      },
+      "point1": {
+        "lat": 41.5553922,
+        "lon": 12.6362592
+      },
+      "point2": {
+        "lat": 41.5553186,
+        "lon": 12.6362666
+      },
+      "track_direction_deg": 85.66,
+      "line_direction_deg": 175.66,
+      "track_width_m": 8.2,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "1gxti5qh.tkk",
+    "name": "Sbiello Park",
+    "city": "Sbiello ACW",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 45.4913571,
+        "lon": 8.8587964
+      },
+      "point1": {
+        "lat": 45.4912904,
+        "lon": 8.8587873
+      },
+      "point2": {
+        "lat": 45.4914238,
+        "lon": 8.8588055
+      },
+      "track_direction_deg": 275.45,
+      "line_direction_deg": 5.45,
+      "track_width_m": 14.9,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "1gxtodbf.tkk",
+    "name": "Circuito Manfredonia",
+    "city": "Manfre. V1",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 41.6132503,
+        "lon": 15.8615315
+      },
+      "point1": {
+        "lat": 41.6132334,
+        "lon": 15.8615011
+      },
+      "point2": {
+        "lat": 41.6132672,
+        "lon": 15.8615619
+      },
+      "track_direction_deg": 323.32,
+      "line_direction_deg": 53.32,
+      "track_width_m": 6.3,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "1gxtozs5.tkk",
+    "name": "Circuito Manfredonia",
+    "city": "Manfre. V2",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 41.6132503,
+        "lon": 15.8615315
+      },
+      "point1": {
+        "lat": 41.6132334,
+        "lon": 15.8615011
+      },
+      "point2": {
+        "lat": 41.6132672,
+        "lon": 15.8615619
+      },
+      "track_direction_deg": 323.32,
+      "line_direction_deg": 53.32,
+      "track_width_m": 6.3,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "1gxtpq37.tkk",
+    "name": "Circuito Manfredonia",
+    "city": "Manfre. V3",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 41.6132503,
+        "lon": 15.8615315
+      },
+      "point1": {
+        "lat": 41.6132336,
+        "lon": 15.8615016
+      },
+      "point2": {
+        "lat": 41.613267,
+        "lon": 15.8615614
+      },
+      "track_direction_deg": 323.32,
+      "line_direction_deg": 53.32,
+      "track_width_m": 6.2,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "1gxts0wu.tkk",
+    "name": "Pista l'Amicizia",
+    "city": "Amicizia",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 45.0600398,
+        "lon": 9.6949255
+      },
+      "point1": {
+        "lat": 45.0600619,
+        "lon": 9.6949344
+      },
+      "point2": {
+        "lat": 45.0600177,
+        "lon": 9.6949166
+      },
+      "track_direction_deg": 105.83,
+      "line_direction_deg": 195.83,
+      "track_width_m": 5.1,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "1gxv4g7q.tkk",
+    "name": "Circuito del Persico",
+    "city": "Persico",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 44.6845137,
+        "lon": 11.7722471
+      },
+      "point1": {
+        "lat": 44.6844828,
+        "lon": 11.7722212
+      },
+      "point2": {
+        "lat": 44.6845446,
+        "lon": 11.772273
+      },
+      "track_direction_deg": 300.83,
+      "line_direction_deg": 30.83,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "1gxv58zi.tkk",
+    "name": "Circuito del Persico",
+    "city": "Persico Sh",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 44.6845137,
+        "lon": 11.7722471
+      },
+      "point1": {
+        "lat": 44.6844828,
+        "lon": 11.7722212
+      },
+      "point2": {
+        "lat": 44.6845446,
+        "lon": 11.772273
+      },
+      "track_direction_deg": 300.83,
+      "line_direction_deg": 30.83,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "1gxv7puf.tkk",
+    "name": "Pista Kart Valsusa",
+    "city": "Valsusa",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 45.1244036,
+        "lon": 7.2038554
+      },
+      "point1": {
+        "lat": 45.1243688,
+        "lon": 7.2038423
+      },
+      "point2": {
+        "lat": 45.1244384,
+        "lon": 7.2038685
+      },
+      "track_direction_deg": 284.94,
+      "line_direction_deg": 14.94,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "1gycnvft.tkk",
+    "name": "Pista Minimoto Motor Park Cattolica",
+    "city": "MotorPark V1",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 43.9518678,
+        "lon": 12.739938
+      },
+      "point1": {
+        "lat": 43.9518008,
+        "lon": 12.7399277
+      },
+      "point2": {
+        "lat": 43.9519348,
+        "lon": 12.7399483
+      },
+      "track_direction_deg": 276.33,
+      "line_direction_deg": 6.33,
+      "track_width_m": 15.0,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "1gycoc16.tkk",
+    "name": "Pista Minimoto Motor Park Cattolica",
+    "city": "MotorPark V2",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 43.9518677,
+        "lon": 12.7399379
+      },
+      "point1": {
+        "lat": 43.9518006,
+        "lon": 12.7399286
+      },
+      "point2": {
+        "lat": 43.9519348,
+        "lon": 12.7399472
+      },
+      "track_direction_deg": 275.68,
+      "line_direction_deg": 5.68,
+      "track_width_m": 15.0,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "1h14eaj3.tkk",
+    "name": "Karting Club Alento",
+    "city": "Alento",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 40.2195975,
+        "lon": 15.1491541
+      },
+      "point1": {
+        "lat": 40.2196478,
+        "lon": 15.149115
+      },
+      "point2": {
+        "lat": 40.2195472,
+        "lon": 15.1491932
+      },
+      "track_direction_deg": 59.3,
+      "line_direction_deg": 149.3,
+      "track_width_m": 13.0,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "1h14ehpl.tkk",
+    "name": "Karting Club Alento",
+    "city": "AlentoK",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 40.2195975,
+        "lon": 15.1491541
+      },
+      "point1": {
+        "lat": 40.2196478,
+        "lon": 15.149115
+      },
+      "point2": {
+        "lat": 40.2195472,
+        "lon": 15.1491932
+      },
+      "track_direction_deg": 59.3,
+      "line_direction_deg": 149.3,
+      "track_width_m": 13.0,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "1hb58bf7.tkk",
+    "name": "Misano World Circuit Marco Simoncelli",
+    "city": "Misano Short",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 43.9618725,
+        "lon": 12.6839705
+      },
+      "point1": {
+        "lat": 43.9618338,
+        "lon": 12.684097
+      },
+      "point2": {
+        "lat": 43.9619112,
+        "lon": 12.683844
+      },
+      "track_direction_deg": 203.04,
+      "line_direction_deg": 293.04,
+      "track_width_m": 22.0,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "1hb59p3j.tkk",
+    "name": "Autodromo Nazionale di Monza",
+    "city": "Monza Car",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 45.6189809,
+        "lon": 9.2811335
+      },
+      "point1": {
+        "lat": 45.6189897,
+        "lon": 9.2810075
+      },
+      "point2": {
+        "lat": 45.6189721,
+        "lon": 9.2812595
+      },
+      "track_direction_deg": 5.73,
+      "line_direction_deg": 95.73,
+      "track_width_m": 19.7,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "1hb5akd9.tkk",
+    "name": "Autodromo Nazionale di Monza",
+    "city": "Monza Junior",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 45.6189809,
+        "lon": 9.2811335
+      },
+      "point1": {
+        "lat": 45.6189891,
+        "lon": 9.2810164
+      },
+      "point2": {
+        "lat": 45.6189727,
+        "lon": 9.2812506
+      },
+      "track_direction_deg": 5.73,
+      "line_direction_deg": 95.73,
+      "track_width_m": 18.3,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "1heg6acp.tkk",
+    "name": "Millenium Karting Club",
+    "city": "Millenium",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 39.274998,
+        "lon": 16.056589
+      },
+      "point1": {
+        "lat": 39.2750028,
+        "lon": 16.0566351
+      },
+      "point2": {
+        "lat": 39.2749932,
+        "lon": 16.0565429
+      },
+      "track_direction_deg": 172.35,
+      "line_direction_deg": 262.35,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "1hegdg69.tkk",
+    "name": "Pista Ronco OMP",
+    "city": "Ronco V1",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 44.6041016,
+        "lon": 8.9514778
+      },
+      "point1": {
+        "lat": 44.6041226,
+        "lon": 8.9515188
+      },
+      "point2": {
+        "lat": 44.6040806,
+        "lon": 8.9514368
+      },
+      "track_direction_deg": 144.2,
+      "line_direction_deg": 234.2,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "1hegdn65.tkk",
+    "name": "Pista Ronco OMP",
+    "city": "Ronco V2",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 44.6041016,
+        "lon": 8.9514778
+      },
+      "point1": {
+        "lat": 44.6041226,
+        "lon": 8.9515188
+      },
+      "point2": {
+        "lat": 44.6040806,
+        "lon": 8.9514368
+      },
+      "track_direction_deg": 144.2,
+      "line_direction_deg": 234.2,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "1hegdtea.tkk",
+    "name": "Pista Ronco OMP",
+    "city": "Ronco V3",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 44.6041016,
+        "lon": 8.9514778
+      },
+      "point1": {
+        "lat": 44.6041226,
+        "lon": 8.9515188
+      },
+      "point2": {
+        "lat": 44.6040806,
+        "lon": 8.9514368
+      },
+      "track_direction_deg": 144.2,
+      "line_direction_deg": 234.2,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "1hegdzpx.tkk",
+    "name": "Pista Ronco OMP",
+    "city": "Ronco V4",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 44.6041016,
+        "lon": 8.9514778
+      },
+      "point1": {
+        "lat": 44.6041226,
+        "lon": 8.9515188
+      },
+      "point2": {
+        "lat": 44.6040806,
+        "lon": 8.9514368
+      },
+      "track_direction_deg": 144.2,
+      "line_direction_deg": 234.2,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "1hege5ai.tkk",
+    "name": "Pista Ronco OMP",
+    "city": "Ronco V5",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 44.6041016,
+        "lon": 8.9514778
+      },
+      "point1": {
+        "lat": 44.6041226,
+        "lon": 8.9515188
+      },
+      "point2": {
+        "lat": 44.6040806,
+        "lon": 8.9514368
+      },
+      "track_direction_deg": 144.2,
+      "line_direction_deg": 234.2,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "1hego3yz.tkk",
+    "name": "Pista Minimoto Chessa Benito",
+    "city": "Chessa",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 42.7793141,
+        "lon": 11.2149248
+      },
+      "point1": {
+        "lat": 42.7792471,
+        "lon": 11.2150478
+      },
+      "point2": {
+        "lat": 42.7793811,
+        "lon": 11.2148018
+      },
+      "track_direction_deg": 216.56,
+      "line_direction_deg": 306.56,
+      "track_width_m": 25.0,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "1hegxmwx.tkk",
+    "name": "Go-Kart Pista Riviera Verde",
+    "city": "RivieraVerde",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 43.969055,
+        "lon": 12.7103241
+      },
+      "point1": {
+        "lat": 43.9690378,
+        "lon": 12.710368
+      },
+      "point2": {
+        "lat": 43.9690722,
+        "lon": 12.7102802
+      },
+      "track_direction_deg": 208.6,
+      "line_direction_deg": 298.6,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "1heh2uyv.tkk",
+    "name": "Go-Kart Park Sant'Anna",
+    "city": "S. Anna",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 40.6068495,
+        "lon": 14.3699961
+      },
+      "point1": {
+        "lat": 40.6068412,
+        "lon": 14.36995
+      },
+      "point2": {
+        "lat": 40.6068578,
+        "lon": 14.3700422
+      },
+      "track_direction_deg": 346.66,
+      "line_direction_deg": 76.66,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "1hehj7bf.tkk",
+    "name": "Pista Torricola Team Racing",
+    "city": "T.T.R V1",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 41.8155092,
+        "lon": 12.5442815
+      },
+      "point1": {
+        "lat": 41.8155385,
+        "lon": 12.5443085
+      },
+      "point2": {
+        "lat": 41.8154799,
+        "lon": 12.5442545
+      },
+      "track_direction_deg": 124.5,
+      "line_direction_deg": 214.5,
+      "track_width_m": 7.9,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "1hehnmo9.tkk",
+    "name": "Pista Torricola Team Racing",
+    "city": "T.T.R V2",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 41.8155092,
+        "lon": 12.5442815
+      },
+      "point1": {
+        "lat": 41.8155385,
+        "lon": 12.5443085
+      },
+      "point2": {
+        "lat": 41.8154799,
+        "lon": 12.5442545
+      },
+      "track_direction_deg": 124.5,
+      "line_direction_deg": 214.5,
+      "track_width_m": 7.9,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "1heho5up.tkk",
+    "name": "Pista Torricola Team Racing",
+    "city": "T.T.R V3",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 41.8155092,
+        "lon": 12.5442815
+      },
+      "point1": {
+        "lat": 41.8155385,
+        "lon": 12.5443085
+      },
+      "point2": {
+        "lat": 41.8154799,
+        "lon": 12.5442545
+      },
+      "track_direction_deg": 124.5,
+      "line_direction_deg": 214.5,
+      "track_width_m": 7.9,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "1jxfat6a.tkk",
+    "name": "Adria International Raceway 2021",
+    "city": "Adria 2021",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 45.0447274,
+        "lon": 12.1478155
+      },
+      "point1": {
+        "lat": 45.0447284,
+        "lon": 12.1477646
+      },
+      "point2": {
+        "lat": 45.0447264,
+        "lon": 12.1478664
+      },
+      "track_direction_deg": 1.62,
+      "line_direction_deg": 91.62,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "1smjn7rw.tkk",
+    "name": "Cronoscalata Poggio - Vallefredda",
+    "city": "PoggioValF",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 41.6794301,
+        "lon": 13.5848752
+      },
+      "point1": {
+        "lat": 41.6794261,
+        "lon": 13.5849231
+      },
+      "point2": {
+        "lat": 41.6794341,
+        "lon": 13.5848273
+      },
+      "track_direction_deg": 186.33,
+      "line_direction_deg": 276.33,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "1stad3sy.tkk",
+    "name": "Pista Italia",
+    "city": "PistaItalia2",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 41.0169029,
+        "lon": 13.9741164
+      },
+      "point1": {
+        "lat": 41.0169277,
+        "lon": 13.974151
+      },
+      "point2": {
+        "lat": 41.0168781,
+        "lon": 13.9740818
+      },
+      "track_direction_deg": 136.53,
+      "line_direction_deg": 226.53,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "1staxhar.tkk",
+    "name": "Pista Azzurra - Borgo Ticino",
+    "city": "BorgoTicino2",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 45.7010952,
+        "lon": 8.5949004
+      },
+      "point1": {
+        "lat": 45.70109,
+        "lon": 8.5949514
+      },
+      "point2": {
+        "lat": 45.7011004,
+        "lon": 8.5948494
+      },
+      "track_direction_deg": 188.39,
+      "line_direction_deg": 278.39,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "1suxy886.tkk",
+    "name": "Pista Fanelli",
+    "city": "TorricellaL",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 40.3703906,
+        "lon": 17.5189852
+      },
+      "point1": {
+        "lat": 40.370415,
+        "lon": 17.5190198
+      },
+      "point2": {
+        "lat": 40.3703662,
+        "lon": 17.5189506
+      },
+      "track_direction_deg": 137.21,
+      "line_direction_deg": 227.21,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "1suymicl.tkk",
+    "name": "Kartodromo di Avola",
+    "city": "Avola",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 36.9060165,
+        "lon": 15.1226701
+      },
+      "point1": {
+        "lat": 36.9060404,
+        "lon": 15.1226365
+      },
+      "point2": {
+        "lat": 36.9059926,
+        "lon": 15.1227037
+      },
+      "track_direction_deg": 41.68,
+      "line_direction_deg": 131.68,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "20cgkiy1.tkk",
+    "name": "Circuito Internazionale di Triscina",
+    "city": "Triscina2",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 37.5916795,
+        "lon": 12.7645655
+      },
+      "point1": {
+        "lat": 37.591703,
+        "lon": 12.7645999
+      },
+      "point2": {
+        "lat": 37.591656,
+        "lon": 12.7645311
+      },
+      "track_direction_deg": 139.29,
+      "line_direction_deg": 229.29,
+      "track_width_m": 8.0,
+      "width_estimated": true
+    }
+  },
+  {
+    "file": "21j4vzky.tkk",
+    "name": "Circuito Tazio Nuvolari",
+    "city": "Nuvolari V3",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 45.0723741,
+        "lon": 8.9918864
+      },
+      "point1": {
+        "lat": 45.0723927,
+        "lon": 8.9919191
+      },
+      "point2": {
+        "lat": 45.0723555,
+        "lon": 8.9918537
+      },
+      "track_direction_deg": 141.08,
+      "line_direction_deg": 231.08,
+      "track_width_m": 6.6,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "22r2z15l.tkk",
+    "name": "Circuito Internazionale Napoli",
+    "city": "Sarno2024",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 40.8370425,
+        "lon": 14.5659137
+      },
+      "point1": {
+        "lat": 40.8370773,
+        "lon": 14.565785
+      },
+      "point2": {
+        "lat": 40.8370077,
+        "lon": 14.5660424
+      },
+      "track_direction_deg": 19.66,
+      "line_direction_deg": 109.66,
+      "track_width_m": 23.0,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "28hg220b.tkk",
+    "name": "Cremona Circuit",
+    "city": "Cremona2025",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 45.085345,
+        "lon": 10.3124633
+      },
+      "point1": {
+        "lat": 45.085238,
+        "lon": 10.3124143
+      },
+      "point2": {
+        "lat": 45.085452,
+        "lon": 10.3125123
+      },
+      "track_direction_deg": 287.92,
+      "line_direction_deg": 17.92,
+      "track_width_m": 25.0,
+      "width_estimated": false
+    }
+  },
+  {
+    "file": "2c29aiq9.tkk",
+    "name": "Ala Karting Circuit",
+    "city": "AlaK 2025",
+    "country": "IT",
+    "start_line": {
+      "center": {
+        "lat": 45.7862334,
+        "lon": 11.0118571
+      },
+      "point1": {
+        "lat": 45.786269,
+        "lon": 11.0117572
+      },
+      "point2": {
+        "lat": 45.7861978,
+        "lon": 11.011957
+      },
+      "track_direction_deg": 27.06,
+      "line_direction_deg": 117.06,
+      "track_width_m": 17.4,
+      "width_estimated": false
+    }
+  }
+]

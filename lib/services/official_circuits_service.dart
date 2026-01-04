@@ -11,21 +11,14 @@ class OfficialCircuitsService {
   OfficialCircuitsService._internal();
 
   List<OfficialCircuitInfo>? _cachedCircuits;
-  String? _version;
-  String? _lastUpdated;
 
   /// Carica tutti i circuiti dal file JSON asset
   Future<List<OfficialCircuitInfo>> loadCircuits() async {
     if (_cachedCircuits != null) return _cachedCircuits!;
 
     final jsonString =
-        await rootBundle.loadString('assets/data/official_circuits.json');
-    final jsonData = json.decode(jsonString) as Map<String, dynamic>;
-
-    _version = jsonData['version'] as String?;
-    _lastUpdated = jsonData['lastUpdated'] as String?;
-
-    final circuitsJson = jsonData['circuits'] as List<dynamic>;
+        await rootBundle.loadString('assets/data/start_lines_italia.json');
+    final circuitsJson = json.decode(jsonString) as List<dynamic>;
 
     _cachedCircuits = circuitsJson
         .map((c) => OfficialCircuitInfo.fromJson(c as Map<String, dynamic>))
@@ -37,34 +30,11 @@ class OfficialCircuitsService {
     return _cachedCircuits!;
   }
 
-  /// Versione del file JSON
-  String? get version => _version;
-
-  /// Data ultimo aggiornamento
-  String? get lastUpdated => _lastUpdated;
-
   /// Ottieni circuiti filtrati per paese
-  Future<List<OfficialCircuitInfo>> getByCountry(String countryCode) async {
+  Future<List<OfficialCircuitInfo>> getByCountry(String country) async {
     final all = await loadCircuits();
     return all
-        .where((c) => c.countryCode.toLowerCase() == countryCode.toLowerCase())
-        .toList();
-  }
-
-  /// Ottieni circuiti filtrati per continente
-  Future<List<OfficialCircuitInfo>> getByContinent(String continent) async {
-    final all = await loadCircuits();
-    return all
-        .where((c) => c.continent.toLowerCase() == continent.toLowerCase())
-        .toList();
-  }
-
-  /// Ottieni circuiti filtrati per categoria
-  Future<List<OfficialCircuitInfo>> getByCategory(String category) async {
-    final all = await loadCircuits();
-    return all
-        .where((c) =>
-            c.category?.toLowerCase() == category.toLowerCase())
+        .where((c) => c.country.toLowerCase() == country.toLowerCase())
         .toList();
   }
 
@@ -92,18 +62,6 @@ class OfficialCircuitsService {
     }
   }
 
-  /// Ottieni tutte le categorie disponibili
-  Future<List<String>> getCategories() async {
-    final all = await loadCircuits();
-    final categories = <String>{};
-    for (final c in all) {
-      if (c.category != null) {
-        categories.add(c.category!);
-      }
-    }
-    return categories.toList()..sort();
-  }
-
   /// Ottieni tutti i paesi disponibili
   Future<List<String>> getCountries() async {
     final all = await loadCircuits();
@@ -123,7 +81,5 @@ class OfficialCircuitsService {
   /// Pulisci la cache (per testing/refresh)
   void clearCache() {
     _cachedCircuits = null;
-    _version = null;
-    _lastUpdated = null;
   }
 }

@@ -5,100 +5,108 @@ import 'track_definition.dart';
 /// Contiene tutte le informazioni necessarie per identificare un circuito
 /// e la sua linea di Start/Finish per il conteggio giri.
 class OfficialCircuitInfo {
-  final String id;
+  final String file; // Nome file .tkk
   final String name;
   final String city;
   final String country;
-  final String countryCode;
-  final String continent;
-  final double lengthMeters;
   final LatLng finishLineStart;
   final LatLng finishLineEnd;
-  final String? category; // F1, MotoGP, GT, Karting, etc.
+  final LatLng finishLineCenter;
+  final double trackDirectionDeg;
+  final double lineDirectionDeg;
+  final double trackWidthM;
+  final bool widthEstimated;
 
   const OfficialCircuitInfo({
-    required this.id,
+    required this.file,
     required this.name,
     required this.city,
     required this.country,
-    required this.countryCode,
-    required this.continent,
-    required this.lengthMeters,
     required this.finishLineStart,
     required this.finishLineEnd,
-    this.category,
+    required this.finishLineCenter,
+    required this.trackDirectionDeg,
+    required this.lineDirectionDeg,
+    required this.trackWidthM,
+    required this.widthEstimated,
   });
 
   /// Crea un'istanza dal JSON
   factory OfficialCircuitInfo.fromJson(Map<String, dynamic> json) {
+    final startLine = json['start_line'] as Map<String, dynamic>;
+    final center = startLine['center'] as Map<String, dynamic>;
+    final point1 = startLine['point1'] as Map<String, dynamic>;
+    final point2 = startLine['point2'] as Map<String, dynamic>;
+
     return OfficialCircuitInfo(
-      id: json['id'] as String,
+      file: json['file'] as String,
       name: json['name'] as String,
       city: json['city'] as String,
       country: json['country'] as String,
-      countryCode: json['countryCode'] as String,
-      continent: json['continent'] as String,
-      lengthMeters: (json['lengthMeters'] as num).toDouble(),
       finishLineStart: LatLng(
-        (json['finishLineStart']['lat'] as num).toDouble(),
-        (json['finishLineStart']['lon'] as num).toDouble(),
+        (point1['lat'] as num).toDouble(),
+        (point1['lon'] as num).toDouble(),
       ),
       finishLineEnd: LatLng(
-        (json['finishLineEnd']['lat'] as num).toDouble(),
-        (json['finishLineEnd']['lon'] as num).toDouble(),
+        (point2['lat'] as num).toDouble(),
+        (point2['lon'] as num).toDouble(),
       ),
-      category: json['category'] as String?,
+      finishLineCenter: LatLng(
+        (center['lat'] as num).toDouble(),
+        (center['lon'] as num).toDouble(),
+      ),
+      trackDirectionDeg: (startLine['track_direction_deg'] as num).toDouble(),
+      lineDirectionDeg: (startLine['line_direction_deg'] as num).toDouble(),
+      trackWidthM: (startLine['track_width_m'] as num).toDouble(),
+      widthEstimated: startLine['width_estimated'] as bool,
     );
   }
 
   /// Converte in JSON
   Map<String, dynamic> toJson() {
     return {
-      'id': id,
+      'file': file,
       'name': name,
       'city': city,
       'country': country,
-      'countryCode': countryCode,
-      'continent': continent,
-      'lengthMeters': lengthMeters,
-      'finishLineStart': {
-        'lat': finishLineStart.latitude,
-        'lon': finishLineStart.longitude,
+      'start_line': {
+        'center': {
+          'lat': finishLineCenter.latitude,
+          'lon': finishLineCenter.longitude,
+        },
+        'point1': {
+          'lat': finishLineStart.latitude,
+          'lon': finishLineStart.longitude,
+        },
+        'point2': {
+          'lat': finishLineEnd.latitude,
+          'lon': finishLineEnd.longitude,
+        },
+        'track_direction_deg': trackDirectionDeg,
+        'line_direction_deg': lineDirectionDeg,
+        'track_width_m': trackWidthM,
+        'width_estimated': widthEstimated,
       },
-      'finishLineEnd': {
-        'lat': finishLineEnd.latitude,
-        'lon': finishLineEnd.longitude,
-      },
-      if (category != null) 'category': category,
     };
   }
 
   /// Converte in TrackDefinition per l'uso nelle sessioni live
   TrackDefinition toTrackDefinition() {
     return TrackDefinition(
-      id: id,
+      id: file, // Usa il nome file come ID
       name: name,
       location: '$city, $country',
       finishLineStart: finishLineStart,
       finishLineEnd: finishLineEnd,
-      estimatedLengthMeters: lengthMeters,
+      estimatedLengthMeters: null, // Non abbiamo la lunghezza nel nuovo formato
     );
   }
 
   /// Location formattata come stringa
   String get location => '$city, $country';
 
-  /// Lunghezza in km con 2 decimali
-  double get lengthKm => lengthMeters / 1000;
-
-  /// Stringa formattata della lunghezza
-  String get lengthFormatted => '${lengthKm.toStringAsFixed(2)} km';
-
-  /// Centro della linea di traguardo
-  LatLng get finishLineCenter => LatLng(
-        (finishLineStart.latitude + finishLineEnd.latitude) / 2,
-        (finishLineStart.longitude + finishLineEnd.longitude) / 2,
-      );
+  /// ID univoco basato sul nome file
+  String get id => file;
 
   @override
   String toString() => 'OfficialCircuitInfo($name, $location)';
@@ -108,8 +116,8 @@ class OfficialCircuitInfo {
       identical(this, other) ||
       other is OfficialCircuitInfo &&
           runtimeType == other.runtimeType &&
-          id == other.id;
+          file == other.file;
 
   @override
-  int get hashCode => id.hashCode;
+  int get hashCode => file.hashCode;
 }

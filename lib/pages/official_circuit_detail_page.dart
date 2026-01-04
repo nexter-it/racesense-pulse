@@ -269,6 +269,10 @@ class _OfficialCircuitDetailPageState extends State<OfficialCircuitDetailPage> {
   }
 
   Widget _buildStatsBar() {
+    // Calcola la larghezza della linea S/F
+    final dist = Distance();
+    final lineWidth = dist.as(LengthUnit.Meter, widget.circuit.finishLineStart, widget.circuit.finishLineEnd);
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
@@ -279,22 +283,14 @@ class _OfficialCircuitDetailPageState extends State<OfficialCircuitDetailPage> {
       ),
       child: Row(
         children: [
-          // Length stat
+          // Track width stat
           _buildStatItem(
             icon: Icons.straighten_rounded,
-            value: widget.circuit.lengthFormatted,
+            value: '${widget.circuit.trackWidthM.toStringAsFixed(1)} m larghezza',
             color: const Color(0xFF00E676),
           ),
-          const SizedBox(width: 16),
-          // Category stat
-          if (widget.circuit.category != null)
-            _buildStatItem(
-              icon: Icons.emoji_events_rounded,
-              value: widget.circuit.category!,
-              color: const Color(0xFFFFB74D),
-            ),
           const Spacer(),
-          // Finish line info
+          // Finish line width
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
@@ -307,7 +303,7 @@ class _OfficialCircuitDetailPageState extends State<OfficialCircuitDetailPage> {
                 Icon(Icons.flag_circle_rounded, color: _kOfficialColor, size: 14),
                 const SizedBox(width: 6),
                 Text(
-                  'S/F Verificata',
+                  'Linea S/F: ${lineWidth.toStringAsFixed(1)} m',
                   style: TextStyle(
                     fontSize: 11,
                     color: kMutedColor,
