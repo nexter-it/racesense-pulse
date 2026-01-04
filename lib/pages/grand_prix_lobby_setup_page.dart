@@ -5,7 +5,9 @@ import 'package:firebase_database/firebase_database.dart';
 import '../theme.dart';
 import '../services/grand_prix_service.dart';
 import '../services/custom_circuit_service.dart';
+import '../services/official_circuits_service.dart';
 import '../models/grand_prix_models.dart';
+import '../models/official_circuit_info.dart';
 import 'grand_prix_live_page.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -722,23 +724,64 @@ class _TrackSelectorSheet extends StatefulWidget {
   State<_TrackSelectorSheet> createState() => _TrackSelectorSheetState();
 }
 
-class _TrackSelectorSheetState extends State<_TrackSelectorSheet> {
+class _TrackSelectorSheetState extends State<_TrackSelectorSheet>
+    with SingleTickerProviderStateMixin {
   final _customCircuitService = CustomCircuitService();
-  List<CustomCircuitInfo> _circuits = [];
+  final _officialCircuitsService = OfficialCircuitsService();
+  final _searchController = TextEditingController();
+
+  List<CustomCircuitInfo> _customCircuits = [];
+  List<OfficialCircuitInfo> _officialCircuits = [];
+  List<OfficialCircuitInfo> _filteredOfficialCircuits = [];
   bool _loading = true;
+
+  late TabController _tabController;
+  int _currentTab = 0;
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(() {
+      setState(() => _currentTab = _tabController.index);
+    });
+    _searchController.addListener(_filterOfficialCircuits);
     _loadCircuits();
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _filterOfficialCircuits() {
+    final query = _searchController.text.toLowerCase();
+    setState(() {
+      if (query.isEmpty) {
+        _filteredOfficialCircuits = _officialCircuits;
+      } else {
+        _filteredOfficialCircuits = _officialCircuits.where((c) {
+          return c.name.toLowerCase().contains(query) ||
+              c.city.toLowerCase().contains(query) ||
+              c.country.toLowerCase().contains(query);
+        }).toList();
+      }
+    });
   }
 
   Future<void> _loadCircuits() async {
     setState(() => _loading = true);
-    final list = await _customCircuitService.listCircuits();
+
+    final customList = await _customCircuitService.listCircuits();
+    final officialList = await _officialCircuitsService.loadCircuits();
+
     if (mounted) {
       setState(() {
-        _circuits = list;
+        _customCircuits = customList;
+        _officialCircuits = officialList;
+        _filteredOfficialCircuits = officialList;
         _loading = false;
       });
     }
@@ -757,6 +800,7 @@ class _TrackSelectorSheetState extends State<_TrackSelectorSheet> {
       ),
       child: Column(
         children: [
+          // Header
           Container(
             padding: const EdgeInsets.all(20),
             decoration: const BoxDecoration(
@@ -783,9 +827,63 @@ class _TrackSelectorSheetState extends State<_TrackSelectorSheet> {
                     color: kFgColor,
                   ),
                 ),
+                const SizedBox(height: 16),
+                // Tab bar
+                Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: _kTileColor,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: _kBorderColor),
+                  ),
+                  child: TabBar(
+                    controller: _tabController,
+                    indicator: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [kBrandColor, kBrandColor.withAlpha(200)],
+                      ),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    indicatorSize: TabBarIndicatorSize.tab,
+                    dividerColor: Colors.transparent,
+                    labelColor: Colors.black,
+                    unselectedLabelColor: kMutedColor,
+                    labelStyle: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                    ),
+                    unselectedLabelStyle: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    tabs: [
+                      Tab(
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.track_changes, size: 16),
+                            const SizedBox(width: 6),
+                            const Text('Tuoi Circuiti'),
+                          ],
+                        ),
+                      ),
+                      Tab(
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.verified_rounded, size: 16),
+                            const SizedBox(width: 6),
+                            const Text('Ufficiali'),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
+          // Content
           Expanded(
             child: _loading
                 ? const Center(
@@ -793,99 +891,286 @@ class _TrackSelectorSheetState extends State<_TrackSelectorSheet> {
                       valueColor: AlwaysStoppedAnimation<Color>(kBrandColor),
                     ),
                   )
-                : _circuits.isEmpty
-                    ? Center(
-                        child: Text(
-                          'Nessun circuito disponibile',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: kMutedColor,
-                          ),
-                        ),
-                      )
-                    : ListView.builder(
-                        physics: const BouncingScrollPhysics(),
-                        padding: const EdgeInsets.all(20),
-                        itemCount: _circuits.length,
-                        itemBuilder: (context, index) {
-                          final circuit = _circuits[index];
-                          return GestureDetector(
-                            onTap: () {
-                              HapticFeedback.selectionClick();
-                              Navigator.of(context).pop({
-                                'id': circuit.trackId ?? circuit.name,
-                                'name': circuit.name,
-                              });
-                            },
-                            child: Container(
-                              margin: const EdgeInsets.only(bottom: 12),
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                  colors: [_kCardStart, _kCardEnd],
-                                ),
-                                borderRadius: BorderRadius.circular(14),
-                                border: Border.all(
-                                  color: _kBorderColor,
-                                  width: 1,
-                                ),
-                              ),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(12),
-                                    decoration: BoxDecoration(
-                                      color: kBrandColor.withOpacity(0.2),
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: Icon(
-                                      Icons.track_changes,
-                                      color: kBrandColor,
-                                      size: 24,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 14),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          circuit.name,
-                                          style: const TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w700,
-                                            color: kFgColor,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          'Circuito Custom',
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: kMutedColor,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  Icon(
-                                    Icons.chevron_right,
-                                    color: kMutedColor,
-                                    size: 24,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
-                      ),
+                : TabBarView(
+                    controller: _tabController,
+                    children: [
+                      _buildCustomCircuitsList(),
+                      _buildOfficialCircuitsList(),
+                    ],
+                  ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildCustomCircuitsList() {
+    if (_customCircuits.isEmpty) {
+      return Center(
+        child: Text(
+          'Nessun circuito custom disponibile',
+          style: TextStyle(
+            fontSize: 14,
+            color: kMutedColor,
+          ),
+        ),
+      );
+    }
+
+    return ListView.builder(
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.all(20),
+      itemCount: _customCircuits.length,
+      itemBuilder: (context, index) {
+        final circuit = _customCircuits[index];
+        return GestureDetector(
+          onTap: () {
+            HapticFeedback.selectionClick();
+            Navigator.of(context).pop({
+              'id': 'custom:${circuit.trackId ?? circuit.name}',
+              'name': circuit.name,
+            });
+          },
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [_kCardStart, _kCardEnd],
+              ),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: _kBorderColor,
+                width: 1,
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: kBrandColor.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    Icons.track_changes,
+                    color: kBrandColor,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        circuit.name,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: kFgColor,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Circuito Custom',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: kMutedColor,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.chevron_right,
+                  color: kMutedColor,
+                  size: 24,
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildOfficialCircuitsList() {
+    if (_officialCircuits.isEmpty) {
+      return Center(
+        child: Text(
+          'Nessun circuito ufficiale disponibile',
+          style: TextStyle(
+            fontSize: 14,
+            color: kMutedColor,
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      children: [
+        // Search bar
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+          child: Container(
+            decoration: BoxDecoration(
+              color: _kTileColor,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: _kBorderColor),
+            ),
+            child: TextField(
+              controller: _searchController,
+              style: const TextStyle(color: kFgColor, fontSize: 14),
+              decoration: InputDecoration(
+                hintText: 'Cerca circuito...',
+                hintStyle: TextStyle(color: kMutedColor, fontSize: 14),
+                prefixIcon: Icon(Icons.search, color: kMutedColor, size: 20),
+                suffixIcon: _searchController.text.isNotEmpty
+                    ? IconButton(
+                        icon: Icon(Icons.clear, color: kMutedColor, size: 18),
+                        onPressed: () {
+                          _searchController.clear();
+                        },
+                      )
+                    : null,
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              ),
+            ),
+          ),
+        ),
+        // Results count
+        if (_searchController.text.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+            child: Row(
+              children: [
+                Text(
+                  '${_filteredOfficialCircuits.length} ${_filteredOfficialCircuits.length == 1 ? 'risultato' : 'risultati'}',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: kMutedColor,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        // Circuit list
+        Expanded(
+          child: _filteredOfficialCircuits.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.search_off, color: kMutedColor, size: 48),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Nessun circuito trovato',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: kMutedColor,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              : ListView.builder(
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                  itemCount: _filteredOfficialCircuits.length,
+                  itemBuilder: (context, index) {
+                    final circuit = _filteredOfficialCircuits[index];
+        return GestureDetector(
+          onTap: () {
+            HapticFeedback.selectionClick();
+            Navigator.of(context).pop({
+              'id': 'official:${circuit.file}',
+              'name': circuit.name,
+            });
+          },
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [_kCardStart, _kCardEnd],
+              ),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: _kBorderColor,
+                width: 1,
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF29B6F6).withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    Icons.stadium_rounded,
+                    color: const Color(0xFF29B6F6),
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        circuit.name,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: kFgColor,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.verified_rounded,
+                            color: const Color(0xFF29B6F6),
+                            size: 12,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Ufficiale • ${circuit.location}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: kMutedColor,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.chevron_right,
+                  color: kMutedColor,
+                  size: 24,
+                ),
+              ],
+            ),
+          ),
+        );
+                  },
+                ),
+        ),
+      ],
     );
   }
 }
