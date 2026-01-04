@@ -401,9 +401,10 @@ class _CustomCircuitDetailPageState extends State<CustomCircuitDetailPage>
   @override
   Widget build(BuildContext context) {
     final path = _closedPath();
+    // Usa la posizione della linea S/F come centro se non ci sono punti GPS
     final center = path.isNotEmpty
         ? path.first
-        : const LatLng(45.0, 9.0);
+        : (_finishLineStart ?? _finishLineEnd ?? const LatLng(45.0, 9.0));
 
     final finishLines = _buildFinishLine();
 
@@ -449,6 +450,7 @@ class _CustomCircuitDetailPageState extends State<CustomCircuitDetailPage>
                               'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
                           userAgentPackageName: 'racesense_pulse',
                         ),
+                        // Mostra tracciato solo se ci sono punti GPS
                         if (path.isNotEmpty)
                           PolylineLayer(
                             polylines: [
@@ -465,9 +467,12 @@ class _CustomCircuitDetailPageState extends State<CustomCircuitDetailPage>
                                 borderStrokeWidth: 1,
                                 borderColor: Colors.black.withAlpha(150),
                               ),
-                              // Linea start/finish a scacchi
-                              ...finishLines,
                             ],
+                          ),
+                        // Linea start/finish sempre visibile
+                        if (finishLines.isNotEmpty)
+                          PolylineLayer(
+                            polylines: finishLines,
                           ),
                         // Marker per editing (non draggabili - gestiti dal GestureDetector padre)
                         if (_isEditingFinishLine && _finishLineStart != null && _finishLineEnd != null)
@@ -613,40 +618,143 @@ class _CustomCircuitDetailPageState extends State<CustomCircuitDetailPage>
   }
 
   Widget _buildStatsBar() {
-    final hasGpsInfo = widget.circuit.gpsFrequencyHz != null;
-    final usedBle = widget.circuit.usedBleDevice;
+    // Calcola lunghezza della linea S/F
+    double finishLineLength = 0;
+    if (_finishLineStart != null && _finishLineEnd != null) {
+      final dist = const Distance();
+      finishLineLength = dist(_finishLineStart!, _finishLineEnd!);
+    }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: const Color(0xFF121212),
         border: const Border(
           bottom: BorderSide(color: Color(0xFF2A2A2A), width: 1),
         ),
       ),
-      child: Row(
-        children: [
-          _buildStatItem(
-            icon: Icons.gps_fixed,
-            label: 'Punti GPS',
-            value: '${widget.circuit.points.length}',
-            color: const Color(0xFF00E676),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              kBrandColor.withAlpha(20),
+              kBrandColor.withAlpha(10),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
-          const SizedBox(width: 24),
-          if (hasGpsInfo) ...[
-            _buildStatItem(
-              icon: Icons.speed,
-              label: 'Frequenza',
-              value: '${widget.circuit.gpsFrequencyHz!.toStringAsFixed(0)} Hz',
-              color: const Color(0xFF29B6F6),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: kBrandColor.withAlpha(60)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.flag_outlined, color: kBrandColor, size: 20),
+                const SizedBox(width: 10),
+                Text(
+                  'Linea Start/Finish Configurata',
+                  style: TextStyle(
+                    color: kBrandColor,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(width: 24),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildFinishLineInfo(
+                    icon: Icons.straighten,
+                    label: 'Lunghezza',
+                    value: '${finishLineLength.toStringAsFixed(1)} m',
+                    color: const Color(0xFF00E676),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildFinishLineInfo(
+                    icon: Icons.check_circle,
+                    label: 'Stato',
+                    value: 'Pronto',
+                    color: const Color(0xFF4CD964),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.white.withAlpha(8),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, color: kMutedColor, size: 16),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'La traccia GPS verrà registrata durante le sessioni',
+                      style: TextStyle(
+                        color: kMutedColor,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ],
-          _buildStatItem(
-            icon: usedBle ? Icons.bluetooth : Icons.phone_android,
-            label: 'Registrato con',
-            value: usedBle ? 'GPS Pro' : 'Telefono',
-            color: usedBle ? const Color(0xFF7C4DFF) : const Color(0xFFFFB74D),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFinishLineInfo({
+    required IconData icon,
+    required String label,
+    required String value,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: color.withAlpha(15),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withAlpha(40)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: color, size: 16),
+          const SizedBox(width: 8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  color: kMutedColor,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                style: TextStyle(
+                  color: color,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
           ),
         ],
       ),

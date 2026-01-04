@@ -314,7 +314,6 @@ class _CustomCircuitsPageState extends State<CustomCircuitsPage> {
   Widget _buildCircuitCard(CustomCircuitInfo circuit, int index) {
     final formattedDate = DateFormat('dd MMM yyyy').format(circuit.createdAt);
     final formattedTime = DateFormat('HH:mm').format(circuit.createdAt);
-    final lengthKm = (circuit.lengthMeters / 1000).toStringAsFixed(2);
 
     return GestureDetector(
       onTap: () async {
@@ -456,30 +455,46 @@ class _CustomCircuitsPageState extends State<CustomCircuitsPage> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 18),
-                  // Stats row
-                  Row(
-                    children: [
-                      _buildStatChip(
-                        icon: Icons.straighten_rounded,
-                        value: '$lengthKm km',
-                        color: const Color(0xFF00E676),
-                      ),
-                      const SizedBox(width: 10),
-                      _buildStatChip(
-                        icon: Icons.gps_fixed_rounded,
-                        value: '${circuit.points.length} pts',
-                        color: const Color(0xFF29B6F6),
-                      ),
-                      const SizedBox(width: 10),
-                      _buildStatChip(
-                        icon: Icons.speed_rounded,
-                        value: circuit.gpsFrequencyHz != null
-                            ? '${circuit.gpsFrequencyHz!.toStringAsFixed(0)} Hz'
-                            : '1 Hz',
-                        color: const Color(0xFFFFB74D),
-                      ),
-                    ],
+                  const SizedBox(height: 14),
+                  // Info linea S/F
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: kBrandColor.withAlpha(10),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: kBrandColor.withAlpha(40)),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.flag_outlined, color: kBrandColor, size: 18),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Linea Start/Finish configurata',
+                                style: TextStyle(
+                                  color: kBrandColor,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                'Pronto per le sessioni',
+                                style: TextStyle(
+                                  color: kBrandColor.withAlpha(180),
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Icon(Icons.check_circle, color: kBrandColor, size: 20),
+                      ],
+                    ),
                   ),
                 ],
               ),

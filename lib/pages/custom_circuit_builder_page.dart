@@ -12,10 +12,10 @@ import 'draw_finish_line_page.dart';
 
 /// Pagina per creare un circuito custom - Flusso semplificato
 ///
-/// 1. Mostra mappa con posizione GPS attuale (cellulare o BLE)
-/// 2. Utente naviga direttamente a DrawFinishLinePage
-/// 3. Utente disegna manualmente linea S/F sulla mappa
-/// 4. Durante la sessione verrà tracciata la traccia GPS e calcolati i giri
+/// 1. Mostra pagina informativa con istruzioni
+/// 2. Utente conferma e naviga direttamente a DrawFinishLinePage con mappa satellitare
+/// 3. Utente disegna manualmente linea S/F sulla mappa con 2 tap
+/// 4. Durante le sessioni verrà tracciata la traccia GPS e calcolati i giri
 /// 5. Salvataggio su Firebase
 class CustomCircuitBuilderPage extends StatefulWidget {
   const CustomCircuitBuilderPage({super.key});
@@ -24,8 +24,6 @@ class CustomCircuitBuilderPage extends StatefulWidget {
   State<CustomCircuitBuilderPage> createState() =>
       _CustomCircuitBuilderPageState();
 }
-
-enum BuilderStep { positioning, finished }
 
 // Premium UI constants
 const Color _kBgColor = Color(0xFF0A0A0A);
@@ -36,7 +34,6 @@ const Color _kTileColor = Color(0xFF0D0D0D);
 
 class _CustomCircuitBuilderPageState extends State<CustomCircuitBuilderPage>
     with SingleTickerProviderStateMixin {
-  final MapController _mapController = MapController();
   final CustomCircuitService _service = CustomCircuitService();
   final BleTrackingService _bleService = BleTrackingService();
 
@@ -44,7 +41,6 @@ class _CustomCircuitBuilderPageState extends State<CustomCircuitBuilderPage>
   StreamSubscription<Map<String, GpsData>>? _bleGpsSubscription;
   StreamSubscription<Map<String, BleDeviceSnapshot>>? _bleDeviceSub;
 
-  BuilderStep _step = BuilderStep.positioning;
   bool _saving = false;
 
   // GPS positioning
@@ -53,23 +49,11 @@ class _CustomCircuitBuilderPageState extends State<CustomCircuitBuilderPage>
   bool _isUsingBleDevice = false;
 
   // Posizione GPS corrente
-  double _currentSpeed = 0.0;
-  double _currentAccuracy = 0.0;
-
-  // Animation for recording indicator
-  late AnimationController _pulseController;
-  late Animation<double> _pulseAnimation;
+  bool _isLoadingGps = true;
 
   @override
   void initState() {
     super.initState();
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1000),
-    )..repeat(reverse: true);
-    _pulseAnimation = Tween<double>(begin: 0.4, end: 1.0).animate(
-      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
-    );
     _syncConnectedDeviceFromService();
     _listenBleConnectionChanges();
     _startPositioning();
@@ -77,7 +61,6 @@ class _CustomCircuitBuilderPageState extends State<CustomCircuitBuilderPage>
 
   @override
   void dispose() {
-    _pulseController.dispose();
     _cellularGpsSubscription?.cancel();
     _bleGpsSubscription?.cancel();
     _bleDeviceSub?.cancel();
@@ -126,17 +109,11 @@ class _CustomCircuitBuilderPageState extends State<CustomCircuitBuilderPage>
     _bleGpsSubscription = _bleService.gpsStream.listen((gpsData) {
       if (_connectedDeviceId != null && _isUsingBleDevice) {
         final data = gpsData[_connectedDeviceId!];
-        if (data != null && mounted && _step == BuilderStep.positioning) {
+        if (data != null && mounted) {
           setState(() {
             _currentPosition = data.position;
-            _currentSpeed = data.speed ?? 0.0;
-            _currentAccuracy = 5.0; // BLE GPS tipicamente ha accuratezza ~5m
+            _isLoadingGps = false;
           });
-
-          // Auto-center map
-          try {
-            _mapController.move(data.position, _mapController.camera.zoom);
-          } catch (_) {}
         }
       }
     });
@@ -152,18 +129,12 @@ class _CustomCircuitBuilderPageState extends State<CustomCircuitBuilderPage>
         distanceFilter: 0,
       ),
     ).listen((position) {
-      if (mounted && !_isUsingBleDevice && _step == BuilderStep.positioning) {
+      if (mounted && !_isUsingBleDevice) {
         final newPosition = LatLng(position.latitude, position.longitude);
         setState(() {
           _currentPosition = newPosition;
-          _currentSpeed = position.speed * 3.6; // m/s → km/h
-          _currentAccuracy = position.accuracy;
+          _isLoadingGps = false;
         });
-
-        // Auto-center map
-        try {
-          _mapController.move(newPosition, _mapController.camera.zoom);
-        } catch (_) {}
       }
     });
   }
@@ -174,16 +145,7 @@ class _CustomCircuitBuilderPageState extends State<CustomCircuitBuilderPage>
   }
 
   /// Naviga direttamente a DrawFinishLinePage per selezione linea S/F
-  Future<void> _selectFinishLine() async {
-    if (_currentPosition == null) {
-      _showErrorSnackBar('Attendi il fix GPS prima di continuare.');
-      return;
-    }
-
-    setState(() {
-      _step = BuilderStep.finished;
-    });
-
+  Future<void> _continueToFinishLineSelection() async {
     // Ferma aggiornamenti posizione
     _cellularGpsSubscription?.cancel();
     _bleGpsSubscription?.cancel();
@@ -202,11 +164,10 @@ class _CustomCircuitBuilderPageState extends State<CustomCircuitBuilderPage>
     );
 
     if (result == null) {
-      // Utente ha annullato → torna a positioning
-      setState(() {
-        _step = BuilderStep.positioning;
-      });
-      _startPositioning();
+      // Utente ha annullato → chiudi la pagina
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
       return;
     }
 
@@ -436,8 +397,6 @@ class _CustomCircuitBuilderPageState extends State<CustomCircuitBuilderPage>
                       _dialogInfoRow(Icons.place_outlined, 'Località', '$city $country'.trim(), const Color(0xFF4CD964)),
                     ],
                     const SizedBox(height: 10),
-                    _dialogInfoRow(Icons.gps_fixed, 'Accuratezza GPS', '${_currentAccuracy.toStringAsFixed(1)} m', const Color(0xFFFF9500)),
-                    const SizedBox(height: 10),
                     _dialogInfoRow(Icons.speed, 'Frequenza GPS', '${_isUsingBleDevice ? "10.0" : "1.0"} Hz', const Color(0xFFAF52DE)),
                   ],
                 ),
@@ -617,51 +576,42 @@ class _CustomCircuitBuilderPageState extends State<CustomCircuitBuilderPage>
     return Scaffold(
       backgroundColor: _kBgColor,
       body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(),
-            Expanded(child: _buildTrackingView()),
-            _buildBottomPanel(),
-          ],
-        ),
+        child: _buildInstructionsPage(),
       ),
     );
   }
 
-  Widget _buildHeader() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [_kCardStart, _kCardEnd],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-        ),
-        border: Border(bottom: BorderSide(color: _kBorderColor)),
-      ),
-      child: Row(
-        children: [
-          // Back button
-          GestureDetector(
-            onTap: () => Navigator.of(context).pop(),
-            child: Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: _kTileColor,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: _kBorderColor),
-              ),
-              child: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 18),
+  Widget _buildInstructionsPage() {
+    return Column(
+      children: [
+        // Header
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [_kCardStart, _kCardEnd],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
             ),
+            border: Border(bottom: BorderSide(color: _kBorderColor)),
           ),
-          const SizedBox(width: 16),
-
-          // Title + subtitle
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
+          child: Row(
+            children: [
+              GestureDetector(
+                onTap: () => Navigator.of(context).pop(),
+                child: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: _kTileColor,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: _kBorderColor),
+                  ),
+                  child: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 18),
+                ),
+              ),
+              const SizedBox(width: 16),
+              const Expanded(
+                child: Text(
                   'Nuovo Circuito Custom',
                   style: TextStyle(
                     fontSize: 18,
@@ -670,201 +620,148 @@ class _CustomCircuitBuilderPageState extends State<CustomCircuitBuilderPage>
                     letterSpacing: -0.3,
                   ),
                 ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: kBrandColor.withAlpha(25),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            _isUsingBleDevice ? Icons.bluetooth_connected : Icons.gps_fixed,
-                            color: kBrandColor,
-                            size: 12,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            _isUsingBleDevice
-                                ? 'GPS BLE 10Hz'
-                                : 'GPS cellulare 1Hz',
-                            style: const TextStyle(
-                              fontSize: 10,
-                              color: kBrandColor,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-
-          // GPS Status indicator
-          if (_currentPosition != null)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    const Color(0xFF4CD964).withAlpha(60),
-                    const Color(0xFF4CD964).withAlpha(30),
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: const Color(0xFF4CD964).withAlpha(200),
-                  width: 1.5,
-                ),
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 8,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF4CD964),
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF4CD964).withAlpha(100),
-                          blurRadius: 8,
-                          spreadRadius: 2,
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  const Text(
-                    'GPS OK',
-                    style: TextStyle(
-                      color: Color(0xFF4CD964),
-                      fontWeight: FontWeight.w900,
-                      fontSize: 12,
-                      letterSpacing: 1,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTrackingView() {
-    final center = _currentPosition ?? const LatLng(45.0, 9.0);
-
-    return Stack(
-      children: [
-        // Map
-        ClipRRect(
-          child: FlutterMap(
-            mapController: _mapController,
-            options: MapOptions(
-              initialCenter: center,
-              initialZoom: 17.0,
-              backgroundColor: _kBgColor,
-              interactionOptions: const InteractionOptions(
-                flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
-              ),
-            ),
-            children: [
-              // Satellite tiles
-              TileLayer(
-                urlTemplate:
-                    'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-                userAgentPackageName: 'com.racesense.pulse',
-              ),
-              // Current position marker
-              if (_currentPosition != null)
-                MarkerLayer(
-                  markers: [
-                    Marker(
-                      point: _currentPosition!,
-                      width: 24,
-                      height: 24,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: kBrandColor,
-                          border: Border.all(color: Colors.white, width: 3),
-                          boxShadow: [
-                            BoxShadow(
-                              color: kBrandColor.withAlpha(150),
-                              blurRadius: 16,
-                              spreadRadius: 4,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
             ],
           ),
         ),
 
-        // Instructions banner
-        Positioned(
-          top: 16,
-          left: 16,
-          right: 16,
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [_kCardStart, _kCardEnd],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: kBrandColor.withAlpha(100)),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withAlpha(80),
-                  blurRadius: 20,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            child: Row(
+        // Content
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: kBrandColor.withAlpha(25),
-                    borderRadius: BorderRadius.circular(12),
+                // Icona principale
+                Center(
+                  child: Container(
+                    width: 120,
+                    height: 120,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        colors: [
+                          kBrandColor.withAlpha(40),
+                          kBrandColor.withAlpha(20),
+                          Colors.transparent,
+                        ],
+                        stops: const [0.0, 0.6, 1.0],
+                      ),
+                    ),
+                    child: Container(
+                      margin: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: _kCardStart,
+                        border: Border.all(color: kBrandColor.withAlpha(100), width: 3),
+                        boxShadow: [
+                          BoxShadow(
+                            color: kBrandColor.withAlpha(50),
+                            blurRadius: 30,
+                            spreadRadius: 5,
+                          ),
+                        ],
+                      ),
+                      child: Icon(
+                        Icons.flag_outlined,
+                        size: 48,
+                        color: kBrandColor,
+                      ),
+                    ),
                   ),
-                  child: const Icon(Icons.touch_app, color: kBrandColor, size: 22),
                 ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
+                const SizedBox(height: 32),
+
+                // Titolo
+                const Center(
+                  child: Text(
+                    'Come Creare il Tuo Circuito',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w900,
+                      color: kFgColor,
+                      letterSpacing: -0.5,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Center(
+                  child: Text(
+                    'Segui questi semplici passaggi',
+                    style: TextStyle(
+                      fontSize: 15,
+                      color: kMutedColor,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                const SizedBox(height: 40),
+
+                // Istruzioni
+                _buildInstructionStep(
+                  number: '1',
+                  title: 'Visualizza la Mappa Satellitare',
+                  description: 'Vedrai una mappa satellitare del tuo circuito con la tua posizione GPS in tempo reale.',
+                  icon: Icons.satellite_alt,
+                  color: const Color(0xFF5AC8FA),
+                ),
+                const SizedBox(height: 20),
+
+                _buildInstructionStep(
+                  number: '2',
+                  title: 'Seleziona la Linea Start/Finish',
+                  description: 'Fai 2 tap sulla mappa per definire i due estremi della linea di partenza/arrivo del tuo circuito.',
+                  icon: Icons.touch_app,
+                  color: kBrandColor,
+                ),
+                const SizedBox(height: 20),
+
+                _buildInstructionStep(
+                  number: '3',
+                  title: 'Conferma e Salva',
+                  description: 'Dai un nome al circuito e salvalo. La traccia GPS verrà registrata durante le tue sessioni.',
+                  icon: Icons.check_circle_outline,
+                  color: const Color(0xFF4CD964),
+                ),
+                const SizedBox(height: 32),
+
+                // Info box
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: kBrandColor.withAlpha(15),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: kBrandColor.withAlpha(60)),
+                  ),
+                  child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Seleziona la linea Start/Finish',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'Premi il pulsante quando sei pronto',
-                        style: TextStyle(
-                          color: kMutedColor,
-                          fontSize: 12,
+                      Icon(Icons.lightbulb_outline, color: kBrandColor, size: 24),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Suggerimento',
+                              style: TextStyle(
+                                color: kBrandColor,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'Posiziona la linea Start/Finish nel punto più adatto del circuito. Posizionerai meglio con lo zoom della mappa.',
+                              style: TextStyle(
+                                color: kBrandColor.withAlpha(200),
+                                fontSize: 13,
+                                height: 1.4,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
@@ -874,220 +771,182 @@ class _CustomCircuitBuilderPageState extends State<CustomCircuitBuilderPage>
             ),
           ),
         ),
+
+        // Bottom button
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [_kCardStart, _kCardEnd],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+            ),
+            border: Border(top: BorderSide(color: _kBorderColor)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withAlpha(60),
+                blurRadius: 20,
+                offset: const Offset(0, -8),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (_isLoadingGps)
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: _kTileColor,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: _kBorderColor),
+                  ),
+                  child: Row(
+                    children: [
+                      SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation(kBrandColor),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Rilevamento posizione GPS in corso...',
+                          style: TextStyle(color: kMutedColor, fontSize: 13),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              GestureDetector(
+                onTap: _isLoadingGps ? null : _continueToFinishLineSelection,
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  decoration: BoxDecoration(
+                    gradient: _isLoadingGps
+                        ? null
+                        : const LinearGradient(colors: [kBrandColor, Color(0xFF00D4AA)]),
+                    color: _isLoadingGps ? _kTileColor : null,
+                    borderRadius: BorderRadius.circular(14),
+                    border: _isLoadingGps ? Border.all(color: _kBorderColor) : null,
+                    boxShadow: _isLoadingGps
+                        ? null
+                        : [
+                            BoxShadow(
+                              color: kBrandColor.withAlpha(60),
+                              blurRadius: 20,
+                              offset: const Offset(0, 6),
+                            ),
+                          ],
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        _isLoadingGps ? Icons.gps_off : Icons.map,
+                        color: _isLoadingGps ? kMutedColor : Colors.black,
+                        size: 22,
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                        _isLoadingGps ? 'Attendi GPS...' : 'Inizia',
+                        style: TextStyle(
+                          color: _isLoadingGps ? kMutedColor : Colors.black,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ],
     );
   }
 
-  Widget _buildBottomPanel() {
-    final hasGpsFix = _currentPosition != null;
-    final accuracyColor = _currentAccuracy <= 10
-        ? const Color(0xFF4CD964)
-        : _currentAccuracy <= 20
-            ? const Color(0xFFFF9500)
-            : const Color(0xFFFF453A);
-
+  Widget _buildInstructionStep({
+    required String number,
+    required String title,
+    required String description,
+    required IconData icon,
+    required Color color,
+  }) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           colors: [_kCardStart, _kCardEnd],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
-        border: Border(top: BorderSide(color: _kBorderColor)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha(60),
-            blurRadius: 20,
-            offset: const Offset(0, -8),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _kBorderColor),
       ),
-      child: Column(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // GPS Info row
           Container(
-            padding: const EdgeInsets.all(16),
+            width: 48,
+            height: 48,
             decoration: BoxDecoration(
-              color: _kTileColor,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: _kBorderColor),
+              color: color.withAlpha(30),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: color.withAlpha(80)),
             ),
-            child: Row(
+            child: Center(
+              child: Text(
+                number,
+                style: TextStyle(
+                  color: color,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: _buildStatTile(
-                    Icons.gps_fixed,
-                    'Lat',
-                    _currentPosition?.latitude.toStringAsFixed(6) ?? '---',
-                    const Color(0xFF5AC8FA)
-                  )
+                Row(
+                  children: [
+                    Icon(icon, color: color, size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                          color: kFgColor,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                _verticalDivider(),
-                Expanded(
-                  child: _buildStatTile(
-                    Icons.gps_not_fixed,
-                    'Lon',
-                    _currentPosition?.longitude.toStringAsFixed(6) ?? '---',
-                    const Color(0xFF4CD964)
-                  )
-                ),
-                _verticalDivider(),
-                Expanded(
-                  child: _buildStatTile(
-                    Icons.my_location,
-                    'Accuratezza',
-                    _currentAccuracy > 0 ? '${_currentAccuracy.toStringAsFixed(1)}' : '---',
-                    accuracyColor,
-                    suffix: 'm'
-                  )
-                ),
-                _verticalDivider(),
-                Expanded(
-                  child: _buildStatTile(
-                    Icons.speed,
-                    'Velocità',
-                    '${_currentSpeed.toStringAsFixed(0)}',
-                    const Color(0xFFFF9500),
-                    suffix: 'km/h'
-                  )
+                const SizedBox(height: 8),
+                Text(
+                  description,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: kMutedColor,
+                    height: 1.4,
+                  ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 16),
-
-          // GPS status info
-          if (!hasGpsFix) ...[
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: _kTileColor,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: _kBorderColor),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.info_outline, color: kMutedColor, size: 18),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      'Attendi il fix GPS prima di continuare',
-                      style: TextStyle(color: kMutedColor, fontSize: 12),
-                    ),
-                  ),
-                  SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation(kMutedColor),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-          ],
-
-          // Action button
-          GestureDetector(
-            onTap: _saving || !hasGpsFix ? null : _selectFinishLine,
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              decoration: BoxDecoration(
-                gradient: hasGpsFix
-                    ? const LinearGradient(colors: [kBrandColor, Color(0xFF00D4AA)])
-                    : null,
-                color: hasGpsFix ? null : _kTileColor,
-                borderRadius: BorderRadius.circular(14),
-                border: hasGpsFix ? null : Border.all(color: _kBorderColor),
-                boxShadow: hasGpsFix
-                    ? [
-                        BoxShadow(
-                          color: kBrandColor.withAlpha(60),
-                          blurRadius: 20,
-                          offset: const Offset(0, 6),
-                        ),
-                      ]
-                    : null,
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    hasGpsFix ? Icons.flag_outlined : Icons.gps_off,
-                    color: hasGpsFix ? Colors.black : kMutedColor,
-                    size: 20,
-                  ),
-                  const SizedBox(width: 10),
-                  Text(
-                    hasGpsFix ? 'Seleziona linea Start/Finish' : 'Attendi GPS...',
-                    style: TextStyle(
-                      color: hasGpsFix ? Colors.black : kMutedColor,
-                      fontWeight: FontWeight.w900,
-                      fontSize: 15,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
         ],
       ),
-    );
-  }
-
-  Widget _buildStatTile(IconData icon, String label, String value, Color color, {String? suffix}) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, color: color, size: 20),
-        const SizedBox(height: 6),
-        Text(
-          label,
-          style: TextStyle(
-            color: kMutedColor,
-            fontSize: 10,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.baseline,
-          textBaseline: TextBaseline.alphabetic,
-          children: [
-            Text(
-              value,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 14,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-            if (suffix != null)
-              Text(
-                ' $suffix',
-                style: TextStyle(
-                  color: kMutedColor,
-                  fontSize: 9,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _verticalDivider() {
-    return Container(
-      width: 1,
-      height: 40,
-      margin: const EdgeInsets.symmetric(horizontal: 8),
-      color: _kBorderColor,
     );
   }
 }
