@@ -16,6 +16,7 @@ import '../services/ble_tracking_service.dart';
 import '../services/lap_detection_service.dart';
 import '../services/grand_prix_service.dart';
 import '../services/track_service.dart';
+import '../services/official_circuits_service.dart';
 import 'grand_prix_statistics_page.dart';
 
 /// Grand Prix Live Page - AIM MXS Style
@@ -185,16 +186,53 @@ class _GrandPrixLivePageState extends State<GrandPrixLivePage> {
       return;
     }
     final trackId = trackIdValue.toString();
-    final trackWithMetadata = await _trackService.getTrackById(trackId);
 
-    if (trackWithMetadata == null || !mounted) return;
+    // Carica il circuito in base al tipo (custom o ufficiale)
+    TrackDefinition? trackDefinition;
+
+    if (trackId.startsWith('official:')) {
+      // Circuito ufficiale dal JSON
+      final officialCircuitsService = OfficialCircuitsService();
+      final fileId = trackId.substring('official:'.length); // Rimuovi il prefisso
+
+      final allCircuits = await officialCircuitsService.loadCircuits();
+      final circuit = allCircuits.where((c) => c.file == fileId).firstOrNull;
+
+      if (circuit != null) {
+        trackDefinition = circuit.toTrackDefinition();
+      }
+    } else if (trackId.startsWith('custom:')) {
+      // Circuito custom da Firebase
+      final circuitId = trackId.substring('custom:'.length); // Rimuovi il prefisso
+
+      final trackWithMetadata = await _trackService.getTrackById(circuitId);
+      if (trackWithMetadata != null) {
+        trackDefinition = trackWithMetadata.trackDefinition;
+      }
+    } else {
+      // Fallback: prova con TrackService (vecchio formato senza prefisso)
+      final trackWithMetadata = await _trackService.getTrackById(trackId);
+      if (trackWithMetadata != null) {
+        trackDefinition = trackWithMetadata.trackDefinition;
+      }
+    }
+
+    if (trackDefinition == null || !mounted) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Circuito non trovato')),
+        );
+        Navigator.of(context).pop();
+      }
+      return;
+    }
 
     if (!mounted) return;
 
     setState(() {
       _isHost = isHost;
       _hostId = hostIdFromLobby; // Salviamo hostId localmente
-      _trackDefinition = trackWithMetadata.trackDefinition;
+      _trackDefinition = trackDefinition;
       print('✅ setState chiamato: _isHost = $_isHost, _hostId = $_hostId, _trackDefinition = ${_trackDefinition?.name}');
     });
 
