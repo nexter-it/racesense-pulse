@@ -7,6 +7,7 @@ import 'package:latlong2/latlong.dart' as ll;
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:intl/intl.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../theme.dart';
 import '../models/session_model.dart';
@@ -44,7 +45,6 @@ class _ActivityDetailPageState extends State<ActivityDetailPage>
   List<LapModel> _laps = [];
   late SessionModel _session;
   bool _liked = false;
-  bool _challenged = false;
 
   // Premium colors
   static const Color _bgColor = Color(0xFF0A0A0A);
@@ -152,7 +152,6 @@ class _ActivityDetailPageState extends State<ActivityDetailPage>
         setState(() {
           _isLoading = false;
           _liked = reactions['like'] ?? false;
-          _challenged = reactions['challenge'] ?? false;
         });
       }
     } catch (e) {
@@ -231,7 +230,7 @@ class _ActivityDetailPageState extends State<ActivityDetailPage>
                     _HeroSessionCard(
                       session: _session,
                       onToggleLike: _handleToggleLike,
-                      onToggleChallenge: _handleToggleChallenge,
+                      onShare: _handleShare,
                     ),
                     const SizedBox(height: 16),
 
@@ -298,15 +297,57 @@ class _ActivityDetailPageState extends State<ActivityDetailPage>
     // Non serve più setState, lo stream si aggiorna automaticamente
   }
 
-  Future<void> _handleToggleChallenge() async {
-    HapticFeedback.lightImpact();
-    await _engagementService.toggleChallenge(_session.sessionId);
-    setState(() {
-      _challenged = !_challenged;
-      _session = _session.copyWith(
-        challengeCount: _session.challengeCount + (_challenged ? 1 : -1),
+  Future<void> _handleShare() async {
+    HapticFeedback.mediumImpact();
+
+    // Formatta i dati della sessione
+    final bestLap = _laps.isNotEmpty
+        ? _laps.reduce((a, b) => a.duration < b.duration ? a : b)
+        : null;
+
+    final bestLapText = bestLap != null
+        ? _formatLapDuration(bestLap.duration)
+        : 'N/A';
+
+    final totalLaps = _laps.length;
+    final circuitName = _session.trackName;
+    final date = DateFormat('dd/MM/yyyy').format(_session.dateTime);
+
+    // Crea il messaggio di condivisione
+    final shareText = '''
+🏁 RaceSense Pulse
+Circuito: $circuitName
+Data: $date
+Giri completati: $totalLaps
+Miglior giro: $bestLapText
+
+Scarica RaceSense Pulse e sfida i tuoi tempi!
+''';
+
+    try {
+      // Su iOS serve specificare la posizione di origine del popover
+      final box = context.findRenderObject() as RenderBox?;
+      await Share.share(
+        shareText,
+        sharePositionOrigin: box!.localToGlobal(Offset.zero) & box.size,
       );
-    });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Errore durante la condivisione: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  String _formatLapDuration(Duration d) {
+    final m = d.inMinutes;
+    final s = d.inSeconds % 60;
+    final ms = (d.inMilliseconds % 1000) ~/ 10;
+    return '$m:${s.toString().padLeft(2, '0')}.${ms.toString().padLeft(2, '0')}';
   }
 
   Widget _buildHeader(BuildContext context) {
@@ -584,12 +625,12 @@ class _ActivityDetailPageState extends State<ActivityDetailPage>
 class _HeroSessionCard extends StatefulWidget {
   final SessionModel session;
   final VoidCallback onToggleLike;
-  final VoidCallback onToggleChallenge;
+  final VoidCallback onShare;
 
   const _HeroSessionCard({
     required this.session,
     required this.onToggleLike,
-    required this.onToggleChallenge,
+    required this.onShare,
   });
 
   @override
@@ -910,12 +951,12 @@ class _HeroSessionCardState extends State<_HeroSessionCard> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: _ActionButton(
-                    icon: Icons.sports_martial_arts,
-                    label: 'Sfida',
-                    count: widget.session.challengeCount,
-                    isActive: false, // TODO: add stream for challenge
-                    activeColor: kPulseColor,
-                    onTap: widget.onToggleChallenge,
+                    icon: Icons.share,
+                    label: 'Condividi',
+                    count: null,
+                    isActive: false,
+                    activeColor: kBrandColor,
+                    onTap: widget.onShare,
                   ),
                 ),
               ],
@@ -996,7 +1037,7 @@ class _HeroSessionCardState extends State<_HeroSessionCard> {
 class _ActionButton extends StatelessWidget {
   final IconData icon;
   final String label;
-  final int count;
+  final int? count;
   final bool isActive;
   final Color activeColor;
   final VoidCallback onTap;
@@ -1004,7 +1045,7 @@ class _ActionButton extends StatelessWidget {
   const _ActionButton({
     required this.icon,
     required this.label,
-    required this.count,
+    this.count,
     required this.isActive,
     required this.activeColor,
     required this.onTap,
@@ -1035,7 +1076,7 @@ class _ActionButton extends StatelessWidget {
             Icon(icon, color: isActive ? Colors.black : activeColor, size: 18),
             const SizedBox(width: 8),
             Text(
-              '$label ($count)',
+              count != null ? '$label ($count)' : label,
               style: TextStyle(
                 color: isActive ? Colors.black : activeColor,
                 fontWeight: FontWeight.w900,

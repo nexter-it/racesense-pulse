@@ -12,12 +12,14 @@ class CustomCircuitDetailPage extends StatefulWidget {
   final CustomCircuitInfo circuit;
   final String? trackId;
   final Function(CustomCircuitInfo)? onCircuitUpdated;
+  final bool selectionMode;
 
   const CustomCircuitDetailPage({
     super.key,
     required this.circuit,
     this.trackId,
     this.onCircuitUpdated,
+    this.selectionMode = false,
   });
 
   @override
@@ -1233,7 +1235,53 @@ class _CustomCircuitDetailPageState extends State<CustomCircuitDetailPage>
                   ),
                 ],
               )
+            else if (widget.selectionMode)
+              // Modalità selezione: bottone per usare il circuito
+              SizedBox(
+                width: double.infinity,
+                child: GestureDetector(
+                  onTap: () {
+                    HapticFeedback.mediumImpact();
+                    Navigator.of(context).pop(widget.circuit.toTrackDefinition());
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          kBrandColor,
+                          kBrandColor.withAlpha(200),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: kBrandColor.withAlpha(60),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.check_circle, color: Colors.white, size: 20),
+                        const SizedBox(width: 8),
+                        const Text(
+                          'Usa questo circuito',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 15,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              )
             else
+              // Modalità normale: bottone per modificare
               SizedBox(
                 width: double.infinity,
                 child: GestureDetector(

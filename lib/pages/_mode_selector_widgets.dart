@@ -9,6 +9,7 @@ import '../theme.dart';
 import '../models/track_definition.dart';
 import '../services/ble_tracking_service.dart';
 import '../services/custom_circuit_service.dart';
+import 'custom_circuit_detail_page.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // PREMIUM UI CONSTANTS
@@ -377,15 +378,43 @@ class PrivateCircuitsPage extends StatefulWidget {
 class _PrivateCircuitsPageState extends State<PrivateCircuitsPage> {
   final CustomCircuitService _service = CustomCircuitService();
   late Future<List<CustomCircuitInfo>> _future;
+  final TextEditingController _searchController = TextEditingController();
+  List<CustomCircuitInfo> _allCircuits = [];
+  List<CustomCircuitInfo> _filteredCircuits = [];
 
   @override
   void initState() {
     super.initState();
     _future = _service.listCircuits();
+    _searchController.addListener(_filterCircuits);
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _filterCircuits() {
+    final query = _searchController.text.toLowerCase();
+    setState(() {
+      if (query.isEmpty) {
+        _filteredCircuits = _allCircuits;
+      } else {
+        _filteredCircuits = _allCircuits.where((c) {
+          return c.name.toLowerCase().contains(query) ||
+              c.city.toLowerCase().contains(query) ||
+              c.country.toLowerCase().contains(query);
+        }).toList();
+      }
+    });
   }
 
   TrackDefinition? _toTrack(CustomCircuitInfo c) {
-    if (c.points.length < 2) return null;
+    // Validazione: il circuito deve avere una linea S/F valida
+    if (c.finishLineStart == null || c.finishLineEnd == null) {
+      return null;
+    }
     return c.toTrackDefinition();
   }
 
@@ -430,33 +459,86 @@ class _PrivateCircuitsPageState extends State<PrivateCircuitsPage> {
                     );
                   }
                   final circuits = snapshot.data ?? [];
+                  // Inizializza la lista filtrata
+                  if (_allCircuits.isEmpty && circuits.isNotEmpty) {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      setState(() {
+                        _allCircuits = circuits;
+                        _filteredCircuits = circuits;
+                      });
+                    });
+                  }
                   if (circuits.isEmpty) {
                     return _buildEmptyState();
                   }
-                  return ListView.separated(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-                    itemCount: circuits.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 12),
-                    itemBuilder: (context, index) {
-                      final c = circuits[index];
-                      final t = _toTrack(c);
-                      return _CircuitCard(
-                        name: c.name,
-                        location: '${c.city} ${c.country}'.trim(),
-                        lengthKm: c.lengthMeters / 1000,
-                        icon: Icons.edit_road,
-                        isOfficial: false,
-                        usedBle: c.usedBleDevice,
-                        hasError: t == null,
-                        onTap: t != null
-                            ? () {
-                                HapticFeedback.lightImpact();
-                                Navigator.of(context).pop(t);
-                              }
-                            : null,
-                      );
-                    },
+
+                  final displayCircuits = _filteredCircuits.isNotEmpty ? _filteredCircuits : circuits;
+
+                  return Column(
+                    children: [
+                      // Barra di ricerca
+                      _buildSearchBar(),
+                      // Risultati
+                      if (_searchController.text.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                          child: Row(
+                            children: [
+                              Icon(Icons.search, size: 16, color: kMutedColor),
+                              const SizedBox(width: 8),
+                              Text(
+                                '${displayCircuits.length} ${displayCircuits.length == 1 ? 'risultato' : 'risultati'}',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: kMutedColor,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      // Lista circuiti
+                      Expanded(
+                        child: displayCircuits.isEmpty
+                            ? _buildNoResultsState()
+                            : ListView.separated(
+                                physics: const AlwaysScrollableScrollPhysics(),
+                                padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                                itemCount: displayCircuits.length,
+                                separatorBuilder: (_, __) => const SizedBox(height: 12),
+                                itemBuilder: (context, index) {
+                                  final c = displayCircuits[index];
+                                  final t = _toTrack(c);
+                                  return _CircuitCard(
+                                    name: c.name,
+                                    location: '${c.city} ${c.country}'.trim(),
+                                    lengthKm: c.lengthMeters / 1000,
+                                    icon: Icons.edit_road,
+                                    isOfficial: false,
+                                    usedBle: c.usedBleDevice,
+                                    hasError: t == null,
+                                    onTap: t != null
+                                        ? () async {
+                                            HapticFeedback.lightImpact();
+                                            // Apri pagina dettaglio
+                                            final result = await Navigator.of(context).push(
+                                              MaterialPageRoute(
+                                                builder: (_) => CustomCircuitDetailPage(
+                                                  circuit: c,
+                                                  selectionMode: true,
+                                                ),
+                                              ),
+                                            );
+                                            if (result != null) {
+                                              Navigator.of(context).pop(result);
+                                            }
+                                          }
+                                        : null,
+                                  );
+                                },
+                              ),
+                      ),
+                    ],
                   );
                 },
               ),
@@ -557,6 +639,105 @@ class _PrivateCircuitsPageState extends State<PrivateCircuitsPage> {
             child: Icon(Icons.info_outline, color: kMutedColor, size: 18),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSearchBar() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF121212),
+        border: const Border(
+          bottom: BorderSide(color: _kBorderColor, width: 1),
+        ),
+      ),
+      child: TextField(
+        controller: _searchController,
+        style: const TextStyle(
+          color: kFgColor,
+          fontSize: 15,
+          fontWeight: FontWeight.w600,
+        ),
+        decoration: InputDecoration(
+          hintText: 'Cerca circuito...',
+          hintStyle: TextStyle(
+            color: kMutedColor,
+            fontSize: 15,
+            fontWeight: FontWeight.w500,
+          ),
+          prefixIcon: Icon(Icons.search, color: kPulseColor, size: 22),
+          suffixIcon: _searchController.text.isNotEmpty
+              ? IconButton(
+                  icon: Icon(Icons.clear, color: kMutedColor, size: 20),
+                  onPressed: () {
+                    _searchController.clear();
+                    HapticFeedback.lightImpact();
+                  },
+                )
+              : null,
+          filled: true,
+          fillColor: _kTileColor,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: _kBorderColor),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: _kBorderColor),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: kPulseColor, width: 2),
+          ),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNoResultsState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  colors: [_kCardStart, _kCardEnd],
+                ),
+                border: Border.all(color: _kBorderColor),
+              ),
+              child: Center(
+                child: Icon(Icons.search_off, size: 36, color: kMutedColor),
+              ),
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              'Nessun risultato',
+              style: TextStyle(
+                color: kFgColor,
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Nessun circuito trovato per\n"${_searchController.text}"',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: kMutedColor,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
