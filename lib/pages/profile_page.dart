@@ -13,6 +13,8 @@ import '../theme.dart';
 import '../widgets/follow_counts.dart';
 import '../widgets/session_metadata_dialog.dart';
 import '../widgets/profile_avatar.dart';
+import '../widgets/badge_display_widget.dart';
+import '../services/event_service.dart';
 import 'app_info_page.dart';
 import 'story_composer_page.dart';
 import 'driver_info_edit_page.dart';
@@ -29,6 +31,7 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
   final SessionService _sessionService = SessionService();
   final ProfileCacheService _cacheService = ProfileCacheService();
   final ProfileImageService _profileImageService = ProfileImageService();
+  final EventService _eventService = EventService();
 
   String _userName = '';
   String _userTag = '';
@@ -602,6 +605,8 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
                           _buildProfileCard(),
                           const SizedBox(height: 16),
                           _buildDriverInfoCard(),
+                          const SizedBox(height: 16),
+                          _buildBadgesCard(),
                           const SizedBox(height: 16),
                           _buildHighlightsCard(),
                           const SizedBox(height: 16),
@@ -1201,6 +1206,16 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
           }).toList(),
         ),
       ],
+    );
+  }
+
+  Widget _buildBadgesCard() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return const SizedBox.shrink();
+
+    return BadgeCard(
+      userId: user.uid,
+      badgesStream: _eventService.getUserBadges(user.uid),
     );
   }
 

@@ -10,6 +10,7 @@ import 'pages/activity_detail_page.dart';
 import 'pages/auth_gate.dart';
 import 'pages/search_page.dart';
 import 'pages/splash_screen.dart';
+import 'pages/events_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -49,7 +50,7 @@ class RacesensePulseApp extends StatelessWidget {
   }
 }
 
-/// Shell con bottom navigation stile Strava: Feed / Nuova / Profilo
+/// Shell con bottom navigation stile Strava: Feed / Eventi / Nuova / Cerca / Profilo
 class RootShell extends StatefulWidget {
   const RootShell({super.key});
 
@@ -69,10 +70,12 @@ class _RootShellState extends State<RootShell> {
       case 0:
         return const FeedPage();
       case 1:
-        return const SearchPage();
+        return const EventsPage();
       case 2:
         return const NewPostPage();
       case 3:
+        return const SearchPage();
+      case 4:
         return const ProfilePage();
       default:
         return const FeedPage();
@@ -91,7 +94,7 @@ class _RootShellState extends State<RootShell> {
   Widget build(BuildContext context) {
     // Costruisci solo le pagine già visitate + quella corrente
     final List<Widget> stackChildren = [];
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < 5; i++) {
       if (_cachedPages.containsKey(i) || i == _index) {
         stackChildren.add(_getPage(i));
       } else {
@@ -121,14 +124,19 @@ class _RootShellState extends State<RootShell> {
             label: 'Feed',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.search_outlined),
-            activeIcon: Icon(Icons.search),
-            label: 'Cerca',
+            icon: Icon(Icons.event_outlined),
+            activeIcon: Icon(Icons.event),
+            label: 'Eventi',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.add_circle_outline),
             activeIcon: Icon(Icons.add_circle),
             label: 'Nuova',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.search_outlined),
+            activeIcon: Icon(Icons.search),
+            label: 'Cerca',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person_outline),
