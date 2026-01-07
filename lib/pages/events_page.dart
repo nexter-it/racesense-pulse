@@ -8,6 +8,7 @@ import '../models/event_model.dart';
 import '../services/event_service.dart';
 import 'create_event_page.dart';
 import 'event_detail_page.dart';
+import 'manage_events_page.dart';
 
 // Premium UI constants
 const Color _kBgColor = Color(0xFF0A0A0A);
@@ -80,7 +81,7 @@ class _EventsPageState extends State<EventsPage>
           ],
         ),
       ),
-      floatingActionButton: _isVerifiedCreator ? _buildCreateEventFAB() : null,
+      bottomNavigationBar: _isVerifiedCreator ? _buildCreatorActionBar() : null,
     );
   }
 
@@ -890,41 +891,101 @@ class _EventsPageState extends State<EventsPage>
     );
   }
 
-  Widget _buildCreateEventFAB() {
+  Widget _buildCreatorActionBar() {
     return Container(
+      padding: EdgeInsets.fromLTRB(16, 12, 16, MediaQuery.of(context).padding.bottom + 12),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        gradient: LinearGradient(
-          colors: [Colors.amber, Colors.amber.shade600],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+        color: _kBgColor,
+        border: Border(
+          top: BorderSide(color: _kBorderColor),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.amber.withAlpha(100),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
+      ),
+      child: Row(
+        children: [
+          // Bottone Crea Evento
+          Expanded(
+            child: GestureDetector(
+              onTap: () {
+                HapticFeedback.mediumImpact();
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const CreateEventPage()),
+                );
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(14),
+                  gradient: LinearGradient(
+                    colors: [Colors.amber, Colors.amber.shade600],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.amber.withAlpha(60),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: const [
+                    Icon(Icons.add, color: Colors.black, size: 20),
+                    SizedBox(width: 8),
+                    Text(
+                      'Crea Evento',
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          // Bottone Modifica Eventi
+          Expanded(
+            child: GestureDetector(
+              onTap: () {
+                HapticFeedback.mediumImpact();
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const ManageEventsPage()),
+                );
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(14),
+                  gradient: LinearGradient(
+                    colors: [_kCardStart, _kCardEnd],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  border: Border.all(color: Colors.amber.withAlpha(80)),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.edit, color: Colors.amber, size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Modifica Eventi',
+                      style: TextStyle(
+                        color: Colors.amber,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
         ],
-      ),
-      child: FloatingActionButton.extended(
-        onPressed: () {
-          HapticFeedback.mediumImpact();
-          Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const CreateEventPage()),
-          );
-        },
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        icon: const Icon(Icons.add, color: Colors.black),
-        label: const Text(
-          'Crea Evento',
-          style: TextStyle(
-            color: Colors.black,
-            fontWeight: FontWeight.w900,
-            fontSize: 15,
-          ),
-        ),
       ),
     );
   }

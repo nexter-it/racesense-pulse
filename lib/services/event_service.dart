@@ -3,6 +3,8 @@ import 'package:geolocator/geolocator.dart';
 import '../models/event_model.dart';
 import '../models/badge_model.dart';
 
+export '../models/event_model.dart' show EventType;
+
 class EventService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
@@ -30,6 +32,15 @@ class EventService {
     String? locationName,
     double checkInRadiusMeters = 100.0,
     String? eventImageUrl,
+    EventType eventType = EventType.other,
+    int? maxParticipants,
+    int? eventDurationMinutes,
+    List<String> requirements = const [],
+    String? contactInfo,
+    String? websiteUrl,
+    double? entryFee,
+    String? officialCircuitId,
+    String? officialCircuitName,
   }) async {
     // Verifica che l'utente sia verificato
     final isVerified = await isUserVerifiedCreator(creatorId);
@@ -54,6 +65,15 @@ class EventService {
       checkedInUserIds: [],
       isActive: true,
       eventImageUrl: eventImageUrl,
+      eventType: eventType,
+      maxParticipants: maxParticipants,
+      eventDurationMinutes: eventDurationMinutes,
+      requirements: requirements,
+      contactInfo: contactInfo,
+      websiteUrl: websiteUrl,
+      entryFee: entryFee,
+      officialCircuitId: officialCircuitId,
+      officialCircuitName: officialCircuitName,
     );
 
     await eventRef.set(event.toFirestore());
@@ -253,6 +273,60 @@ class EventService {
                 (event.description.toLowerCase().contains(lowerQuery)) ||
                 (event.locationName?.toLowerCase().contains(lowerQuery) ?? false))
             .toList());
+  }
+
+  /// Aggiorna un evento esistente (solo per il creatore)
+  Future<void> updateEvent({
+    required String eventId,
+    required String userId,
+    String? title,
+    String? description,
+    DateTime? eventDateTime,
+    double? latitude,
+    double? longitude,
+    String? locationName,
+    String? eventImageUrl,
+    String? officialCircuitId,
+    String? officialCircuitName,
+    double? entryFee,
+    String? websiteUrl,
+    int? maxParticipants,
+    int? eventDurationMinutes,
+    List<String>? requirements,
+    String? contactInfo,
+  }) async {
+    final event = await getEvent(eventId);
+    if (event == null) {
+      throw Exception('Evento non trovato');
+    }
+    if (event.creatorId != userId) {
+      throw Exception('Solo il creatore può modificare l\'evento');
+    }
+
+    final updates = <String, dynamic>{};
+
+    if (title != null) updates['title'] = title;
+    if (description != null) updates['description'] = description;
+    if (eventDateTime != null) updates['eventDateTime'] = Timestamp.fromDate(eventDateTime);
+    if (latitude != null && longitude != null) {
+      updates['location'] = GeoPoint(latitude, longitude);
+    }
+    if (locationName != null) updates['locationName'] = locationName;
+    if (eventImageUrl != null) updates['eventImageUrl'] = eventImageUrl;
+    if (officialCircuitId != null) updates['officialCircuitId'] = officialCircuitId;
+    if (officialCircuitName != null) updates['officialCircuitName'] = officialCircuitName;
+    if (entryFee != null) updates['entryFee'] = entryFee;
+    if (websiteUrl != null) updates['websiteUrl'] = websiteUrl;
+    if (maxParticipants != null) updates['maxParticipants'] = maxParticipants;
+    if (eventDurationMinutes != null) updates['eventDurationMinutes'] = eventDurationMinutes;
+    if (requirements != null) updates['requirements'] = requirements;
+    if (contactInfo != null) updates['contactInfo'] = contactInfo;
+
+    if (updates.isEmpty) {
+      return; // Nessuna modifica da applicare
+    }
+
+    await _firestore.collection('events').doc(eventId).update(updates);
   }
 
   /// Elimina un evento (solo per il creatore)

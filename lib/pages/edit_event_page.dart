@@ -11,52 +11,83 @@ import '../theme.dart';
 import '../services/event_service.dart';
 import '../services/event_image_service.dart';
 import '../services/official_circuits_service.dart';
+import '../models/event_model.dart';
 import '../models/official_circuit_info.dart';
 import 'map_location_picker.dart';
 
 const Color _kBgColor = Color(0xFF0A0A0A);
 const Color _kCardStart = Color(0xFF1A1A1A);
-const Color _kCardEnd = Color(0xFF141414);
 const Color _kBorderColor = Color(0xFF2A2A2A);
 const Color _kTileColor = Color(0xFF0D0D0D);
 
-class CreateEventPage extends StatefulWidget {
-  const CreateEventPage({super.key});
+class EditEventPage extends StatefulWidget {
+  final EventModel event;
+
+  const EditEventPage({super.key, required this.event});
 
   @override
-  State<CreateEventPage> createState() => _CreateEventPageState();
+  State<EditEventPage> createState() => _EditEventPageState();
 }
 
-class _CreateEventPageState extends State<CreateEventPage> {
+class _EditEventPageState extends State<EditEventPage> {
   final _formKey = GlobalKey<FormState>();
   final EventService _eventService = EventService();
   final EventImageService _imageService = EventImageService();
   final OfficialCircuitsService _circuitsService = OfficialCircuitsService();
 
-  final TextEditingController _titleController = TextEditingController();
-  final TextEditingController _descriptionController = TextEditingController();
-  final TextEditingController _locationNameController = TextEditingController();
-  final TextEditingController _dateController = TextEditingController();
-  final TextEditingController _timeController = TextEditingController();
-  final TextEditingController _entryFeeController = TextEditingController();
-  final TextEditingController _websiteController = TextEditingController();
+  late TextEditingController _titleController;
+  late TextEditingController _descriptionController;
+  late TextEditingController _locationNameController;
+  late TextEditingController _dateController;
+  late TextEditingController _timeController;
+  late TextEditingController _entryFeeController;
+  late TextEditingController _websiteController;
 
   File? _selectedImage;
-  String? _imageUrl;
+  String? _existingImageUrl;
   double? _latitude;
   double? _longitude;
   bool _isLoadingLocation = false;
-  bool _isCreating = false;
+  bool _isSaving = false;
   bool _isUploadingImage = false;
+  bool _imageRemoved = false;
 
-  // Circuito ufficiale selezionato (opzionale)
   OfficialCircuitInfo? _selectedCircuit;
   List<OfficialCircuitInfo> _circuits = [];
 
   @override
   void initState() {
     super.initState();
+    _initializeFromEvent();
     _loadCircuits();
+  }
+
+  void _initializeFromEvent() {
+    final event = widget.event;
+
+    _titleController = TextEditingController(text: event.title);
+    _descriptionController = TextEditingController(text: event.description);
+    _locationNameController = TextEditingController(text: event.locationName ?? '');
+
+    // Formatta data
+    final date = event.eventDateTime;
+    _dateController = TextEditingController(
+      text: '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}',
+    );
+
+    // Formatta ora
+    _timeController = TextEditingController(
+      text: '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}',
+    );
+
+    _entryFeeController = TextEditingController(
+      text: event.entryFee != null ? event.entryFee!.toStringAsFixed(0) : '',
+    );
+    _websiteController = TextEditingController(text: event.websiteUrl ?? '');
+
+    _existingImageUrl = event.eventImageUrl;
+    _latitude = event.location.latitude;
+    _longitude = event.location.longitude;
   }
 
   Future<void> _loadCircuits() async {
@@ -64,6 +95,13 @@ class _CreateEventPageState extends State<CreateEventPage> {
     if (mounted) {
       setState(() {
         _circuits = circuits;
+        // Se l'evento ha un circuito ufficiale, selezionalo
+        if (widget.event.officialCircuitId != null) {
+          _selectedCircuit = circuits.firstWhere(
+            (c) => c.file == widget.event.officialCircuitId,
+            orElse: () => circuits.first,
+          );
+        }
       });
     }
   }
@@ -153,8 +191,6 @@ class _CreateEventPageState extends State<CreateEventPage> {
         return;
       }
 
-      // Per ora salviamo solo il riferimento all'immagine
-      // L'upload vero verrà fatto al momento della creazione evento
       if (result == 'gallery') {
         final picked = await _imageService.picker.pickImage(
           source: ImageSource.gallery,
@@ -165,6 +201,7 @@ class _CreateEventPageState extends State<CreateEventPage> {
         if (picked != null) {
           setState(() {
             _selectedImage = File(picked.path);
+            _imageRemoved = false;
           });
         }
       } else if (result == 'camera') {
@@ -177,6 +214,7 @@ class _CreateEventPageState extends State<CreateEventPage> {
         if (picked != null) {
           setState(() {
             _selectedImage = File(picked.path);
+            _imageRemoved = false;
           });
         }
       }
@@ -263,7 +301,6 @@ class _CreateEventPageState extends State<CreateEventPage> {
 
   Future<void> _selectLocationOnMap() async {
     try {
-      // Se non abbiamo ancora una posizione, ottieni quella corrente
       LatLng? initialLocation;
       if (_latitude != null && _longitude != null) {
         initialLocation = LatLng(_latitude!, _longitude!);
@@ -272,7 +309,6 @@ class _CreateEventPageState extends State<CreateEventPage> {
           final position = await Geolocator.getCurrentPosition();
           initialLocation = LatLng(position.latitude, position.longitude);
         } catch (e) {
-          // Default a Roma se fallisce
           initialLocation = LatLng(41.9028, 12.4964);
         }
       }
@@ -289,7 +325,6 @@ class _CreateEventPageState extends State<CreateEventPage> {
           _longitude = result.longitude;
         });
 
-        // Prova a ottenere il nome del luogo
         try {
           final placemarks = await placemarkFromCoordinates(
             result.latitude,
@@ -328,7 +363,7 @@ class _CreateEventPageState extends State<CreateEventPage> {
     }
   }
 
-  Future<void> _createEvent() async {
+  Future<void> _saveEvent() async {
     if (!_formKey.currentState!.validate()) return;
 
     // Valida data
@@ -348,16 +383,6 @@ class _CreateEventPageState extends State<CreateEventPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Formato data non valido. Usa dd/mm/yyyy'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
-
-    if (parsedDate.isBefore(DateTime.now().subtract(const Duration(days: 1)))) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('La data dell\'evento non può essere nel passato'),
           backgroundColor: Colors.red,
         ),
       );
@@ -398,7 +423,7 @@ class _CreateEventPageState extends State<CreateEventPage> {
       return;
     }
 
-    setState(() => _isCreating = true);
+    setState(() => _isSaving = true);
 
     try {
       final currentUser = FirebaseAuth.instance.currentUser;
@@ -421,11 +446,26 @@ class _CreateEventPageState extends State<CreateEventPage> {
         entryFee = double.tryParse(_entryFeeController.text.trim());
       }
 
-      // Prima crea l'evento per ottenere l'ID
-      final eventId = await _eventService.createEvent(
-        creatorId: currentUser.uid,
-        creatorName: currentUser.displayName ?? 'Utente',
-        creatorProfileImage: currentUser.photoURL,
+      // Gestisci upload immagine
+      String? imageUrl = _existingImageUrl;
+      if (_imageRemoved) {
+        imageUrl = null;
+      } else if (_selectedImage != null) {
+        try {
+          final compressedFile = await _imageService.compressImage(_selectedImage!);
+          if (compressedFile != null) {
+            imageUrl = await _imageService.uploadToStorage(compressedFile, widget.event.eventId);
+            await compressedFile.delete();
+          }
+        } catch (e) {
+          print('Errore upload immagine: $e');
+        }
+      }
+
+      // Aggiorna evento
+      await _eventService.updateEvent(
+        eventId: widget.event.eventId,
+        userId: currentUser.uid,
         title: _titleController.text.trim(),
         description: _descriptionController.text.trim(),
         eventDateTime: eventDateTime,
@@ -434,7 +474,7 @@ class _CreateEventPageState extends State<CreateEventPage> {
         locationName: _locationNameController.text.trim().isNotEmpty
             ? _locationNameController.text.trim()
             : null,
-        eventImageUrl: null, // Verrà aggiornato dopo l'upload
+        eventImageUrl: imageUrl,
         officialCircuitId: _selectedCircuit?.file,
         officialCircuitName: _selectedCircuit?.name,
         entryFee: entryFee,
@@ -443,36 +483,22 @@ class _CreateEventPageState extends State<CreateEventPage> {
             : null,
       );
 
-      // Se c'è un'immagine, caricala
-      String? imageUrl;
-      if (_selectedImage != null) {
-        try {
-          // Upload dell'immagine compressa
-          final compressedFile = await _imageService.compressImage(_selectedImage!);
-          if (compressedFile != null) {
-            imageUrl = await _imageService.uploadToStorage(compressedFile, eventId);
-            await compressedFile.delete();
-
-            // Aggiorna l'evento con l'URL dell'immagine
-            await FirebaseFirestore.instance
-                .collection('events')
-                .doc(eventId)
-                .update({'eventImageUrl': imageUrl});
-          }
-        } catch (e) {
-          print('❌ Errore upload immagine (evento creato senza foto): $e');
-          // Continua comunque, l'evento è già stato creato
-        }
+      // Aggiorna imageUrl separatamente se è stata rimossa
+      if (_imageRemoved) {
+        await FirebaseFirestore.instance
+            .collection('events')
+            .doc(widget.event.eventId)
+            .update({'eventImageUrl': FieldValue.delete()});
       }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Evento creato con successo!'),
+            content: Text('Evento aggiornato con successo!'),
             backgroundColor: Colors.green,
           ),
         );
-        Navigator.of(context).pop();
+        Navigator.of(context).pop(true); // Ritorna true per indicare che c'è stato un aggiornamento
       }
     } catch (e) {
       if (mounted) {
@@ -485,7 +511,7 @@ class _CreateEventPageState extends State<CreateEventPage> {
       }
     } finally {
       if (mounted) {
-        setState(() => _isCreating = false);
+        setState(() => _isSaving = false);
       }
     }
   }
@@ -502,7 +528,7 @@ class _CreateEventPageState extends State<CreateEventPage> {
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: const Text(
-          'Crea Evento',
+          'Modifica Evento',
           style: TextStyle(
             color: kFgColor,
             fontSize: 18,
@@ -608,9 +634,7 @@ class _CreateEventPageState extends State<CreateEventPage> {
                 keyboardType: TextInputType.url,
               ),
               const SizedBox(height: 24),
-              _buildInfoBox(),
-              const SizedBox(height: 24),
-              _buildCreateButton(),
+              _buildSaveButton(),
               const SizedBox(height: 40),
             ],
           ),
@@ -674,7 +698,7 @@ class _CreateEventPageState extends State<CreateEventPage> {
         controller: controller,
         keyboardType: keyboardType,
         maxLines: maxLines,
-        enabled: !_isCreating,
+        enabled: !_isSaving,
         style: const TextStyle(
           fontSize: 16,
           color: kFgColor,
@@ -707,6 +731,9 @@ class _CreateEventPageState extends State<CreateEventPage> {
   }
 
   Widget _buildImageSection() {
+    final hasImage = _selectedImage != null ||
+        (_existingImageUrl != null && !_imageRemoved);
+
     return Container(
       decoration: BoxDecoration(
         color: _kTileColor,
@@ -724,6 +751,23 @@ class _CreateEventPageState extends State<CreateEventPage> {
                 width: double.infinity,
                 fit: BoxFit.cover,
               ),
+            )
+          else if (_existingImageUrl != null && !_imageRemoved)
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+              child: Image.network(
+                _existingImageUrl!,
+                height: 200,
+                width: double.infinity,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => Container(
+                  height: 200,
+                  color: _kBorderColor,
+                  child: Center(
+                    child: Icon(Icons.broken_image, color: kMutedColor, size: 48),
+                  ),
+                ),
+              ),
             ),
           Padding(
             padding: const EdgeInsets.all(16),
@@ -731,16 +775,19 @@ class _CreateEventPageState extends State<CreateEventPage> {
               children: [
                 Expanded(
                   child: _buildImageButton(
-                    label: _selectedImage == null ? 'Seleziona Foto' : 'Cambia Foto',
+                    label: hasImage ? 'Cambia Foto' : 'Seleziona Foto',
                     icon: Icons.photo_library,
                     onTap: _isUploadingImage ? null : _selectImage,
                   ),
                 ),
-                if (_selectedImage != null) ...[
+                if (hasImage) ...[
                   const SizedBox(width: 12),
                   IconButton(
                     onPressed: () {
-                      setState(() => _selectedImage = null);
+                      setState(() {
+                        _selectedImage = null;
+                        _imageRemoved = true;
+                      });
                     },
                     icon: const Icon(Icons.delete, color: Colors.red),
                   ),
@@ -798,7 +845,7 @@ class _CreateEventPageState extends State<CreateEventPage> {
       child: TextFormField(
         controller: _dateController,
         keyboardType: TextInputType.number,
-        enabled: !_isCreating,
+        enabled: !_isSaving,
         inputFormatters: [
           FilteringTextInputFormatter.digitsOnly,
           _DateInputFormatter(),
@@ -843,7 +890,7 @@ class _CreateEventPageState extends State<CreateEventPage> {
       child: TextFormField(
         controller: _timeController,
         keyboardType: TextInputType.number,
-        enabled: !_isCreating,
+        enabled: !_isSaving,
         inputFormatters: [
           FilteringTextInputFormatter.digitsOnly,
           _TimeInputFormatter(),
@@ -1087,7 +1134,6 @@ class _CreateEventPageState extends State<CreateEventPage> {
           ),
           child: Column(
             children: [
-              // Handle
               Container(
                 margin: const EdgeInsets.only(top: 12),
                 width: 40,
@@ -1097,7 +1143,6 @@ class _CreateEventPageState extends State<CreateEventPage> {
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
-              // Header
               Padding(
                 padding: const EdgeInsets.all(20),
                 child: Column(
@@ -1120,7 +1165,6 @@ class _CreateEventPageState extends State<CreateEventPage> {
                       ],
                     ),
                     const SizedBox(height: 12),
-                    // Search
                     Container(
                       decoration: BoxDecoration(
                         color: _kTileColor,
@@ -1158,7 +1202,6 @@ class _CreateEventPageState extends State<CreateEventPage> {
                   ],
                 ),
               ),
-              // Lista
               Expanded(
                 child: ListView.builder(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -1236,7 +1279,6 @@ class _CreateEventPageState extends State<CreateEventPage> {
     if (result != null) {
       setState(() {
         _selectedCircuit = result;
-        // Auto-popola nome location e GPS del circuito
         _locationNameController.text = '${result.name}, ${result.city}';
         _latitude = result.finishLineCenter.latitude;
         _longitude = result.finishLineCenter.longitude;
@@ -1244,61 +1286,19 @@ class _CreateEventPageState extends State<CreateEventPage> {
     }
   }
 
-  Widget _buildInfoBox() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        color: Colors.blue.withAlpha(15),
-        border: Border.all(color: Colors.blue.withAlpha(60)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(Icons.info_outline, color: Colors.blue, size: 24),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Come funziona',
-                  style: TextStyle(
-                    color: Colors.blue,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  'Gli utenti potranno iscriversi al tuo evento e riceveranno un badge quando faranno check-in durante l\'evento nel raggio di 100 metri dalla posizione GPS indicata.',
-                  style: TextStyle(
-                    color: kMutedColor,
-                    fontSize: 12,
-                    height: 1.4,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCreateButton() {
+  Widget _buildSaveButton() {
     return GestureDetector(
-      onTap: _isCreating ? null : _createEvent,
+      onTap: _isSaving ? null : _saveEvent,
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 18),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
           gradient: LinearGradient(
-            colors: _isCreating
+            colors: _isSaving
                 ? [Colors.grey.shade700, Colors.grey.shade800]
                 : [Colors.amber, Colors.amber.shade700],
           ),
-          boxShadow: _isCreating
+          boxShadow: _isSaving
               ? null
               : [
                   BoxShadow(
@@ -1311,7 +1311,7 @@ class _CreateEventPageState extends State<CreateEventPage> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            if (_isCreating)
+            if (_isSaving)
               const SizedBox(
                 width: 20,
                 height: 20,
@@ -1321,10 +1321,10 @@ class _CreateEventPageState extends State<CreateEventPage> {
                 ),
               )
             else
-              const Icon(Icons.check_circle, color: Colors.black, size: 24),
+              const Icon(Icons.save, color: Colors.black, size: 24),
             const SizedBox(width: 12),
             Text(
-              _isCreating ? 'Creazione in corso...' : 'Crea Evento',
+              _isSaving ? 'Salvataggio in corso...' : 'Salva Modifiche',
               style: const TextStyle(
                 color: Colors.black,
                 fontSize: 17,

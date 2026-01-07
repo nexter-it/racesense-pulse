@@ -6,10 +6,12 @@ import '../theme.dart';
 import '../services/firestore_service.dart';
 import '../services/session_service.dart';
 import '../services/follow_service.dart';
+import '../services/event_service.dart';
 import '../models/session_model.dart';
 import '../models/driver_info.dart';
 import '../widgets/follow_counts.dart';
 import '../widgets/profile_avatar.dart';
+import '../widgets/badge_display_widget.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // PREMIUM UI CONSTANTS
@@ -38,6 +40,7 @@ class _SearchUserProfilePageState extends State<SearchUserProfilePage> {
   final FirestoreService _firestoreService = FirestoreService();
   final SessionService _sessionService = SessionService();
   final FollowService _followService = FollowService();
+  final EventService _eventService = EventService();
 
   String _userName = '';
   String _userTag = '';
@@ -247,6 +250,12 @@ class _SearchUserProfilePageState extends State<SearchUserProfilePage> {
                                 const SizedBox(height: 16),
                               ],
                               _buildHighlightsCard(),
+                              const SizedBox(height: 16),
+                              // Collezione Badge
+                              BadgeCard(
+                                userId: widget.userId,
+                                badgesStream: _eventService.getUserBadges(widget.userId),
+                              ),
                               const SizedBox(height: 24),
                               _buildSessionsSection(isMe),
                             ],

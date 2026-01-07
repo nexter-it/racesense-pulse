@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'theme.dart';
 import 'firebase_options.dart';
 import 'pages/feed_page.dart';
@@ -14,6 +15,10 @@ import 'pages/events_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Inizializza locale italiano per DateFormat
+  await initializeDateFormatting('it_IT', null);
+
   try {
     if (kIsWeb) {
       await Firebase.initializeApp(
