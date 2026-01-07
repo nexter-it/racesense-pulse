@@ -819,228 +819,234 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
           ),
         ],
       ),
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(18),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            Row(
               children: [
-                // Header
-                Row(
-                  children: [
-                    Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        gradient: LinearGradient(
-                          colors: [
-                            kBrandColor.withAlpha(40),
-                            kBrandColor.withAlpha(20),
-                          ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        border: Border.all(color: kBrandColor.withAlpha(60), width: 1.5),
-                      ),
-                      child: Center(
-                        child: Icon(Icons.person_pin_outlined, color: kBrandColor, size: 22),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    const Expanded(
-                      child: Text(
-                        'Bacheca Pilota',
-                        style: TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.w900,
-                          color: kFgColor,
-                          letterSpacing: -0.3,
-                        ),
-                      ),
-                    ),
-                    GestureDetector(
-                      onTap: () async {
-                        HapticFeedback.lightImpact();
-                        final result = await Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => DriverInfoEditPage(
-                              initialDriverInfo: _driverInfo ?? DriverInfo.empty(),
-                            ),
-                          ),
-                        );
-                        if (result is DriverInfo && mounted) {
-                          setState(() {
-                            _driverInfo = result;
-                          });
-                        }
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: kBrandColor.withAlpha(20),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: kBrandColor.withAlpha(60)),
-                        ),
-                        child: Icon(Icons.edit_outlined, color: kBrandColor, size: 18),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-
-                if (!hasInfo) ...[
-                  // Empty state
-                  Text(
-                    'Condividi informazioni su di te con altri piloti e sponsor',
-                    style: TextStyle(
-                      color: kMutedColor,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  GestureDetector(
-                    onTap: () async {
-                      HapticFeedback.lightImpact();
-                      final result = await Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => DriverInfoEditPage(
-                            initialDriverInfo: DriverInfo.empty(),
-                          ),
-                        ),
-                      );
-                      if (result is DriverInfo && mounted) {
-                        setState(() {
-                          _driverInfo = result;
-                        });
-                      }
-                    },
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        gradient: LinearGradient(
-                          colors: [
-                            kBrandColor.withAlpha(30),
-                            kBrandColor.withAlpha(15),
-                          ],
-                        ),
-                        border: Border.all(color: kBrandColor.withAlpha(80)),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.add_circle_outline, color: kBrandColor, size: 18),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Aggiungi informazioni',
-                            style: TextStyle(
-                              color: kBrandColor,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ] else ...[
-                  // Bio
-                  if (_driverInfo!.hasBio) ...[
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        color: Colors.white.withAlpha(6),
-                        border: Border.all(color: const Color(0xFF2A2A2A)),
-                      ),
-                      child: Text(
-                        _driverInfo!.bio,
-                        style: TextStyle(
-                          color: kFgColor.withAlpha(220),
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                          height: 1.4,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                  ],
-
-                  // Badges per categoria
-                  ...DriverInfo.badgeCategories.entries.map((entry) {
-                    final categoryBadges = _driverInfo!.selectedBadges
-                        .where((badgeId) =>
-                            DriverInfo.getCategoryForBadge(badgeId) == entry.key)
-                        .toList();
-
-                    if (categoryBadges.isEmpty) return const SizedBox.shrink();
-
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.only(left: 4, bottom: 10),
-                          child: Text(
-                            entry.key,
-                            style: TextStyle(
-                              color: kMutedColor,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                        ),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: categoryBadges.map((badgeId) {
-                            final label = DriverInfo.getLabelForBadge(badgeId);
-                            return Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 8,
-                              ),
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: [
-                                    kBrandColor.withAlpha(30),
-                                    kBrandColor.withAlpha(20),
-                                  ],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                ),
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(
-                                  color: kBrandColor.withAlpha(60),
-                                  width: 1.5,
-                                ),
-                              ),
-                              child: Text(
-                                label,
-                                style: TextStyle(
-                                  color: kBrandColor,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            );
-                          }).toList(),
-                        ),
-                        const SizedBox(height: 14),
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    gradient: LinearGradient(
+                      colors: [
+                        kBrandColor.withAlpha(40),
+                        kBrandColor.withAlpha(20),
                       ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    border: Border.all(color: kBrandColor.withAlpha(60), width: 1.5),
+                  ),
+                  child: Center(
+                    child: Icon(Icons.person_pin_outlined, color: kBrandColor, size: 22),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Text(
+                    'Bacheca Pilota',
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w900,
+                      color: kFgColor,
+                      letterSpacing: -0.3,
+                    ),
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () async {
+                    HapticFeedback.lightImpact();
+                    final result = await Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => DriverInfoEditPage(
+                          initialDriverInfo: _driverInfo ?? DriverInfo.empty(),
+                        ),
+                      ),
                     );
-                  }).toList(),
+                    if (result is DriverInfo && mounted) {
+                      setState(() {
+                        _driverInfo = result;
+                      });
+                    }
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: kBrandColor.withAlpha(20),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: kBrandColor.withAlpha(60)),
+                    ),
+                    child: Icon(Icons.edit_outlined, color: kBrandColor, size: 18),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            if (!hasInfo)
+              _buildEmptyDriverInfo()
+            else
+              _buildDriverInfoContent(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyDriverInfo() {
+    return Column(
+      children: [
+        Text(
+          'Condividi informazioni su di te con altri piloti e sponsor',
+          style: TextStyle(
+            color: kMutedColor,
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 16),
+        GestureDetector(
+          onTap: () async {
+            HapticFeedback.lightImpact();
+            final result = await Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => DriverInfoEditPage(
+                  initialDriverInfo: DriverInfo.empty(),
+                ),
+              ),
+            );
+            if (result is DriverInfo && mounted) {
+              setState(() {
+                _driverInfo = result;
+              });
+            }
+          },
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              gradient: LinearGradient(
+                colors: [
+                  kBrandColor.withAlpha(30),
+                  kBrandColor.withAlpha(15),
                 ],
+              ),
+              border: Border.all(color: kBrandColor.withAlpha(80)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.add_circle_outline, color: kBrandColor, size: 18),
+                const SizedBox(width: 8),
+                Text(
+                  'Aggiungi informazioni',
+                  style: TextStyle(
+                    color: kBrandColor,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
               ],
             ),
           ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDriverInfoContent() {
+    // Mappa colori per categoria
+    final categoryColors = {
+      'Esperienza': const Color(0xFF29B6F6), // Blu
+      'Aspirazioni': const Color(0xFFAB47BC), // Viola
+      'Disponibilità': const Color(0xFF66BB6A), // Verde
+    };
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Bio compatta
+        if (_driverInfo!.hasBio) ...[
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              color: Colors.white.withAlpha(6),
+              border: Border.all(color: const Color(0xFF2A2A2A)),
+            ),
+            child: Text(
+              '"${_driverInfo!.bio}"',
+              style: TextStyle(
+                color: kFgColor.withAlpha(220),
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                height: 1.4,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
         ],
-      ),
+
+        // Badges in griglia compatta con colori per categoria
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: _driverInfo!.selectedBadges.map((badgeId) {
+            final label = DriverInfo.getLabelForBadge(badgeId);
+            final category = DriverInfo.getCategoryForBadge(badgeId);
+            final color = categoryColors[category] ?? kBrandColor;
+
+            return Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    color.withAlpha(30),
+                    color.withAlpha(20),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: color.withAlpha(60),
+                  width: 1.5,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 6,
+                    height: 6,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: color,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    label,
+                    style: TextStyle(
+                      color: color,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }).toList(),
+        ),
+      ],
     );
   }
 

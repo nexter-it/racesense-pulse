@@ -7,6 +7,7 @@ import '../services/firestore_service.dart';
 import '../services/session_service.dart';
 import '../services/follow_service.dart';
 import '../models/session_model.dart';
+import '../models/driver_info.dart';
 import '../widgets/follow_counts.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -52,6 +53,7 @@ class _SearchUserProfilePageState extends State<SearchUserProfilePage> {
   int _followerCount = 0;
   int _followingCount = 0;
   bool _isFollowing = false;
+  DriverInfo? _driverInfo;
 
   @override
   void initState() {
@@ -82,6 +84,16 @@ class _SearchUserProfilePageState extends State<SearchUserProfilePage> {
       final stats = (userData != null && userData['stats'] != null)
           ? UserStats.fromMap(userData['stats'] as Map<String, dynamic>)
           : UserStats.empty();
+
+      // Carica driverInfo se presente
+      DriverInfo? driverInfo;
+      if (userData != null && userData['driverInfo'] != null) {
+        try {
+          driverInfo = DriverInfo.fromJson(userData['driverInfo'] as Map<String, dynamic>);
+        } catch (e) {
+          driverInfo = null;
+        }
+      }
 
       if (mounted) {
         final fullName = userData?['fullName'] ?? widget.fullName;
@@ -117,6 +129,7 @@ class _SearchUserProfilePageState extends State<SearchUserProfilePage> {
           _allPublicSessions = [];
           _followerCount = stats.followerCount;
           _followingCount = stats.followingCount;
+          _driverInfo = driverInfo;
         });
       }
     } catch (e) {
@@ -226,6 +239,10 @@ class _SearchUserProfilePageState extends State<SearchUserProfilePage> {
                             children: [
                               _buildProfileCard(isMe),
                               const SizedBox(height: 16),
+                              if (_driverInfo != null && _driverInfo!.hasAnyInfo) ...[
+                                _buildDriverInfoCard(),
+                                const SizedBox(height: 16),
+                              ],
                               _buildHighlightsCard(),
                               const SizedBox(height: 24),
                               _buildSessionsSection(isMe),
@@ -1292,6 +1309,155 @@ class _SearchUserProfilePageState extends State<SearchUserProfilePage> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildDriverInfoCard() {
+    // Mappa colori per categoria
+    final categoryColors = {
+      'Esperienza': const Color(0xFF29B6F6), // Blu
+      'Aspirazioni': const Color(0xFFAB47BC), // Viola
+      'Disponibilità': const Color(0xFF66BB6A), // Verde
+    };
+
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        gradient: LinearGradient(
+          colors: [_kCardStart, _kCardEnd],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        border: Border.all(color: _kBorderColor),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(80),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    gradient: LinearGradient(
+                      colors: [
+                        kBrandColor.withAlpha(40),
+                        kBrandColor.withAlpha(20),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    border: Border.all(color: kBrandColor.withAlpha(60), width: 1.5),
+                  ),
+                  child: Center(
+                    child: Icon(Icons.person_pin_outlined, color: kBrandColor, size: 22),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Text(
+                    'Bacheca Pilota',
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w900,
+                      color: kFgColor,
+                      letterSpacing: -0.3,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // Bio compatta
+            if (_driverInfo!.hasBio) ...[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  color: Colors.white.withAlpha(6),
+                  border: Border.all(color: _kBorderColor),
+                ),
+                child: Text(
+                  '"${_driverInfo!.bio}"',
+                  style: TextStyle(
+                    color: kFgColor.withAlpha(220),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    height: 1.4,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+            ],
+
+            // Badges in griglia compatta con colori per categoria
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _driverInfo!.selectedBadges.map((badgeId) {
+                final label = DriverInfo.getLabelForBadge(badgeId);
+                final category = DriverInfo.getCategoryForBadge(badgeId);
+                final color = categoryColors[category] ?? kBrandColor;
+
+                return Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        color.withAlpha(30),
+                        color.withAlpha(20),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: color.withAlpha(60),
+                      width: 1.5,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 6,
+                        height: 6,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: color,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        label,
+                        style: TextStyle(
+                          color: color,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
+        ),
       ),
     );
   }
