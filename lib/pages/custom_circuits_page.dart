@@ -36,6 +36,217 @@ class _CustomCircuitsPageState extends State<CustomCircuitsPage> {
     }
   }
 
+  Future<void> _deleteCircuit(CustomCircuitInfo circuit) async {
+    if (circuit.trackId == null) return;
+
+    // Mostra dialog di conferma
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                const Color(0xFF1A1A1A),
+                const Color(0xFF141414),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: const Color(0xFF2A2A2A), width: 1.5),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withAlpha(100),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Icon
+              Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: kErrorColor.withAlpha(20),
+                  border: Border.all(color: kErrorColor.withAlpha(60), width: 2),
+                ),
+                child: Icon(Icons.delete_forever, color: kErrorColor, size: 32),
+              ),
+              const SizedBox(height: 20),
+              // Title
+              const Text(
+                'Elimina Circuito',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w900,
+                  color: kFgColor,
+                  letterSpacing: -0.5,
+                ),
+              ),
+              const SizedBox(height: 12),
+              // Message
+              Text(
+                'Sei sicuro di voler eliminare "${circuit.name}"?\n\nQuesta azione non può essere annullata.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: kMutedColor,
+                  fontWeight: FontWeight.w600,
+                  height: 1.5,
+                ),
+              ),
+              const SizedBox(height: 24),
+              // Buttons
+              Row(
+                children: [
+                  // Cancel
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () {
+                        HapticFeedback.lightImpact();
+                        Navigator.of(context).pop(false);
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          color: Colors.white.withAlpha(10),
+                          border: Border.all(color: const Color(0xFF2A2A2A)),
+                        ),
+                        child: const Text(
+                          'Annulla',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: kFgColor,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 15,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  // Delete
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () {
+                        HapticFeedback.mediumImpact();
+                        Navigator.of(context).pop(true);
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          gradient: LinearGradient(
+                            colors: [kErrorColor, kErrorColor.withAlpha(200)],
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: kErrorColor.withAlpha(60),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: const Text(
+                          'Elimina',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 15,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        // Mostra loading
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(kFgColor),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  const Text('Eliminazione in corso...', style: TextStyle(
+                            color: Colors.white,
+                          )),
+                ],
+              ),
+              backgroundColor: const Color(0xFF1A1A1A),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+
+        // Elimina da Firebase
+        await _service.deleteCircuit(circuit.trackId!);
+
+        // Ricarica lista
+        await _loadCircuits();
+
+        // Mostra successo
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  Icon(Icons.check_circle, color: kBrandColor, size: 20),
+                  const SizedBox(width: 12),
+                  const Text('Circuito eliminato con successo', style: TextStyle(
+                            color: Colors.white,
+                          )),
+                ],
+              ),
+              backgroundColor: const Color(0xFF1A1A1A),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  Icon(Icons.error_outline, color: kErrorColor, size: 20),
+                  const SizedBox(width: 12),
+                  Text('Errore: $e'),
+                ],
+              ),
+              backgroundColor: kErrorColor.withAlpha(200),
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -544,6 +755,27 @@ class _CustomCircuitsPageState extends State<CustomCircuitsPage> {
                     ),
                   ),
                   const Spacer(),
+                  // Delete button
+                  GestureDetector(
+                    onTap: () {
+                      HapticFeedback.lightImpact();
+                      _deleteCircuit(circuit);
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: kErrorColor.withAlpha(15),
+                        border: Border.all(color: kErrorColor.withAlpha(60)),
+                      ),
+                      child: Icon(
+                        Icons.delete_outline,
+                        color: kErrorColor,
+                        size: 16,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
                   Text(
                     'Visualizza',
                     style: TextStyle(
@@ -638,19 +870,26 @@ class _CustomCircuitsPageState extends State<CustomCircuitsPage> {
         _loadCircuits();
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          color: const Color(0xFF1E1E1E),
+          borderRadius: BorderRadius.circular(16),
+          gradient: LinearGradient(
+            colors: [
+              kBrandColor,
+              kBrandColor.withAlpha(220),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
           border: Border.all(
-            color: Colors.white.withAlpha(25),
-            width: 1,
+            color: kBrandColor.withAlpha(60),
+            width: 1.5,
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withAlpha(80),
-              blurRadius: 20,
-              offset: const Offset(0, 8),
+              color: Colors.black.withAlpha(60),
+              blurRadius: 12,
+              offset: const Offset(0, 6),
             ),
           ],
         ),
@@ -660,21 +899,21 @@ class _CustomCircuitsPageState extends State<CustomCircuitsPage> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: kBrandColor.withAlpha(30),
+                color: Colors.white.withAlpha(20),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(
                 Icons.add_location_alt_rounded,
-                color: kBrandColor,
+                color: Colors.black,
                 size: 20,
               ),
             ),
-            const SizedBox(width: 14),
+            const SizedBox(width: 12),
             Text(
               'Nuovo Tracciato',
               style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w700,
+                color: Colors.black,
+                fontWeight: FontWeight.w800,
                 fontSize: 15,
                 letterSpacing: -0.2,
               ),

@@ -586,29 +586,20 @@ class _DrawFinishLinePageState extends State<DrawFinishLinePage> {
                 child: const Icon(Icons.flag_outlined, color: kBrandColor, size: 36),
               ),
               const SizedBox(height: 20),
-              const Text(
-                'Linea Start/Finish Posizionata',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w900,
-                  color: Colors.white,
-                  letterSpacing: -0.3,
-                ),
-                textAlign: TextAlign.center,
-              ),
+              // const Text(
+              //   'Linea Start/Finish Posizionata',
+              //   style: TextStyle(
+              //     fontSize: 20,
+              //     fontWeight: FontWeight.w900,
+              //     color: Colors.white,
+              //     letterSpacing: -0.3,
+              //   ),
+              //   textAlign: TextAlign.center,
+              // ),
               const SizedBox(height: 20),
 
               // Info linea S/F
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: _kTileColor,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: _kBorderColor),
-                ),
-                child: Column(
-                  children: [
-                    Row(
+              Row(
                       children: [
                         Icon(Icons.straighten, color: kBrandColor, size: 20),
                         const SizedBox(width: 10),
@@ -627,34 +618,6 @@ class _DrawFinishLinePageState extends State<DrawFinishLinePage> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 12),
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: kBrandColor.withAlpha(15),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: kBrandColor.withAlpha(60)),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.info_outline, color: kBrandColor, size: 18),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              'La traccia GPS verrà registrata durante le tue sessioni sul circuito',
-                              style: TextStyle(
-                                color: kBrandColor,
-                                fontSize: 12,
-                                height: 1.3,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
               const SizedBox(height: 24),
 
               // Buttons

@@ -635,39 +635,7 @@ class _CustomCircuitDetailPageState extends State<CustomCircuitDetailPage>
           bottom: BorderSide(color: Color(0xFF2A2A2A), width: 1),
         ),
       ),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              kBrandColor.withAlpha(20),
-              kBrandColor.withAlpha(10),
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: kBrandColor.withAlpha(60)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.flag_outlined, color: kBrandColor, size: 20),
-                const SizedBox(width: 10),
-                Text(
-                  'Linea Start/Finish Configurata',
-                  style: TextStyle(
-                    color: kBrandColor,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
+      child: Row(
               children: [
                 Expanded(
                   child: _buildFinishLineInfo(
@@ -688,33 +656,6 @@ class _CustomCircuitDetailPageState extends State<CustomCircuitDetailPage>
                 ),
               ],
             ),
-            const SizedBox(height: 10),
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Colors.white.withAlpha(8),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.info_outline, color: kMutedColor, size: 16),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'La traccia GPS verrà registrata durante le sessioni',
-                      style: TextStyle(
-                        color: kMutedColor,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
