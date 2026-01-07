@@ -389,13 +389,17 @@ class _SearchPageState extends State<SearchPage>
 
   Widget _buildUsersTab() {
     if (_query.length < 2) {
+      final topList = _topUsers.take(20).toList();
       return _buildTopSection(
         title: 'Top Piloti',
         subtitle: 'I piloti più seguiti della piattaforma',
         icon: Icons.emoji_events_outlined,
         iconColor: const Color(0xFFFFD60A),
         isLoading: _loadingTopUsers && _topUsers.isEmpty,
-        children: _topUsers.take(20).map((u) => _buildUserCard(u)).toList(),
+        children: List.generate(
+          topList.length,
+          (i) => _buildUserCard(topList[i], position: i + 1),
+        ),
       );
     }
 
@@ -521,7 +525,7 @@ class _SearchPageState extends State<SearchPage>
     );
   }
 
-  Widget _buildUserCard(Map<String, dynamic> user) {
+  Widget _buildUserCard(Map<String, dynamic> user, {int? position}) {
     final fullName = user['fullName'] ?? user['name'] ?? '';
     final stats = user['stats'] as Map<String, dynamic>? ?? {};
     final totalSessions = stats['totalSessions'] ?? user['sessions'] ?? 0;
@@ -532,6 +536,20 @@ class _SearchPageState extends State<SearchPage>
     final followerCount = stats['followerCount'] ?? 0;
     final isMe = _currentUserId != null && _currentUserId == userId;
     final isFollowing = userId != null && _followingIds.contains(userId);
+
+    // Colore posizione per top 3
+    Color? positionColor;
+    if (position != null) {
+      if (position == 1) {
+        positionColor = const Color(0xFFFFD700); // Oro
+      } else if (position == 2) {
+        positionColor = const Color(0xFFC0C0C0); // Argento
+      } else if (position == 3) {
+        positionColor = const Color(0xFFCD7F32); // Bronzo
+      } else {
+        positionColor = kMutedColor;
+      }
+    }
 
     return GestureDetector(
       onTap: (userId != null && userId.isNotEmpty)
@@ -568,6 +586,32 @@ class _SearchPageState extends State<SearchPage>
         ),
         child: Row(
           children: [
+            // Posizione in classifica
+            if (position != null) ...[
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: positionColor!.withAlpha(position <= 3 ? 30 : 15),
+                  border: Border.all(
+                    color: positionColor.withAlpha(position <= 3 ? 100 : 50),
+                    width: 1.5,
+                  ),
+                ),
+                child: Center(
+                  child: Text(
+                    '$position°',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w900,
+                      color: positionColor,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+            ],
             // Avatar
             ProfileAvatar(
               profileImageUrl: profileImageUrl,

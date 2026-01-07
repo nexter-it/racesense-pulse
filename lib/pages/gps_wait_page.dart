@@ -1034,37 +1034,64 @@ class _GpsWaitPageState extends State<GpsWaitPage>
 
   Widget _buildSelectionSummary() {
     final hasTrack = _selectedTrack != null;
+    final isOfficial = _selectedMode == StartMode.existing;
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(18),
         gradient: hasTrack
             ? LinearGradient(
-                colors: [kBrandColor.withAlpha(15), kBrandColor.withAlpha(8)],
+                colors: [
+                  kBrandColor.withAlpha(25),
+                  kBrandColor.withAlpha(12),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               )
             : null,
         color: hasTrack ? null : Colors.white.withAlpha(4),
         border: Border.all(
-          color: hasTrack ? kBrandColor.withAlpha(80) : _kBorderColor,
+          color: hasTrack ? kBrandColor.withAlpha(120) : _kBorderColor,
           width: hasTrack ? 2 : 1,
         ),
+        boxShadow: hasTrack
+            ? [
+                BoxShadow(
+                  color: kBrandColor.withAlpha(30),
+                  blurRadius: 16,
+                  offset: const Offset(0, 4),
+                ),
+              ]
+            : null,
       ),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(10),
+            width: 48,
+            height: 48,
             decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: hasTrack ? kBrandColor.withAlpha(20) : kMutedColor.withAlpha(15),
+              borderRadius: BorderRadius.circular(14),
+              gradient: hasTrack
+                  ? LinearGradient(
+                      colors: [
+                        kBrandColor.withAlpha(40),
+                        kBrandColor.withAlpha(20),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    )
+                  : null,
+              color: hasTrack ? null : kMutedColor.withAlpha(15),
               border: Border.all(
-                color: hasTrack ? kBrandColor.withAlpha(60) : kMutedColor.withAlpha(40),
+                color: hasTrack ? kBrandColor.withAlpha(80) : kMutedColor.withAlpha(40),
+                width: 1.5,
               ),
             ),
             child: Icon(
               hasTrack ? Icons.check_circle : Icons.info_outline,
               color: hasTrack ? kBrandColor : kMutedColor,
-              size: 20,
+              size: 24,
             ),
           ),
           const SizedBox(width: 14),
@@ -1072,31 +1099,75 @@ class _GpsWaitPageState extends State<GpsWaitPage>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  hasTrack
-                      ? (_selectedMode == StartMode.existing
-                          ? 'Circuito ufficiale'
-                          : 'Circuito custom')
-                      : 'Nessun circuito selezionato',
-                  style: TextStyle(
-                    color: hasTrack ? kFgColor : kMutedColor,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
+                if (hasTrack) ...[
+                  // Badge tipo circuito
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: isOfficial
+                          ? const Color(0xFFFFD700).withAlpha(20)
+                          : kPulseColor.withAlpha(20),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: isOfficial
+                            ? const Color(0xFFFFD700).withAlpha(80)
+                            : kPulseColor.withAlpha(60),
+                      ),
+                    ),
+                    child: Text(
+                      isOfficial ? 'UFFICIALE' : 'CUSTOM',
+                      style: TextStyle(
+                        fontSize: 9,
+                        fontWeight: FontWeight.w900,
+                        color: isOfficial ? const Color(0xFFFFD700) : kPulseColor,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  hasTrack
-                      ? '${_selectedTrack!.name} • ${_selectedTrack!.location}'
-                      : 'Seleziona un circuito per iniziare',
-                  style: TextStyle(
-                    color: kMutedColor,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
+                  const SizedBox(height: 6),
+                  // Nome circuito - più grande e visibile
+                  Text(
+                    _selectedTrack!.name,
+                    style: const TextStyle(
+                      color: kFgColor,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -0.3,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
+                  const SizedBox(height: 2),
+                  // Location
+                  Text(
+                    _selectedTrack!.location,
+                    style: TextStyle(
+                      color: kMutedColor,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ] else ...[
+                  Text(
+                    'Nessun circuito selezionato',
+                    style: TextStyle(
+                      color: kMutedColor,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Seleziona un circuito per iniziare',
+                    style: TextStyle(
+                      color: kMutedColor.withAlpha(180),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
