@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../theme.dart';
 import '../services/grand_prix_service.dart';
 import '../models/grand_prix_models.dart';
+import '../widgets/profile_avatar.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // PREMIUM UI CONSTANTS
@@ -102,6 +103,9 @@ class _GrandPrixStatisticsPageState extends State<GrandPrixStatisticsPage>
                        lobby.participants[userId]?.username ??
                        'Pilota ${userId.substring(0, 8)}';
 
+      // ProfileImageUrl: prendi da participants se disponibile
+      final profileImageUrl = lobby.participants[userId]?.profileImageUrl;
+
       print('📊 Creando statistiche per $username: ${liveData.totalLaps} laps, bestLap: ${liveData.bestLap}');
 
       try {
@@ -109,6 +113,7 @@ class _GrandPrixStatisticsPageState extends State<GrandPrixStatisticsPage>
           userId,
           username,
           liveData,
+          profileImageUrl: profileImageUrl,
         ));
       } catch (e) {
         print('❌ Errore creando statistiche per $username: $e');
@@ -409,16 +414,8 @@ class _GrandPrixStatisticsPageState extends State<GrandPrixStatisticsPage>
     return Column(
       children: [
         Container(
-          width: 60,
-          height: 60,
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [color, color.withOpacity(0.7)],
-            ),
             shape: BoxShape.circle,
-            border: Border.all(color: color, width: 3),
             boxShadow: [
               BoxShadow(
                 color: color.withOpacity(0.4),
@@ -427,15 +424,12 @@ class _GrandPrixStatisticsPageState extends State<GrandPrixStatisticsPage>
               ),
             ],
           ),
-          child: Center(
-            child: Text(
-              stats.username.substring(0, 2).toUpperCase(),
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w900,
-                color: Colors.white,
-              ),
-            ),
+          child: ProfileAvatar(
+            profileImageUrl: stats.profileImageUrl,
+            userTag: stats.username.substring(0, 2).toUpperCase(),
+            size: 60,
+            borderWidth: 3,
+            showGradientBorder: true,
           ),
         ),
         const SizedBox(height: 12),

@@ -15,6 +15,7 @@ import '../services/follow_service.dart';
 import '../services/feed_cache_service.dart';
 import '../services/engagement_service.dart';
 import '../models/session_model.dart';
+import '../widgets/profile_avatar.dart';
 
 /// Converte il displayPath salvato nel doc sessione in una path 2D per il painter.
 List<Offset> _buildTrack2dFromSession(SessionModel session) {
@@ -1522,72 +1523,53 @@ class _AvatarUser extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<String>(
-      future: _getInitials(),
+    return FutureBuilder<Map<String, String?>>(
+      future: _getUserData(),
       builder: (context, snapshot) {
-        final initials = snapshot.data ?? 'US';
+        final userData = snapshot.data ?? {'initials': 'US', 'profileImageUrl': null};
+        final initials = userData['initials'] ?? 'US';
+        final profileImageUrl = userData['profileImageUrl'];
 
-        return Container(
-          padding: const EdgeInsets.all(2),
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: LinearGradient(
-              colors: [
-                kBrandColor.withAlpha(100),
-                kPulseColor.withAlpha(80),
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-          child: Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: const Color(0xFF1A1A1A),
-              border: Border.all(color: const Color(0xFF2A2A2A), width: 2),
-            ),
-            child: Center(
-              child: Text(
-                initials,
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w900,
-                  color: kBrandColor,
-                  letterSpacing: 1,
-                ),
-              ),
-            ),
-          ),
+        return ProfileAvatar(
+          profileImageUrl: profileImageUrl,
+          userTag: initials,
+          size: 44,
+          borderWidth: 2,
+          showGradientBorder: true,
         );
       },
     );
   }
 
-  Future<String> _getInitials() async {
+  Future<Map<String, String?>> _getUserData() async {
     try {
       final doc = await FirebaseFirestore.instance
           .collection('users')
           .doc(userId)
           .get();
 
-      if (!doc.exists) return 'US';
+      if (!doc.exists) return {'initials': 'US', 'profileImageUrl': null};
 
-      final fullName = doc.data()?['fullName'] as String? ?? 'User';
+      final data = doc.data();
+      final fullName = data?['fullName'] as String? ?? 'User';
+      final profileImageUrl = data?['profileImageUrl'] as String?;
+
       final nameParts = fullName.split(' ');
+      String initials;
 
       if (nameParts.length >= 2 &&
           nameParts[0].isNotEmpty &&
           nameParts[1].isNotEmpty) {
-        return nameParts[0][0].toUpperCase() + nameParts[1][0].toUpperCase();
+        initials = nameParts[0][0].toUpperCase() + nameParts[1][0].toUpperCase();
       } else if (nameParts.isNotEmpty && nameParts[0].length >= 2) {
-        return nameParts[0].substring(0, 2).toUpperCase();
+        initials = nameParts[0].substring(0, 2).toUpperCase();
       } else {
-        return 'US';
+        initials = 'US';
       }
+
+      return {'initials': initials, 'profileImageUrl': profileImageUrl};
     } catch (e) {
-      return 'US';
+      return {'initials': 'US', 'profileImageUrl': null};
     }
   }
 }

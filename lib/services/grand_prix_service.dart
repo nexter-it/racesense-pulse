@@ -29,6 +29,17 @@ class GrandPrixService {
     }
   }
 
+  Future<String?> _getProfileImageUrl() async {
+    final user = _auth.currentUser;
+    if (user == null) return null;
+    try {
+      final doc = await _firestore.collection('users').doc(user.uid).get();
+      return doc.data()?['profileImageUrl']?.toString();
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// Genera codice lobby 4 cifre
   String _generateCode() {
     return (1000 + Random().nextInt(9000)).toString();
@@ -115,13 +126,20 @@ class GrandPrixService {
     if (!snapshot.exists) throw 'Lobby non trovata';
 
     final username = await _getUsername();
+    final profileImageUrl = await _getProfileImageUrl();
 
     // Aggiungi partecipante
-    await _database.ref('$_basePath/$code/participants/$userId').set({
+    final participantData = {
       'username': username,
       'joinedAt': ServerValue.timestamp,
       'connected': true,
-    });
+    };
+
+    if (profileImageUrl != null) {
+      participantData['profileImageUrl'] = profileImageUrl;
+    }
+
+    await _database.ref('$_basePath/$code/participants/$userId').set(participantData);
   }
 
   /// Esci dalla lobby

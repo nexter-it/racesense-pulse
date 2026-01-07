@@ -9,6 +9,7 @@ import '../services/follow_service.dart';
 import '../models/session_model.dart';
 import '../models/driver_info.dart';
 import '../widgets/follow_counts.dart';
+import '../widgets/profile_avatar.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // PREMIUM UI CONSTANTS
@@ -41,6 +42,7 @@ class _SearchUserProfilePageState extends State<SearchUserProfilePage> {
   String _userName = '';
   String _userTag = '';
   String _username = '';
+  String? _profileImageUrl;
   bool _isLoading = true;
   bool _error = false;
 
@@ -121,6 +123,7 @@ class _SearchUserProfilePageState extends State<SearchUserProfilePage> {
           _userTag = tag;
           _username = userData?['username'] as String? ??
               fullName.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+          _profileImageUrl = userData?['profileImageUrl'] as String?;
           _userStats = stats;
           _publicSessions = sessions;
           _isLoading = false;
@@ -294,39 +297,12 @@ class _SearchUserProfilePageState extends State<SearchUserProfilePage> {
           ),
           const SizedBox(width: 14),
           // Avatar
-          Container(
-            padding: const EdgeInsets.all(2),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                colors: [
-                  kBrandColor.withAlpha(120),
-                  kPulseColor.withAlpha(80),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-            ),
-            child: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: _kCardStart,
-                border: Border.all(color: _kBorderColor, width: 2),
-              ),
-              child: Center(
-                child: Text(
-                  _userTag,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w900,
-                    color: kBrandColor,
-                    letterSpacing: 1,
-                  ),
-                ),
-              ),
-            ),
+          ProfileAvatar(
+            profileImageUrl: _profileImageUrl,
+            userTag: _userTag,
+            size: 40,
+            borderWidth: 2,
+            showGradientBorder: true,
           ),
           const SizedBox(width: 12),
           // Title
@@ -525,45 +501,12 @@ class _SearchUserProfilePageState extends State<SearchUserProfilePage> {
             child: Row(
               children: [
                 // Large Avatar
-                Container(
-                  padding: const EdgeInsets.all(3),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                      colors: [
-                        kBrandColor.withAlpha(100),
-                        kPulseColor.withAlpha(80),
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                  ),
-                  child: Container(
-                    width: 72,
-                    height: 72,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: _kBgColor,
-                      boxShadow: [
-                        BoxShadow(
-                          color: kBrandColor.withAlpha(40),
-                          blurRadius: 20,
-                          spreadRadius: 2,
-                        ),
-                      ],
-                    ),
-                    child: Center(
-                      child: Text(
-                        _userTag,
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 2,
-                          color: kBrandColor,
-                        ),
-                      ),
-                    ),
-                  ),
+                ProfileAvatar(
+                  profileImageUrl: _profileImageUrl,
+                  userTag: _userTag,
+                  size: 72,
+                  borderWidth: 3,
+                  showGradientBorder: true,
                 ),
                 const SizedBox(width: 16),
                 // Name and stats

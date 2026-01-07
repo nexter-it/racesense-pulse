@@ -42,6 +42,9 @@ dependencies:
 
   # Image picker & sharing
   image_picker: ^1.0.7
+  flutter_image_compress: ^2.1.0
+  firebase_storage: ^13.0.4
+  cached_network_image: ^3.3.0
   share_plus: ^10.1.4
   permission_handler: ^11.3.0
   url_launcher: ^6.2.5

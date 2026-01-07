@@ -9,6 +9,7 @@ import '../models/session_model.dart';
 import 'search_track_sessions_page.dart';
 import '../services/follow_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../widgets/profile_avatar.dart';
 
 // Premium UI constants
 const Color _kBgColor = Color(0xFF0A0A0A);
@@ -507,6 +508,7 @@ class _SearchPageState extends State<SearchPage>
     final totalSessions = stats['totalSessions'] ?? user['sessions'] ?? 0;
     final initials = user['initials'] ??
         (fullName.isNotEmpty ? fullName[0].toUpperCase() : '?');
+    final profileImageUrl = user['profileImageUrl'] as String?;
     final userId = user['id']?.toString();
     final followerCount = stats['followerCount'] ?? 0;
     final isMe = _currentUserId != null && _currentUserId == userId;
@@ -548,32 +550,12 @@ class _SearchPageState extends State<SearchPage>
         child: Row(
           children: [
             // Avatar
-            Container(
-              padding: const EdgeInsets.all(3),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: LinearGradient(
-                  colors: [kBrandColor.withAlpha(80), kPulseColor.withAlpha(60)],
-                ),
-              ),
-              child: Container(
-                width: 52,
-                height: 52,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: _kTileColor,
-                ),
-                child: Center(
-                  child: Text(
-                    initials.toString(),
-                    style: const TextStyle(
-                      color: kBrandColor,
-                      fontWeight: FontWeight.w900,
-                      fontSize: 18,
-                    ),
-                  ),
-                ),
-              ),
+            ProfileAvatar(
+              profileImageUrl: profileImageUrl,
+              userTag: initials.toString(),
+              size: 52,
+              borderWidth: 3,
+              showGradientBorder: true,
             ),
             const SizedBox(width: 14),
 

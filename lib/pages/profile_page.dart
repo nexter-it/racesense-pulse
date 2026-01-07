@@ -8,9 +8,11 @@ import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
 import '../services/session_service.dart';
 import '../services/profile_cache_service.dart';
+import '../services/profile_image_service.dart';
 import '../theme.dart';
 import '../widgets/follow_counts.dart';
 import '../widgets/session_metadata_dialog.dart';
+import '../widgets/profile_avatar.dart';
 import 'app_info_page.dart';
 import 'story_composer_page.dart';
 import 'driver_info_edit_page.dart';
@@ -26,10 +28,12 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
   final FirestoreService _firestoreService = FirestoreService();
   final SessionService _sessionService = SessionService();
   final ProfileCacheService _cacheService = ProfileCacheService();
+  final ProfileImageService _profileImageService = ProfileImageService();
 
   String _userName = '';
   String _userTag = '';
   String _username = '';
+  String? _profileImageUrl;
   bool _isLoading = true;
   bool _sessionsLoadingAll = false;
   bool _showAllSessions = false;
@@ -37,6 +41,7 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
   int _followerCount = 0;
   int _followingCount = 0;
   bool _creatingCode = false;
+  bool _uploadingImage = false;
 
   UserStats _userStats = UserStats.empty();
   List<SessionModel> _recentSessions = [];
@@ -274,6 +279,7 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
           _userTag = tag;
           _username = userData?['username'] as String? ??
               fullName.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+          _profileImageUrl = userData?['profileImageUrl'] as String?;
           _userStats = stats;
           _recentSessions = sessions;
           _followerCount = stats.followerCount;
@@ -304,6 +310,172 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
 
   Future<void> _loadUserData() async {
     await _refreshFromFirebase();
+  }
+
+  Future<void> _uploadProfileImage() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    setState(() => _uploadingImage = true);
+
+    try {
+      final imageUrl = await _profileImageService.updateProfileImage(user.uid);
+
+      if (imageUrl != null && mounted) {
+        setState(() {
+          _profileImageUrl = imageUrl;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Immagine profilo aggiornata'),
+            backgroundColor: kBrandColor,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Errore: $e'),
+            backgroundColor: kErrorColor,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _uploadingImage = false);
+      }
+    }
+  }
+
+  Future<void> _showProfileImageOptions() async {
+    final hasImage = _profileImageUrl != null && _profileImageUrl!.isNotEmpty;
+
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF1A1A1A),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: kBrandColor.withAlpha(20),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(Icons.photo_library, color: kBrandColor),
+                ),
+                title: Text(
+                  hasImage ? 'Cambia immagine profilo' : 'Aggiungi immagine profilo',
+                  style: const TextStyle(color: kFgColor, fontWeight: FontWeight.w600),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  _uploadProfileImage();
+                },
+              ),
+              if (hasImage)
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: kErrorColor.withAlpha(20),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(Icons.delete_outline, color: kErrorColor),
+                  ),
+                  title: const Text(
+                    'Rimuovi immagine profilo',
+                    style: TextStyle(color: kErrorColor, fontWeight: FontWeight.w600),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _deleteProfileImage();
+                  },
+                ),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: kMutedColor.withAlpha(20),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(Icons.close, color: kMutedColor),
+                ),
+                title: const Text(
+                  'Annulla',
+                  style: TextStyle(color: kMutedColor, fontWeight: FontWeight.w600),
+                ),
+                onTap: () => Navigator.pop(context),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _deleteProfileImage() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1a1a1a),
+        title: const Text('Rimuovi immagine profilo', style: TextStyle(color: kFgColor)),
+        content: const Text(
+          'Vuoi rimuovere la tua immagine profilo?',
+          style: TextStyle(color: kMutedColor),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Annulla', style: TextStyle(color: kMutedColor)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Rimuovi', style: TextStyle(color: kErrorColor)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    try {
+      await _profileImageService.deleteProfileImage(user.uid);
+
+      if (mounted) {
+        setState(() {
+          _profileImageUrl = null;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Immagine profilo rimossa'),
+            backgroundColor: kBrandColor,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Errore: $e'),
+            backgroundColor: kErrorColor,
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _showCreateAffiliateDialog() async {
@@ -465,39 +637,12 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
       child: Row(
         children: [
           // Avatar
-          Container(
-            padding: const EdgeInsets.all(2),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                colors: [
-                  kBrandColor.withAlpha(120),
-                  kPulseColor.withAlpha(80),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-            ),
-            child: Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: const Color(0xFF1A1A1A),
-                border: Border.all(color: const Color(0xFF2A2A2A), width: 2),
-              ),
-              child: Center(
-                child: Text(
-                  _userTag,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w900,
-                    color: kBrandColor,
-                    letterSpacing: 1,
-                  ),
-                ),
-              ),
-            ),
+          ProfileAvatar(
+            profileImageUrl: _profileImageUrl,
+            userTag: _userTag,
+            size: 48,
+            borderWidth: 2,
+            showGradientBorder: true,
           ),
           const SizedBox(width: 14),
           // Title and username
@@ -637,46 +782,55 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
             padding: const EdgeInsets.all(18),
             child: Row(
               children: [
-                // Large Avatar
-                Container(
-                  padding: const EdgeInsets.all(3),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                      colors: [
-                        kBrandColor.withAlpha(100),
-                        kPulseColor.withAlpha(80),
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
+                // Large Avatar with edit button
+                Stack(
+                  children: [
+                    ProfileAvatar(
+                      profileImageUrl: _profileImageUrl,
+                      userTag: _userTag,
+                      size: 72,
+                      borderWidth: 3,
+                      showGradientBorder: true,
                     ),
-                  ),
-                  child: Container(
-                    width: 72,
-                    height: 72,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: const Color(0xFF0A0A0A),
-                      boxShadow: [
-                        BoxShadow(
-                          color: kBrandColor.withAlpha(40),
-                          blurRadius: 20,
-                          spreadRadius: 2,
-                        ),
-                      ],
-                    ),
-                    child: Center(
-                      child: Text(
-                        _userTag,
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 2,
-                          color: kBrandColor,
+                    // Edit button
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: GestureDetector(
+                        onTap: _uploadingImage
+                            ? null
+                            : () {
+                                HapticFeedback.lightImpact();
+                                _showProfileImageOptions();
+                              },
+                        child: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: kBrandColor,
+                            border: Border.all(
+                              color: const Color(0xFF1A1A1A),
+                              width: 2,
+                            ),
+                          ),
+                          child: _uploadingImage
+                              ? SizedBox(
+                                  width: 12,
+                                  height: 12,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation(Colors.black),
+                                  ),
+                                )
+                              : Icon(
+                                  Icons.camera_alt,
+                                  color: Colors.black,
+                                  size: 12,
+                                ),
                         ),
                       ),
                     ),
-                  ),
+                  ],
                 ),
                 const SizedBox(width: 16),
                 // Name and stats

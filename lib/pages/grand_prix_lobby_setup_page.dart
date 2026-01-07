@@ -9,6 +9,7 @@ import '../services/official_circuits_service.dart';
 import '../models/grand_prix_models.dart';
 import '../models/official_circuit_info.dart';
 import 'grand_prix_live_page.dart';
+import '../widgets/profile_avatar.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // PREMIUM UI CONSTANTS
@@ -570,34 +571,10 @@ class _GrandPrixLobbySetupPageState extends State<GrandPrixLobbySetupPage>
                 ),
                 child: Row(
                   children: [
-                    Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            kBrandColor.withOpacity(0.3),
-                            kBrandColor.withOpacity(0.1),
-                          ],
-                        ),
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: kBrandColor.withOpacity(0.5),
-                          width: 2,
-                        ),
-                      ),
-                      child: Center(
-                        child: Text(
-                          participant.username.substring(0, 2).toUpperCase(),
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w900,
-                            color: kBrandColor,
-                          ),
-                        ),
-                      ),
+                    ProfileAvatarCompact(
+                      profileImageUrl: participant.profileImageUrl,
+                      userTag: participant.username.substring(0, 2).toUpperCase(),
+                      size: 40,
                     ),
                     const SizedBox(width: 12),
                     Expanded(

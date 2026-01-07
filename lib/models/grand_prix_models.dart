@@ -61,12 +61,14 @@ class GrandPrixLobby {
 class GrandPrixParticipant {
   final String userId;
   final String username;
+  final String? profileImageUrl;
   final int joinedAt;
   final bool connected;
 
   GrandPrixParticipant({
     required this.userId,
     required this.username,
+    this.profileImageUrl,
     required this.joinedAt,
     required this.connected,
   });
@@ -83,6 +85,7 @@ class GrandPrixParticipant {
     return GrandPrixParticipant(
       userId: userId,
       username: map['username']?.toString() ?? 'Unknown',
+      profileImageUrl: map['profileImageUrl']?.toString(),
       joinedAt: parseTimestamp(map['joinedAt']),
       connected: map['connected'] == true,
     );
@@ -196,6 +199,7 @@ class GrandPrixLiveData {
 class GrandPrixStatistics {
   final String userId;
   final String username;
+  final String? profileImageUrl;
   final int totalLaps;
   final double? bestLap;
   final double? slowestLap;
@@ -208,6 +212,7 @@ class GrandPrixStatistics {
   GrandPrixStatistics({
     required this.userId,
     required this.username,
+    this.profileImageUrl,
     required this.totalLaps,
     this.bestLap,
     this.slowestLap,
@@ -221,8 +226,9 @@ class GrandPrixStatistics {
   factory GrandPrixStatistics.fromLiveData(
     String userId,
     String username,
-    GrandPrixLiveData liveData,
-  ) {
+    GrandPrixLiveData liveData, {
+    String? profileImageUrl,
+  }) {
     final validLaps = liveData.lapTimes.where((t) => t > 0).toList();
 
     double? bestLap;
@@ -251,6 +257,7 @@ class GrandPrixStatistics {
     return GrandPrixStatistics(
       userId: userId,
       username: username,
+      profileImageUrl: profileImageUrl,
       totalLaps: liveData.totalLaps,
       bestLap: bestLap,
       slowestLap: slowestLap,
