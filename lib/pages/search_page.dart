@@ -117,7 +117,7 @@ class _SearchPageState extends State<SearchPage>
       final snap = await _firestore
           .collection('users')
           .orderBy('stats.followerCount', descending: true)
-          .limit(3)
+          .limit(20)
           .get();
       if (!mounted) return;
 
@@ -221,32 +221,51 @@ class _SearchPageState extends State<SearchPage>
 
   Widget _buildHeader() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [_kCardStart, _kCardEnd],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-        ),
-      ),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(10),
+            width: 48,
+            height: 48,
             decoration: BoxDecoration(
-              color: kBrandColor.withAlpha(25),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(14),
+              gradient: LinearGradient(
+                colors: [
+                  kBrandColor.withAlpha(40),
+                  kBrandColor.withAlpha(20),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              border: Border.all(color: kBrandColor.withAlpha(80), width: 1.5),
             ),
-            child: const Icon(Icons.search, color: kBrandColor, size: 22),
+            child: const Center(
+              child: Icon(Icons.search, color: kBrandColor, size: 26),
+            ),
           ),
           const SizedBox(width: 14),
-          const Text(
-            'Ricerca',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.w900,
-              color: Colors.white,
-              letterSpacing: -0.3,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Ricerca',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w900,
+                    color: kFgColor,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+                Text(
+                  'Trova piloti, circuiti e sessioni',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: kMutedColor,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -372,11 +391,11 @@ class _SearchPageState extends State<SearchPage>
     if (_query.length < 2) {
       return _buildTopSection(
         title: 'Top Piloti',
-        subtitle: 'I piloti pi seguiti della piattaforma',
+        subtitle: 'I piloti più seguiti della piattaforma',
         icon: Icons.emoji_events_outlined,
         iconColor: const Color(0xFFFFD60A),
         isLoading: _loadingTopUsers && _topUsers.isEmpty,
-        children: _topUsers.take(3).map((u) => _buildUserCard(u)).toList(),
+        children: _topUsers.take(20).map((u) => _buildUserCard(u)).toList(),
       );
     }
 

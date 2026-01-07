@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../models/session_model.dart';
 import '../services/session_service.dart';
 import '../theme.dart';
+import '../widgets/profile_avatar.dart';
 import 'activity_detail_page.dart';
 import 'search_user_profile_page.dart';
 
@@ -34,9 +36,14 @@ class SearchTrackSessionsPage extends StatefulWidget {
 
 class _SearchTrackSessionsPageState extends State<SearchTrackSessionsPage> {
   final SessionService _sessionService = SessionService();
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   bool _loading = false;
   List<SessionModel> _sessions = [];
+
+  // Cache per le immagini profilo degli utenti
+  final Map<String, String?> _userProfileImages = {};
+  bool _loadingProfiles = false;
 
   @override
   void initState() {
@@ -65,6 +72,8 @@ class _SearchTrackSessionsPageState extends State<SearchTrackSessionsPage> {
         setState(() {
           _sessions = data;
         });
+        // Carica le foto profilo in background
+        _loadUserProfileImages(data);
       }
     } catch (_) {
       // silenzioso
@@ -73,6 +82,51 @@ class _SearchTrackSessionsPageState extends State<SearchTrackSessionsPage> {
         setState(() {
           _loading = false;
         });
+      }
+    }
+  }
+
+  /// Carica le immagini profilo degli utenti in batch (una sola query)
+  Future<void> _loadUserProfileImages(List<SessionModel> sessions) async {
+    if (_loadingProfiles) return;
+
+    // Raccogli tutti gli userId unici che non sono già in cache
+    final userIds = sessions
+        .map((s) => s.userId)
+        .where((id) => id.isNotEmpty && !_userProfileImages.containsKey(id))
+        .toSet()
+        .toList();
+
+    if (userIds.isEmpty) return;
+
+    setState(() => _loadingProfiles = true);
+
+    try {
+      // Firebase supporta max 30 elementi per query whereIn
+      // Facciamo batch se necessario
+      const batchSize = 30;
+      for (int i = 0; i < userIds.length; i += batchSize) {
+        final batchIds = userIds.skip(i).take(batchSize).toList();
+
+        final snap = await _firestore
+            .collection('users')
+            .where(FieldPath.documentId, whereIn: batchIds)
+            .get();
+
+        for (final doc in snap.docs) {
+          final data = doc.data();
+          _userProfileImages[doc.id] = data['profileImageUrl'] as String?;
+        }
+      }
+
+      if (mounted) {
+        setState(() {});
+      }
+    } catch (e) {
+      debugPrint('Errore caricamento foto profilo: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _loadingProfiles = false);
       }
     }
   }
@@ -473,6 +527,8 @@ class _SearchTrackSessionsPageState extends State<SearchTrackSessionsPage> {
             .toUpperCase()
         : '??';
 
+    final profileImageUrl = _userProfileImages[session.userId];
+
     return GestureDetector(
       onTap: () {
         HapticFeedback.lightImpact();
@@ -486,43 +542,14 @@ class _SearchTrackSessionsPageState extends State<SearchTrackSessionsPage> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Avatar
-          Container(
-            padding: const EdgeInsets.all(2),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                colors: [
-                  color.withAlpha(150),
-                  color.withAlpha(80),
-                ],
-              ),
-            ),
-            child: Container(
-              width: position == 1 ? 52 : 44,
-              height: position == 1 ? 52 : 44,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: _kBgColor,
-                boxShadow: [
-                  BoxShadow(
-                    color: color.withAlpha(60),
-                    blurRadius: 12,
-                  ),
-                ],
-              ),
-              child: Center(
-                child: Text(
-                  userInitials,
-                  style: TextStyle(
-                    fontSize: position == 1 ? 16 : 14,
-                    fontWeight: FontWeight.w900,
-                    color: color,
-                    letterSpacing: 1,
-                  ),
-                ),
-              ),
-            ),
+          // Avatar con foto profilo
+          ProfileAvatar(
+            profileImageUrl: profileImageUrl,
+            userTag: userInitials,
+            size: position == 1 ? 52 : 44,
+            borderWidth: 2,
+            showGradientBorder: true,
+            gradientColors: [color.withAlpha(200), color.withAlpha(120)],
           ),
           const SizedBox(height: 8),
           // Name
@@ -591,6 +618,8 @@ class _SearchTrackSessionsPageState extends State<SearchTrackSessionsPage> {
             .join()
             .toUpperCase()
         : '??';
+
+    final profileImageUrl = _userProfileImages[session.userId];
 
     // Position colors for top 3
     Color positionColor;
@@ -661,7 +690,7 @@ class _SearchTrackSessionsPageState extends State<SearchTrackSessionsPage> {
                 ),
               ),
               const SizedBox(width: 12),
-              // Avatar
+              // Avatar con foto profilo
               GestureDetector(
                 onTap: () {
                   HapticFeedback.lightImpact();
@@ -674,36 +703,12 @@ class _SearchTrackSessionsPageState extends State<SearchTrackSessionsPage> {
                     ),
                   );
                 },
-                child: Container(
-                  padding: const EdgeInsets.all(2),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                      colors: [
-                        kBrandColor.withAlpha(100),
-                        kPulseColor.withAlpha(80),
-                      ],
-                    ),
-                  ),
-                  child: Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: _kBgColor,
-                    ),
-                    child: Center(
-                      child: Text(
-                        userInitials,
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w900,
-                          color: kBrandColor,
-                          letterSpacing: 1,
-                        ),
-                      ),
-                    ),
-                  ),
+                child: ProfileAvatar(
+                  profileImageUrl: profileImageUrl,
+                  userTag: userInitials,
+                  size: 44,
+                  borderWidth: 2,
+                  showGradientBorder: true,
                 ),
               ),
               const SizedBox(width: 12),

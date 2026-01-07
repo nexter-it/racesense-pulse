@@ -215,20 +215,9 @@ class _NewPostPageState extends State<NewPostPage>
 
   Widget _buildHeader() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [_kBgColor, const Color(0xFF121212)],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-        ),
-        border: const Border(
-          bottom: BorderSide(color: _kBorderColor, width: 1),
-        ),
-      ),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
       child: Row(
         children: [
-          // Icon
           Container(
             width: 48,
             height: 48,
@@ -244,21 +233,33 @@ class _NewPostPageState extends State<NewPostPage>
               ),
               border: Border.all(color: kBrandColor.withAlpha(80), width: 1.5),
             ),
-            child: Center(
+            child: const Center(
               child: Icon(Icons.add_circle_outline, color: kBrandColor, size: 26),
             ),
           ),
           const SizedBox(width: 14),
-          // Title
-          const Expanded(
-            child: Text(
-              'Nuova Attività',
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.w900,
-                color: kFgColor,
-                letterSpacing: -0.5,
-              ),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Nuova Attività',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w900,
+                    color: kFgColor,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+                Text(
+                  'Registra e condividi le tue sessioni',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: kMutedColor,
+                  ),
+                ),
+              ],
             ),
           ),
           // Auto Lap badge

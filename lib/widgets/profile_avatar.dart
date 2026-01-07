@@ -11,6 +11,7 @@ class ProfileAvatar extends StatelessWidget {
   final double borderWidth;
   final bool showGradientBorder;
   final VoidCallback? onTap;
+  final List<Color>? gradientColors;
 
   const ProfileAvatar({
     super.key,
@@ -20,6 +21,7 @@ class ProfileAvatar extends StatelessWidget {
     this.borderWidth = 2,
     this.showGradientBorder = true,
     this.onTap,
+    this.gradientColors,
   });
 
   @override
@@ -79,15 +81,16 @@ class ProfileAvatar extends StatelessWidget {
     );
 
     if (showGradientBorder) {
+      final colors = gradientColors ?? [
+        kBrandColor.withAlpha(120),
+        kPulseColor.withAlpha(80),
+      ];
       avatarContent = Container(
         padding: EdgeInsets.all(borderWidth + 1),
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           gradient: LinearGradient(
-            colors: [
-              kBrandColor.withAlpha(120),
-              kPulseColor.withAlpha(80),
-            ],
+            colors: colors,
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),

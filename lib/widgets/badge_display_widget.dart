@@ -193,7 +193,7 @@ class BadgeDisplayWidget extends StatelessWidget {
           const SizedBox(height: 20),
           // Badge sovrapposti
           SizedBox(
-            height: 70,
+            height: 60,
             child: Stack(
               children: [
                 ...displayBadges.asMap().entries.map((entry) {
@@ -229,7 +229,7 @@ class BadgeDisplayWidget extends StatelessWidget {
       },
       child: Container(
         width: 60,
-        height: 70,
+        height: 60,
         child: Column(
           children: [
             // Medaglia
@@ -295,16 +295,16 @@ class BadgeDisplayWidget extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(height: 4),
-            // Anno
-            Text(
-              badge.year.toString(),
-              style: TextStyle(
-                color: _kGoldPrimary.withAlpha(200),
-                fontSize: 9,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
+            // const SizedBox(height: 4),
+            // // Anno
+            // Text(
+            //   badge.year.toString(),
+            //   style: TextStyle(
+            //     color: _kGoldPrimary.withAlpha(200),
+            //     fontSize: 9,
+            //     fontWeight: FontWeight.w900,
+            //   ),
+            // ),
           ],
         ),
       ),

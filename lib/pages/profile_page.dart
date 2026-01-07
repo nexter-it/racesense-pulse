@@ -978,13 +978,13 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
           ),
         ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header
-            Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Padding(
+            padding: const EdgeInsets.all(18),
+            child: Row(
               children: [
                 Container(
                   width: 44,
@@ -1006,15 +1006,39 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
                   ),
                 ),
                 const SizedBox(width: 12),
-                const Expanded(
-                  child: Text(
-                    'Bacheca Pilota',
-                    style: TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.w900,
-                      color: kFgColor,
-                      letterSpacing: -0.3,
-                    ),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Profilo Pilota',
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w900,
+                          color: kFgColor,
+                          letterSpacing: -0.3,
+                        ),
+                      ),
+                      if (hasInfo) ...[
+                        const SizedBox(height: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: kBrandColor.withAlpha(20),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: kBrandColor.withAlpha(60)),
+                          ),
+                          child: Text(
+                            '${_driverInfo!.selectedBadges.length} caratteristiche',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: kBrandColor,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
                 GestureDetector(
@@ -1045,14 +1069,16 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+          ),
 
-            if (!hasInfo)
-              _buildEmptyDriverInfo()
-            else
-              _buildDriverInfoContent(),
-          ],
-        ),
+          if (!hasInfo)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 0, 18, 18),
+              child: _buildEmptyDriverInfo(),
+            )
+          else
+            _buildDriverInfoContent(),
+        ],
       ),
     );
   }
@@ -1120,91 +1146,130 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
   }
 
   Widget _buildDriverInfoContent() {
-    // Mappa colori per categoria
-    final categoryColors = {
-      'Esperienza': const Color(0xFF29B6F6), // Blu
-      'Aspirazioni': const Color(0xFFAB47BC), // Viola
-      'Disponibilità': const Color(0xFF66BB6A), // Verde
+    // Mappa colori e icone per categoria (corrispondenti a DriverInfo.badgeCategories)
+    final categoryConfig = {
+      'Status/Obiettivi': (const Color(0xFFAB47BC), Icons.rocket_launch), // Viola
+      'Specializzazione': (const Color(0xFF29B6F6), Icons.sports_score), // Blu
+      'Disponibilità': (const Color(0xFF66BB6A), Icons.handshake), // Verde
     };
+
+    // Raggruppa i badge per categoria
+    final badgesByCategory = <String, List<String>>{};
+    for (final badgeId in _driverInfo!.selectedBadges) {
+      final category = DriverInfo.getCategoryForBadge(badgeId) ?? 'Altro';
+      badgesByCategory.putIfAbsent(category, () => []).add(badgeId);
+    }
+
+    // Ordina le categorie
+    final orderedCategories = ['Status/Obiettivi', 'Specializzazione', 'Disponibilità']
+        .where((c) => badgesByCategory.containsKey(c))
+        .toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Bio compatta
-        if (_driverInfo!.hasBio) ...[
+        // Bio (se presente)
+        if (_driverInfo!.hasBio)
           Container(
-            width: double.infinity,
+            margin: const EdgeInsets.fromLTRB(18, 0, 18, 16),
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              color: Colors.white.withAlpha(6),
+              borderRadius: BorderRadius.circular(14),
+              color: const Color(0xFF0D0D0D),
               border: Border.all(color: const Color(0xFF2A2A2A)),
             ),
-            child: Text(
-              '"${_driverInfo!.bio}"',
-              style: TextStyle(
-                color: kFgColor.withAlpha(220),
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                height: 1.4,
-                fontStyle: FontStyle.italic,
-              ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.format_quote, color: kMutedColor.withAlpha(100), size: 20),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    _driverInfo!.bio ?? '',
+                    style: TextStyle(
+                      color: kFgColor.withAlpha(220),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      height: 1.5,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 14),
-        ],
 
-        // Badges in griglia compatta con colori per categoria
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: _driverInfo!.selectedBadges.map((badgeId) {
-            final label = DriverInfo.getLabelForBadge(badgeId);
-            final category = DriverInfo.getCategoryForBadge(badgeId);
-            final color = categoryColors[category] ?? kBrandColor;
+        // Categorie organizzate
+        ...orderedCategories.map((category) {
+          final config = categoryConfig[category]!;
+          final color = config.$1;
+          final icon = config.$2;
+          final badges = badgesByCategory[category]!;
 
-            return Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    color.withAlpha(30),
-                    color.withAlpha(20),
+          return Container(
+            margin: const EdgeInsets.fromLTRB(18, 0, 18, 14),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              color: color.withAlpha(8),
+              border: Border.all(color: color.withAlpha(40)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Category header
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(8),
+                        color: color.withAlpha(25),
+                      ),
+                      child: Icon(icon, color: color, size: 14),
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      category.toUpperCase(),
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        color: color,
+                        letterSpacing: 1,
+                      ),
+                    ),
                   ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
                 ),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                  color: color.withAlpha(60),
-                  width: 1.5,
+                const SizedBox(height: 12),
+                // Badge chips
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: badges.map((badgeId) {
+                    final label = DriverInfo.getLabelForBadge(badgeId);
+                    return Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: color.withAlpha(20),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: color.withAlpha(60)),
+                      ),
+                      child: Text(
+                        label,
+                        style: TextStyle(
+                          color: color,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    );
+                  }).toList(),
                 ),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 6,
-                    height: 6,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: color,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    label,
-                    style: TextStyle(
-                      color: color,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }).toList(),
-        ),
+              ],
+            ),
+          );
+        }),
+
+        const SizedBox(height: 4),
       ],
     );
   }
@@ -1310,34 +1375,44 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
                   ],
                 ),
                 const SizedBox(height: 18),
-                // Stats grid
+                // Stats in una riga
                 Row(
                   children: [
                     Expanded(
-                      child: _buildStatChip(
+                      child: _buildStatTile(
                         icon: Icons.flag_circle_outlined,
                         value: sessionsTotal,
                         label: 'Sessioni',
                         color: kBrandColor,
                       ),
                     ),
-                    const SizedBox(width: 10),
+                    Container(
+                      width: 1,
+                      height: 50,
+                      color: const Color(0xFF2A2A2A),
+                    ),
                     Expanded(
-                      child: _buildStatChip(
+                      child: _buildStatTile(
                         icon: Icons.route_rounded,
                         value: '$distanceTotal km',
                         label: 'Distanza',
                         color: const Color(0xFF29B6F6),
                       ),
                     ),
+                    Container(
+                      width: 1,
+                      height: 50,
+                      color: const Color(0xFF2A2A2A),
+                    ),
+                    Expanded(
+                      child: _buildStatTile(
+                        icon: Icons.loop_rounded,
+                        value: totalLaps,
+                        label: 'Giri',
+                        color: const Color(0xFF00E676),
+                      ),
+                    ),
                   ],
-                ),
-                const SizedBox(height: 10),
-                _buildStatChip(
-                  icon: Icons.loop_rounded,
-                  value: totalLaps,
-                  label: 'Giri totali',
-                  color: const Color(0xFF00E676),
                 ),
               ],
             ),
@@ -1347,56 +1422,45 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
     );
   }
 
-  Widget _buildStatChip({
+  Widget _buildStatTile({
     required IconData icon,
     required String value,
     required String label,
     required Color color,
   }) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
-        color: color.withAlpha(12),
-        border: Border.all(color: color.withAlpha(50)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: color.withAlpha(25),
-              border: Border.all(color: color.withAlpha(80)),
-            ),
-            child: Icon(icon, color: color, size: 16),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: color.withAlpha(20),
+            border: Border.all(color: color.withAlpha(60), width: 1.5),
           ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  value,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w900,
-                    color: color,
-                  ),
-                ),
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: color.withAlpha(180),
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
+          child: Icon(icon, color: color, size: 18),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 17,
+            fontWeight: FontWeight.w900,
+            color: kFgColor,
+            letterSpacing: -0.3,
           ),
-        ],
-      ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 10,
+            color: kMutedColor,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
     );
   }
 
