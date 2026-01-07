@@ -127,7 +127,7 @@ class _NewPostPageState extends State<NewPostPage>
                         child: _buildOptionCard(
                           icon: Icons.edit_road,
                           title: 'Circuiti Custom',
-                          subtitle: 'Crea o gestisci tracciati custom',
+                          subtitle: 'Crea o gestisci tracciati privati custom',
                           color: kBrandColor,
                           onTap: () {
                             HapticFeedback.lightImpact();

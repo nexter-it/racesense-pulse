@@ -8,12 +8,14 @@ import 'package:geolocator/geolocator.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../theme.dart';
 import '../models/session_model.dart';
 import '../models/track_definition.dart';
 import '../services/session_service.dart';
 import '../services/engagement_service.dart';
+import '../widgets/profile_avatar.dart';
 import 'search_user_profile_page.dart';
 
 class ActivityDetailPage extends StatefulWidget {
@@ -1095,38 +1097,56 @@ class _AvatarWidget extends StatelessWidget {
 
   const _AvatarWidget({required this.userId});
 
-  String _assetForUser() {
-    final seed = userId.hashCode & 0x7fffffff;
-    final idx = (math.Random(seed).nextInt(5)) + 1;
-    return 'assets/images/dr$idx.png';
-  }
-
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(2),
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: LinearGradient(
-          colors: [kBrandColor.withAlpha(100), kPulseColor.withAlpha(80)],
-        ),
-      ),
-      child: Container(
-        width: 48,
-        height: 48,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: const Color(0xFF1A1A1A),
-          border: Border.all(color: const Color(0xFF2A2A2A), width: 2),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: Image.asset(
-          _assetForUser(),
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => const Icon(Icons.person, color: kMutedColor, size: 24),
-        ),
-      ),
+    return FutureBuilder<Map<String, String?>>(
+      future: _getUserData(),
+      builder: (context, snapshot) {
+        final userData = snapshot.data ?? {'initials': 'US', 'profileImageUrl': null};
+        final initials = userData['initials'] ?? 'US';
+        final profileImageUrl = userData['profileImageUrl'];
+
+        return ProfileAvatar(
+          profileImageUrl: profileImageUrl,
+          userTag: initials,
+          size: 48,
+          borderWidth: 2,
+          showGradientBorder: true,
+        );
+      },
     );
+  }
+
+  Future<Map<String, String?>> _getUserData() async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .get();
+
+      if (!doc.exists) return {'initials': 'US', 'profileImageUrl': null};
+
+      final data = doc.data();
+      final fullName = data?['fullName'] as String? ?? 'User';
+      final profileImageUrl = data?['profileImageUrl'] as String?;
+
+      final nameParts = fullName.split(' ');
+      String initials;
+
+      if (nameParts.length >= 2 &&
+          nameParts[0].isNotEmpty &&
+          nameParts[1].isNotEmpty) {
+        initials = nameParts[0][0].toUpperCase() + nameParts[1][0].toUpperCase();
+      } else if (nameParts.isNotEmpty && nameParts[0].length >= 2) {
+        initials = nameParts[0].substring(0, 2).toUpperCase();
+      } else {
+        initials = 'US';
+      }
+
+      return {'initials': initials, 'profileImageUrl': profileImageUrl};
+    } catch (e) {
+      return {'initials': 'US', 'profileImageUrl': null};
+    }
   }
 }
 
