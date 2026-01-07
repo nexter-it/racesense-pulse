@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../theme.dart';
 import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
+import '../models/driver_info.dart';
 import 'privacy_policy_page.dart';
 import 'terms_conditions_page.dart';
+import 'driver_info_setup_page.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PREMIUM UI CONSTANTS
@@ -131,7 +135,37 @@ class _RegisterPageState extends State<RegisterPage> with TickerProviderStateMix
       );
 
       if (mounted) {
-        Navigator.of(context).pop();
+        // Naviga alla pagina setup driver info
+        await Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (builderContext) => DriverInfoSetupPage(
+              onComplete: (driverInfo) async {
+                print('📝 Callback onComplete chiamato in register_page');
+                // Salva le informazioni driver su Firebase
+                try {
+                  final user = FirebaseAuth.instance.currentUser;
+                  if (user != null) {
+                    await FirebaseFirestore.instance
+                        .collection('users')
+                        .doc(user.uid)
+                        .update({
+                      'driverInfo': driverInfo.toJson(),
+                    });
+                    print('✅ Driver info salvato su Firebase');
+                  }
+                } catch (e) {
+                  print('❌ Errore salvataggio driver info: $e');
+                }
+
+                // Torna alla schermata principale usando il context corretto
+                if (builderContext.mounted) {
+                  print('🔙 Tornando alla schermata principale');
+                  Navigator.of(builderContext).pop();
+                }
+              },
+            ),
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -371,7 +405,7 @@ class _RegisterPageState extends State<RegisterPage> with TickerProviderStateMix
           _buildProgressLine(true),
           _buildProgressStep(2, 'Credenziali', true),
           _buildProgressLine(false),
-          _buildProgressStep(3, 'Conferma', false),
+          _buildProgressStep(3, 'Bacheca', false),
         ],
       ),
     );

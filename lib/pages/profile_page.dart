@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import '../models/session_model.dart';
+import '../models/driver_info.dart';
 import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
 import '../services/session_service.dart';
@@ -12,6 +13,7 @@ import '../widgets/follow_counts.dart';
 import '../widgets/session_metadata_dialog.dart';
 import 'app_info_page.dart';
 import 'story_composer_page.dart';
+import 'driver_info_edit_page.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -41,6 +43,7 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
   List<SessionModel> _allSessions = [];
   String? _affiliateCode;
   String? _referredByCode;
+  DriverInfo? _driverInfo;
 
   Future<void> _editSession(SessionModel session) async {
     final user = FirebaseAuth.instance.currentUser;
@@ -254,6 +257,18 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
           tag = 'US';
         }
 
+        // Parse driver info
+        DriverInfo? driverInfo;
+        if (userData?['driverInfo'] != null) {
+          try {
+            driverInfo = DriverInfo.fromJson(
+              Map<String, dynamic>.from(userData!['driverInfo']),
+            );
+          } catch (e) {
+            print('❌ Errore parsing driverInfo: $e');
+          }
+        }
+
         setState(() {
           _userName = fullName;
           _userTag = tag;
@@ -265,6 +280,7 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
           _followingCount = stats.followingCount;
           _affiliateCode = userData?['affiliateCode'] as String?;
           _referredByCode = userData?['referredByCode'] as String?;
+          _driverInfo = driverInfo;
           _isLoading = false;
           _hasAllSessions = sessions.length < 5;
         });
@@ -412,6 +428,8 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
                         padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
                         children: [
                           _buildProfileCard(),
+                          const SizedBox(height: 16),
+                          _buildDriverInfoCard(),
                           const SizedBox(height: 16),
                           _buildHighlightsCard(),
                           const SizedBox(height: 16),
@@ -771,6 +789,254 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
               fontSize: 10,
               color: color.withAlpha(180),
               fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDriverInfoCard() {
+    final hasInfo = _driverInfo != null && _driverInfo!.hasAnyInfo;
+
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        gradient: LinearGradient(
+          colors: [
+            const Color(0xFF1A1A1A),
+            const Color(0xFF141414),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        border: Border.all(color: const Color(0xFF2A2A2A)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(80),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header
+                Row(
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        gradient: LinearGradient(
+                          colors: [
+                            kBrandColor.withAlpha(40),
+                            kBrandColor.withAlpha(20),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        border: Border.all(color: kBrandColor.withAlpha(60), width: 1.5),
+                      ),
+                      child: Center(
+                        child: Icon(Icons.person_pin_outlined, color: kBrandColor, size: 22),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Text(
+                        'Bacheca Pilota',
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w900,
+                          color: kFgColor,
+                          letterSpacing: -0.3,
+                        ),
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () async {
+                        HapticFeedback.lightImpact();
+                        final result = await Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => DriverInfoEditPage(
+                              initialDriverInfo: _driverInfo ?? DriverInfo.empty(),
+                            ),
+                          ),
+                        );
+                        if (result is DriverInfo && mounted) {
+                          setState(() {
+                            _driverInfo = result;
+                          });
+                        }
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: kBrandColor.withAlpha(20),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: kBrandColor.withAlpha(60)),
+                        ),
+                        child: Icon(Icons.edit_outlined, color: kBrandColor, size: 18),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                if (!hasInfo) ...[
+                  // Empty state
+                  Text(
+                    'Condividi informazioni su di te con altri piloti e sponsor',
+                    style: TextStyle(
+                      color: kMutedColor,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  GestureDetector(
+                    onTap: () async {
+                      HapticFeedback.lightImpact();
+                      final result = await Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => DriverInfoEditPage(
+                            initialDriverInfo: DriverInfo.empty(),
+                          ),
+                        ),
+                      );
+                      if (result is DriverInfo && mounted) {
+                        setState(() {
+                          _driverInfo = result;
+                        });
+                      }
+                    },
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        gradient: LinearGradient(
+                          colors: [
+                            kBrandColor.withAlpha(30),
+                            kBrandColor.withAlpha(15),
+                          ],
+                        ),
+                        border: Border.all(color: kBrandColor.withAlpha(80)),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.add_circle_outline, color: kBrandColor, size: 18),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Aggiungi informazioni',
+                            style: TextStyle(
+                              color: kBrandColor,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ] else ...[
+                  // Bio
+                  if (_driverInfo!.hasBio) ...[
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        color: Colors.white.withAlpha(6),
+                        border: Border.all(color: const Color(0xFF2A2A2A)),
+                      ),
+                      child: Text(
+                        _driverInfo!.bio,
+                        style: TextStyle(
+                          color: kFgColor.withAlpha(220),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+
+                  // Badges per categoria
+                  ...DriverInfo.badgeCategories.entries.map((entry) {
+                    final categoryBadges = _driverInfo!.selectedBadges
+                        .where((badgeId) =>
+                            DriverInfo.getCategoryForBadge(badgeId) == entry.key)
+                        .toList();
+
+                    if (categoryBadges.isEmpty) return const SizedBox.shrink();
+
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.only(left: 4, bottom: 10),
+                          child: Text(
+                            entry.key,
+                            style: TextStyle(
+                              color: kMutedColor,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: categoryBadges.map((badgeId) {
+                            final label = DriverInfo.getLabelForBadge(badgeId);
+                            return Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 8,
+                              ),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    kBrandColor.withAlpha(30),
+                                    kBrandColor.withAlpha(20),
+                                  ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: kBrandColor.withAlpha(60),
+                                  width: 1.5,
+                                ),
+                              ),
+                              child: Text(
+                                label,
+                                style: TextStyle(
+                                  color: kBrandColor,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                        const SizedBox(height: 14),
+                      ],
+                    );
+                  }).toList(),
+                ],
+              ],
             ),
           ),
         ],
