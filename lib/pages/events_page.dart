@@ -471,9 +471,6 @@ class _EventsPageState extends State<EventsPage>
 
   Widget _buildEventCard(EventModel event, String currentUserId) {
     final isRegistered = event.registeredUserIds.contains(currentUserId);
-    final hasCheckedIn = event.checkedInUserIds.contains(currentUserId);
-    final isOngoing = event.isOngoing;
-    final isPast = event.eventDateTime.isBefore(DateTime.now());
 
     return GestureDetector(
       onTap: () {
@@ -493,13 +490,7 @@ class _EventsPageState extends State<EventsPage>
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
-          border: Border.all(
-            color: hasCheckedIn
-                ? Colors.green.withAlpha(100)
-                : isOngoing
-                    ? kBrandColor.withAlpha(100)
-                    : _kBorderColor,
-          ),
+          border: Border.all(color: _kBorderColor),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withAlpha(80),
@@ -575,12 +566,12 @@ class _EventsPageState extends State<EventsPage>
                         ),
                       ),
                     ),
-                    // Status badge in alto a destra
-                    if (hasCheckedIn || isRegistered || isOngoing)
+                    // Status badge in alto a destra (solo se iscritto)
+                    if (isRegistered)
                       Positioned(
                         top: 12,
                         right: 12,
-                        child: _buildStatusBadge(hasCheckedIn, isRegistered, isOngoing),
+                        child: _buildIscrittoBadge(),
                       ),
                     // Data box in alto a sinistra
                     Positioned(
@@ -646,8 +637,8 @@ class _EventsPageState extends State<EventsPage>
                         ],
                       ),
                     ),
-                    if (hasCheckedIn || isRegistered || isOngoing)
-                      _buildStatusBadge(hasCheckedIn, isRegistered, isOngoing),
+                    if (isRegistered)
+                      _buildIscrittoBadge(),
                   ],
                 ),
               ),
@@ -866,124 +857,37 @@ class _EventsPageState extends State<EventsPage>
     );
   }
 
-  Widget _buildStatusBadge(bool hasCheckedIn, bool isRegistered, bool isOngoing) {
-    if (hasCheckedIn) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(10),
-          gradient: LinearGradient(
-            colors: [
-              Colors.green.shade600,
-              Colors.green.shade700,
-            ],
+  Widget _buildIscrittoBadge() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(10),
+        color: kBrandColor,
+        boxShadow: [
+          BoxShadow(
+            color: kBrandColor.withAlpha(100),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.green.withAlpha(100),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: const [
+          Icon(Icons.check, color: Colors.black, size: 14),
+          SizedBox(width: 4),
+          Text(
+            'ISCRITTO',
+            style: TextStyle(
+              color: Colors.black,
+              fontSize: 10,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0.5,
             ),
-          ],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: const [
-            Icon(Icons.emoji_events, color: Colors.white, size: 14),
-            SizedBox(width: 4),
-            Text(
-              'BADGE',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 10,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 0.5,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    if (isOngoing) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(10),
-          gradient: LinearGradient(
-            colors: [
-              kPulseColor,
-              kPulseColor.withAlpha(200),
-            ],
           ),
-          boxShadow: [
-            BoxShadow(
-              color: kPulseColor.withAlpha(100),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 6,
-              height: 6,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white,
-              ),
-            ),
-            const SizedBox(width: 6),
-            const Text(
-              'LIVE',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 10,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 0.5,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    if (isRegistered) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(10),
-          color: kBrandColor,
-          boxShadow: [
-            BoxShadow(
-              color: kBrandColor.withAlpha(100),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: const [
-            Icon(Icons.check, color: Colors.black, size: 14),
-            SizedBox(width: 4),
-            Text(
-              'ISCRITTO',
-              style: TextStyle(
-                color: Colors.black,
-                fontSize: 10,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 0.5,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return const SizedBox.shrink();
+        ],
+      ),
+    );
   }
 
   Widget _buildCreateEventFAB() {

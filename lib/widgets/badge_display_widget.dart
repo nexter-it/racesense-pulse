@@ -1,20 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import '../models/badge_model.dart';
 import '../theme.dart';
+import '../pages/event_detail_page.dart';
 
 const Color _kCardStart = Color(0xFF1A1A1A);
 const Color _kCardEnd = Color(0xFF141414);
 const Color _kBorderColor = Color(0xFF2A2A2A);
 
-// Colori premium per le medaglie
+// Colore oro uniforme per tutti i badge
 const Color _kGoldPrimary = Color(0xFFFFD700);
 const Color _kGoldSecondary = Color(0xFFB8860B);
 const Color _kGoldAccent = Color(0xFFFFF8DC);
-const Color _kSilverPrimary = Color(0xFFC0C0C0);
-const Color _kSilverSecondary = Color(0xFF808080);
-const Color _kBronzePrimary = Color(0xFFCD7F32);
-const Color _kBronzeSecondary = Color(0xFF8B4513);
 
 class BadgeDisplayWidget extends StatelessWidget {
   final List<BadgeModel> badges;
@@ -33,10 +31,10 @@ class BadgeDisplayWidget extends StatelessWidget {
     }
 
     if (isCompact) {
-      return _buildCompactView();
+      return _buildCompactView(context);
     }
 
-    return _buildFullView();
+    return _buildFullView(context);
   }
 
   Widget _buildEmptyState() {
@@ -94,10 +92,10 @@ class BadgeDisplayWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildCompactView() {
-    // Mostra i primi 4 badge in una griglia premium
-    final displayBadges = badges.take(4).toList();
-    final hasMore = badges.length > 4;
+  Widget _buildCompactView(BuildContext context) {
+    // Mostra i badge sovrapposti (stile collezione)
+    final displayBadges = badges.take(5).toList();
+    final hasMore = badges.length > 5;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -164,7 +162,7 @@ class BadgeDisplayWidget extends StatelessWidget {
                           ),
                           child: Text(
                             '${badges.length} ${badges.length == 1 ? 'badge' : 'badge'}',
-                            style: TextStyle(
+                            style: const TextStyle(
                               color: _kGoldPrimary,
                               fontSize: 11,
                               fontWeight: FontWeight.w800,
@@ -176,39 +174,183 @@ class BadgeDisplayWidget extends StatelessWidget {
                   ],
                 ),
               ),
-              if (hasMore)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(10),
-                    color: Colors.white.withAlpha(8),
-                    border: Border.all(color: _kBorderColor),
-                  ),
-                  child: Text(
-                    '+${badges.length - 4}',
-                    style: TextStyle(
-                      color: kMutedColor,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
+              // Freccia per vedere tutti
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(10),
+                  color: Colors.white.withAlpha(8),
+                  border: Border.all(color: _kBorderColor),
                 ),
+                child: Icon(
+                  Icons.arrow_forward_ios,
+                  size: 14,
+                  color: kMutedColor,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 20),
-          // Badge Grid
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: displayBadges.asMap().entries.map((entry) {
-              return _buildPremiumBadgeIcon(entry.value, entry.key);
-            }).toList(),
+          // Badge sovrapposti
+          SizedBox(
+            height: 70,
+            child: Stack(
+              children: [
+                ...displayBadges.asMap().entries.map((entry) {
+                  final index = entry.key;
+                  final badge = entry.value;
+                  return Positioned(
+                    left: index * 45.0, // Sovrapposizione
+                    child: _buildStackedBadge(context, badge),
+                  );
+                }),
+                if (hasMore)
+                  Positioned(
+                    left: displayBadges.length * 45.0,
+                    child: _buildMoreBadge(badges.length - 5),
+                  ),
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildFullView() {
+  Widget _buildStackedBadge(BuildContext context, BadgeModel badge) {
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => EventDetailPage(eventId: badge.eventId),
+          ),
+        );
+      },
+      child: Container(
+        width: 60,
+        height: 70,
+        child: Column(
+          children: [
+            // Medaglia
+            Container(
+              width: 54,
+              height: 54,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: const LinearGradient(
+                  colors: [_kGoldPrimary, _kGoldSecondary],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                border: Border.all(color: _kCardStart, width: 3),
+                boxShadow: [
+                  BoxShadow(
+                    color: _kGoldPrimary.withAlpha(60),
+                    blurRadius: 12,
+                    spreadRadius: 1,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  // Cerchio interno
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: const LinearGradient(
+                        colors: [_kGoldSecondary, _kGoldPrimary],
+                        begin: Alignment.topRight,
+                        end: Alignment.bottomLeft,
+                      ),
+                      border: Border.all(
+                        color: _kGoldAccent.withAlpha(150),
+                        width: 2,
+                      ),
+                    ),
+                  ),
+                  // Icona
+                  Icon(
+                    Icons.emoji_events,
+                    color: Colors.black.withAlpha(180),
+                    size: 20,
+                  ),
+                  // Shine
+                  Positioned(
+                    top: 6,
+                    left: 12,
+                    child: Container(
+                      width: 6,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white.withAlpha(200),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 4),
+            // Anno
+            Text(
+              badge.year.toString(),
+              style: TextStyle(
+                color: _kGoldPrimary.withAlpha(200),
+                fontSize: 9,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMoreBadge(int count) {
+    return Container(
+      width: 54,
+      height: 54,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: _kCardStart,
+        border: Border.all(color: _kBorderColor, width: 2),
+      ),
+      child: Center(
+        child: Text(
+          '+$count',
+          style: TextStyle(
+            color: kMutedColor,
+            fontSize: 14,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFullView(BuildContext context) {
+    // Raggruppa badge per mese
+    final Map<String, List<BadgeModel>> badgesByMonth = {};
+
+    for (final badge in badges) {
+      final monthKey = DateFormat('MMMM yyyy').format(badge.eventDate);
+      badgesByMonth.putIfAbsent(monthKey, () => []);
+      badgesByMonth[monthKey]!.add(badge);
+    }
+
+    // Ordina i mesi dal più recente
+    final sortedMonths = badgesByMonth.keys.toList()
+      ..sort((a, b) {
+        final dateA = DateFormat('MMMM yyyy').parse(a);
+        final dateB = DateFormat('MMMM yyyy').parse(b);
+        return dateB.compareTo(dateA);
+      });
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -223,6 +365,7 @@ class BadgeDisplayWidget extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Header
           Row(
             children: [
               Container(
@@ -241,7 +384,7 @@ class BadgeDisplayWidget extends StatelessWidget {
               ),
               const SizedBox(width: 12),
               Text(
-                'Tutti i Badge (${badges.length})',
+                'Collezione Badge (${badges.length})',
                 style: const TextStyle(
                   color: kFgColor,
                   fontSize: 18,
@@ -250,330 +393,148 @@ class BadgeDisplayWidget extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 20),
-          Wrap(
-            spacing: 16,
-            runSpacing: 16,
-            children: badges.asMap().entries.map((entry) {
-              return _buildFullBadgeCard(entry.value, entry.key);
-            }).toList(),
-          ),
+          const SizedBox(height: 24),
+          // Badge organizzati per mese
+          ...sortedMonths.map((month) {
+            final monthBadges = badgesByMonth[month]!;
+            return _buildMonthSection(context, month, monthBadges);
+          }),
         ],
       ),
     );
   }
 
-  // Determina il colore del badge basato sull'indice (simulazione rarità)
-  List<Color> _getBadgeColors(int index) {
-    // Primo badge = oro, secondo = argento, terzo = bronzo, resto = oro
-    if (index == 0) {
-      return [_kGoldPrimary, _kGoldSecondary, _kGoldAccent];
-    } else if (index == 1) {
-      return [_kSilverPrimary, _kSilverSecondary, Colors.white];
-    } else if (index == 2) {
-      return [_kBronzePrimary, _kBronzeSecondary, const Color(0xFFDEB887)];
-    } else {
-      return [_kGoldPrimary, _kGoldSecondary, _kGoldAccent];
-    }
-  }
-
-  Widget _buildPremiumBadgeIcon(BadgeModel badge, int index) {
-    final colors = _getBadgeColors(index);
-
-    return Container(
-      width: 70,
-      height: 85,
-      child: Column(
-        children: [
-          // Medaglia principale
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                colors: [colors[0], colors[1]],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: colors[0].withAlpha(80),
-                  blurRadius: 16,
-                  spreadRadius: 2,
-                  offset: const Offset(0, 6),
-                ),
-                BoxShadow(
-                  color: colors[0].withAlpha(40),
-                  blurRadius: 30,
-                  spreadRadius: 5,
-                  offset: const Offset(0, 10),
-                ),
-              ],
-            ),
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                // Cerchio interno
-                Container(
-                  width: 50,
-                  height: 50,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                      colors: [colors[1], colors[0]],
-                      begin: Alignment.topRight,
-                      end: Alignment.bottomLeft,
-                    ),
-                    border: Border.all(
-                      color: colors[2].withAlpha(150),
-                      width: 2,
-                    ),
-                  ),
-                ),
-                // Icona centrale
-                Icon(
-                  Icons.emoji_events,
-                  color: Colors.black.withAlpha(180),
-                  size: 24,
-                ),
-                // Shine effect
-                Positioned(
-                  top: 8,
-                  left: 15,
-                  child: Container(
-                    width: 8,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.white.withAlpha(180),
-                    ),
-                  ),
-                ),
-              ],
+  Widget _buildMonthSection(BuildContext context, String month, List<BadgeModel> monthBadges) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Header mese
+        Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            color: Colors.white.withAlpha(5),
+            border: Border.all(color: _kBorderColor.withAlpha(100)),
+          ),
+          child: Text(
+            month.toUpperCase(),
+            style: TextStyle(
+              color: kMutedColor,
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 1,
             ),
           ),
-          const SizedBox(height: 6),
-          // Anno
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(4),
-              color: colors[0].withAlpha(30),
+        ),
+        // Badge sovrapposti per questo mese
+        Container(
+          margin: const EdgeInsets.only(bottom: 20),
+          height: 80,
+          child: Stack(
+            children: monthBadges.asMap().entries.map((entry) {
+              final index = entry.key;
+              final badge = entry.value;
+              return Positioned(
+                left: index * 50.0,
+                child: _buildCollectionBadge(context, badge),
+              );
+            }).toList(),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCollectionBadge(BuildContext context, BadgeModel badge) {
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => EventDetailPage(eventId: badge.eventId),
+          ),
+        );
+      },
+      child: Container(
+        width: 70,
+        child: Column(
+          children: [
+            // Medaglia grande
+            Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: const LinearGradient(
+                  colors: [_kGoldPrimary, _kGoldSecondary],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                border: Border.all(color: _kCardStart, width: 3),
+                boxShadow: [
+                  BoxShadow(
+                    color: _kGoldPrimary.withAlpha(80),
+                    blurRadius: 16,
+                    spreadRadius: 2,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  // Cerchio interno
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: const LinearGradient(
+                        colors: [_kGoldSecondary, _kGoldPrimary],
+                        begin: Alignment.topRight,
+                        end: Alignment.bottomLeft,
+                      ),
+                      border: Border.all(
+                        color: _kGoldAccent.withAlpha(150),
+                        width: 2,
+                      ),
+                    ),
+                  ),
+                  // Icona
+                  Icon(
+                    Icons.emoji_events,
+                    color: Colors.black.withAlpha(200),
+                    size: 24,
+                  ),
+                  // Shine
+                  Positioned(
+                    top: 8,
+                    left: 14,
+                    child: Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white.withAlpha(200),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-            child: Text(
+            const SizedBox(height: 4),
+            // Anno piccolo sotto
+            Text(
               badge.year.toString(),
-              style: TextStyle(
-                color: colors[0],
+              style: const TextStyle(
+                color: _kGoldPrimary,
                 fontSize: 10,
                 fontWeight: FontWeight.w900,
               ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFullBadgeCard(BadgeModel badge, int index) {
-    final colors = _getBadgeColors(index % 3); // Cicla tra oro, argento, bronzo
-
-    return Container(
-      width: 160,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        gradient: LinearGradient(
-          colors: [
-            colors[0].withAlpha(15),
-            colors[0].withAlpha(5),
           ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
         ),
-        border: Border.all(color: colors[0].withAlpha(60)),
-        boxShadow: [
-          BoxShadow(
-            color: colors[0].withAlpha(20),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          // Medaglia grande
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              // Glow background
-              Container(
-                width: 80,
-                height: 80,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      colors[0].withAlpha(40),
-                      Colors.transparent,
-                    ],
-                  ),
-                ),
-              ),
-              // Medaglia
-              Container(
-                width: 70,
-                height: 70,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    colors: [colors[0], colors[1]],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: colors[0].withAlpha(100),
-                      blurRadius: 20,
-                      spreadRadius: 2,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
-                ),
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    // Inner ring
-                    Container(
-                      width: 58,
-                      height: 58,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: LinearGradient(
-                          colors: [colors[1], colors[0]],
-                          begin: Alignment.topRight,
-                          end: Alignment.bottomLeft,
-                        ),
-                        border: Border.all(
-                          color: colors[2].withAlpha(180),
-                          width: 3,
-                        ),
-                      ),
-                    ),
-                    // Icon
-                    Icon(
-                      Icons.emoji_events,
-                      color: Colors.black.withAlpha(200),
-                      size: 28,
-                    ),
-                    // Shine
-                    Positioned(
-                      top: 12,
-                      left: 18,
-                      child: Container(
-                        width: 10,
-                        height: 10,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Colors.white.withAlpha(200),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              // Ribbon
-              Positioned(
-                bottom: 0,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(8),
-                    gradient: LinearGradient(
-                      colors: [colors[0], colors[1]],
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: colors[0].withAlpha(60),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Text(
-                    badge.year.toString(),
-                    style: const TextStyle(
-                      color: Colors.black,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          // Titolo evento
-          Text(
-            badge.eventTitle,
-            style: const TextStyle(
-              color: kFgColor,
-              fontSize: 13,
-              fontWeight: FontWeight.w800,
-              height: 1.2,
-            ),
-            textAlign: TextAlign.center,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 8),
-          // Data check-in
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(8),
-              color: Colors.white.withAlpha(5),
-              border: Border.all(color: _kBorderColor.withAlpha(100)),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.check_circle, size: 12, color: Colors.green.withAlpha(180)),
-                const SizedBox(width: 4),
-                Text(
-                  DateFormat('dd/MM/yy').format(badge.checkedInAt),
-                  style: TextStyle(
-                    color: kMutedColor,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          if (badge.eventLocationName != null) ...[
-            const SizedBox(height: 6),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.location_on, size: 10, color: kMutedColor.withAlpha(150)),
-                const SizedBox(width: 3),
-                Flexible(
-                  child: Text(
-                    badge.eventLocationName!,
-                    style: TextStyle(
-                      color: kMutedColor.withAlpha(150),
-                      fontSize: 9,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ],
       ),
     );
   }
@@ -623,13 +584,11 @@ class BadgeCard extends StatelessWidget {
           print('Errore: $error');
           print('User ID: $userId');
 
-          // Controlla se è un errore di indice mancante
           if (error.contains('index') || error.contains('Index') || error.contains('FAILED_PRECONDITION')) {
             print('');
             print('🔥 INDICE FIRESTORE MANCANTE!');
             print('');
 
-            // Estrai il link se presente
             final linkRegex = RegExp(r'https://console\.firebase\.google\.com[^\s]+');
             final match = linkRegex.firstMatch(error);
 
@@ -637,19 +596,11 @@ class BadgeCard extends StatelessWidget {
               final link = match.group(0);
               print('📎 CLICCA QUI PER CREARE L\'INDICE:');
               print(link);
-              print('');
-              print('Oppure vai manualmente a:');
-              print('Firebase Console → Firestore Database → Indici → Crea indice');
-            } else {
-              print('Vai a: Firebase Console → Firestore Database → Indici');
-              print('Crea un indice composito per la collezione "badges"');
-              print('Campi necessari: userId (Ascending) + eventDate (Descending)');
             }
           }
 
           print('═══════════════════════════════════════════════════════');
 
-          // Mostra un widget di errore compatto
           return Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
