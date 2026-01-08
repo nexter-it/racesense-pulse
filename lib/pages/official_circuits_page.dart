@@ -6,6 +6,7 @@ import '../models/track_definition.dart';
 import '../services/official_circuits_service.dart';
 import '../theme.dart';
 import 'official_circuit_detail_page.dart';
+import 'dev_start_line_editor_page.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // PREMIUM UI CONSTANTS
@@ -220,6 +221,33 @@ class _OfficialCircuitsPageState extends State<OfficialCircuitsPage> {
               ],
             ),
           ),
+          // DEV: Editor start line (solo se abilitato)
+          if (kEnableStartLineEditor) ...[
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.red.withAlpha(15),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.red.withAlpha(40)),
+              ),
+              child: IconButton(
+                icon: const Icon(
+                  Icons.edit_location_alt,
+                  color: Colors.red,
+                  size: 22,
+                ),
+                onPressed: () {
+                  HapticFeedback.lightImpact();
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const DevStartLineEditorPage(),
+                    ),
+                  );
+                },
+                tooltip: 'DEV: Editor Start Line',
+              ),
+            ),
+            const SizedBox(width: 8),
+          ],
           // Info icon
           Container(
             decoration: BoxDecoration(
