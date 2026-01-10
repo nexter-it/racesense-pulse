@@ -150,71 +150,74 @@ class FeedCacheService {
     }
   }
 
-  /// Refresha il feed completo da Firebase
-  /// Chiamato solo con pull-to-refresh o al primo avvio senza cache
+  /// Refresha il feed completo da Firebase con query ottimizzate
   ///
-  /// OTTIMIZZAZIONE: Ridotto maxBatchAttempts da 4 a 2 e aggiunto early exit
-  /// Risparmio: da 100 letture potenziali a max 50 per refresh
+  /// NUOVA STRATEGIA:
+  /// 1. Query diretta per sessioni dei followed (whereIn, molto efficiente)
+  /// 2. Query sessioni recenti per nearby (filtra client-side solo le ultime 72h)
+  /// 3. Merge e deduplica i risultati
+  ///
+  /// Risparmio: da ~50-100 letture a ~2-3 query mirate
   Future<List<SessionModel>> refreshFeed({
     required Set<String> followingIds,
     required bool Function(SessionModel) isNearbyFilter,
-    int pageSize = 10,
-    int maxBatchAttempts = 2, // OTTIMIZZATO: era 4
+    int pageSize = 15,
   }) async {
     try {
-      print('🔄 Refreshing feed from Firebase...');
+      print('🔄 Refreshing feed con query ottimizzate...');
 
-      final List<SessionModel> feedSessions = [];
-      DocumentSnapshot? lastDoc;
-      int added = 0;
-      int attempts = 0;
-      const fetchBatchSize = 25;
+      final Map<String, SessionModel> feedMap = {};
 
-      while (added < pageSize && attempts < maxBatchAttempts) {
-        attempts++;
-
-        final snap = await _sessionService.fetchSessionsPage(
-          limit: fetchBatchSize,
-          startAfter: lastDoc,
+      // 1. Query efficiente per followed (usa whereIn)
+      if (followingIds.isNotEmpty) {
+        print('  📥 Fetching sessioni followed (${followingIds.length} utenti)...');
+        final followedSessions = await _sessionService.fetchSessionsByUserIds(
+          userIds: followingIds,
+          limit: pageSize,
         );
-
-        if (snap.docs.isEmpty) break;
-        lastDoc = snap.docs.last;
-
-        for (final doc in snap.docs) {
-          final session = SessionModel.fromFirestore(doc.id, doc.data());
-          final isFollowed = followingIds.contains(session.userId);
-          final isNearby = isNearbyFilter(session);
-
-          if (!isFollowed && !isNearby) continue;
-
-          // Evita duplicati
-          if (feedSessions.any((s) => s.sessionId == session.sessionId)) continue;
-
-          feedSessions.add(session);
-          added++;
-
-          if (added >= pageSize) break;
+        for (final session in followedSessions) {
+          feedMap[session.sessionId] = session;
         }
-
-        // OTTIMIZZAZIONE: Early exit se abbiamo abbastanza sessioni
-        if (added >= pageSize) {
-          print('✅ Early exit: raggiunte $added sessioni in $attempts tentativi');
-          break;
-        }
-
-        if (snap.docs.length < fetchBatchSize) break;
+        print('  ✅ Trovate ${followedSessions.length} sessioni followed');
       }
 
+      // 2. Query sessioni recenti per nearby (ultime 72h, filtra client-side)
+      print('  📥 Fetching sessioni recenti per nearby...');
+      final recentSessions = await _sessionService.fetchRecentSessions(
+        limit: 50,
+        hoursBack: 72,
+      );
+
+      int nearbyCount = 0;
+      for (final session in recentSessions) {
+        // Skip se già presente (era un followed)
+        if (feedMap.containsKey(session.sessionId)) continue;
+
+        // Applica filtro nearby
+        if (isNearbyFilter(session)) {
+          feedMap[session.sessionId] = session;
+          nearbyCount++;
+        }
+      }
+      print('  ✅ Trovate $nearbyCount sessioni nearby');
+
+      // 3. Ordina per data e limita
+      final feedSessions = feedMap.values.toList()
+        ..sort((a, b) => b.dateTime.compareTo(a.dateTime));
+
+      final limitedFeed = feedSessions.length > pageSize
+          ? feedSessions.sublist(0, pageSize)
+          : feedSessions;
+
       // Aggiorna cache in memoria
-      _cachedFeedSessions = feedSessions;
+      _cachedFeedSessions = limitedFeed;
       _lastFeedRefresh = DateTime.now();
 
       // Salva in SharedPreferences
       await _saveFeedToPrefs();
 
-      print('✅ Feed refreshed: ${feedSessions.length} sessioni in $attempts batch');
-      return feedSessions;
+      print('✅ Feed refreshed: ${limitedFeed.length} sessioni totali');
+      return limitedFeed;
     } catch (e) {
       print('❌ Errore refresh feed: $e');
       return _cachedFeedSessions; // Ritorna cache esistente in caso di errore
@@ -224,60 +227,50 @@ class FeedCacheService {
   /// Carica più sessioni per il feed (paginazione)
   /// Usato per infinite scroll
   ///
-  /// OTTIMIZZAZIONE: Ridotto maxAttempts da 4 a 2 con early exit
+  /// OTTIMIZZAZIONE: Usa query mirate invece di fetch generico
   Future<List<SessionModel>> loadMoreFeed({
     required Set<String> followingIds,
     required bool Function(SessionModel) isNearbyFilter,
-    required DocumentSnapshot? startAfter,
+    DateTime? olderThan,
     int pageSize = 10,
   }) async {
     try {
-      final List<SessionModel> newSessions = [];
-      DocumentSnapshot? lastDoc = startAfter;
-      int added = 0;
-      int attempts = 0;
-      const fetchBatchSize = 25;
-      const maxAttempts = 2; // OTTIMIZZATO: era 4
+      print('📥 Loading more feed...');
 
-      while (added < pageSize && attempts < maxAttempts) {
-        attempts++;
+      final Map<String, SessionModel> newSessionsMap = {};
+      final existingIds = _cachedFeedSessions.map((s) => s.sessionId).toSet();
 
-        final snap = await _sessionService.fetchSessionsPage(
-          limit: fetchBatchSize,
-          startAfter: lastDoc,
+      // 1. Carica più sessioni followed
+      if (followingIds.isNotEmpty) {
+        final followedSessions = await _sessionService.fetchSessionsByUserIds(
+          userIds: followingIds,
+          limit: pageSize,
+          olderThan: olderThan,
         );
 
-        if (snap.docs.isEmpty) break;
-        lastDoc = snap.docs.last;
-
-        for (final doc in snap.docs) {
-          final session = SessionModel.fromFirestore(doc.id, doc.data());
-          final isFollowed = followingIds.contains(session.userId);
-          final isNearby = isNearbyFilter(session);
-
-          if (!isFollowed && !isNearby) continue;
-
-          // Evita duplicati con cache esistente
-          if (_cachedFeedSessions.any((s) => s.sessionId == session.sessionId)) continue;
-          if (newSessions.any((s) => s.sessionId == session.sessionId)) continue;
-
-          newSessions.add(session);
-          added++;
-
-          if (added >= pageSize) break;
+        for (final session in followedSessions) {
+          if (!existingIds.contains(session.sessionId)) {
+            newSessionsMap[session.sessionId] = session;
+          }
         }
-
-        // OTTIMIZZAZIONE: Early exit se abbiamo abbastanza sessioni
-        if (added >= pageSize) break;
-
-        if (snap.docs.length < fetchBatchSize) break;
       }
 
+      // 2. Per nearby, usa le sessioni recenti già filtrate
+      // (Il nearby ha senso solo per sessioni recenti, non per paginazione infinita)
+
+      final newSessions = newSessionsMap.values.toList()
+        ..sort((a, b) => b.dateTime.compareTo(a.dateTime));
+
+      final limitedNew = newSessions.length > pageSize
+          ? newSessions.sublist(0, pageSize)
+          : newSessions;
+
       // Aggiungi alla cache
-      _cachedFeedSessions.addAll(newSessions);
+      _cachedFeedSessions.addAll(limitedNew);
       await _saveFeedToPrefs();
 
-      return newSessions;
+      print('✅ Loaded ${limitedNew.length} more sessions');
+      return limitedNew;
     } catch (e) {
       print('❌ Errore load more: $e');
       return [];

@@ -965,6 +965,66 @@ class _HeroSessionCardState extends State<_HeroSessionCard> {
             ),
           ),
 
+          // Vehicle category and weather info
+          if (widget.session.vehicleCategory != null || widget.session.weather != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  color: const Color(0xFF1A1A1A),
+                  border: Border.all(color: const Color(0xFF2A2A2A)),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    if (widget.session.vehicleCategory != null) ...[
+                      const Icon(
+                        Icons.directions_car,
+                        color: kBrandColor,
+                        size: 16,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        widget.session.vehicleCategory!,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: kBrandColor,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                    if (widget.session.vehicleCategory != null && widget.session.weather != null)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: Container(
+                          width: 1,
+                          height: 14,
+                          color: const Color(0xFF2A2A2A),
+                        ),
+                      ),
+                    if (widget.session.weather != null) ...[
+                      const Icon(
+                        Icons.wb_sunny,
+                        color: Color(0xFFFFA726),
+                        size: 16,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        widget.session.weather!,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: kFgColor,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+
           // === FOOTER ===
           Container(
             margin: const EdgeInsets.only(top: 14),
@@ -1030,6 +1090,8 @@ class _HeroSessionCardState extends State<_HeroSessionCard> {
               ],
             ),
           ),
+
+          
         ],
       ),
     );
@@ -1335,6 +1397,17 @@ class _TelemetryPanelState extends State<_TelemetryPanel> {
       return FlSpot(xs[j], widget.gForceHistory[idx]);
     });
 
+    // Trova il punto di velocità massima nel giro corrente
+    double maxSpeed = speedSpots.first.y;
+    int maxSpeedIndex = 0;
+    for (int j = 0; j < speedSpots.length; j++) {
+      if (speedSpots[j].y > maxSpeed) {
+        maxSpeed = speedSpots[j].y;
+        maxSpeedIndex = j;
+      }
+    }
+    final maxSpeedSpot = speedSpots[maxSpeedIndex];
+
     double minY = speedSpots.first.y;
     double maxY = speedSpots.first.y;
     for (final s in [...speedSpots, ...gSpots]) {
@@ -1465,7 +1538,25 @@ class _TelemetryPanelState extends State<_TelemetryPanel> {
                     verticalLines: [
                       VerticalLine(x: cursorX, color: kBrandColor.withAlpha(180), strokeWidth: 1.5, dashArray: [6, 3]),
                     ],
+                    horizontalLines: [
+                      // Linea orizzontale tratteggiata per la velocità massima
+                      HorizontalLine(
+                        y: maxSpeed,
+                        color: const Color(0xFF9C27B0).withAlpha(100),
+                        strokeWidth: 1,
+                        dashArray: [4, 4],
+                      ),
+                    ],
                   ),
+                  showingTooltipIndicators: [
+                    ShowingTooltipIndicators([
+                      LineBarSpot(
+                        _buildLine(speedSpots, const Color(0xFFFF4D4F), _focus == _MetricFocus.speed, maxSpeedIndex: maxSpeedIndex),
+                        maxSpeedIndex,
+                        maxSpeedSpot,
+                      ),
+                    ]),
+                  ],
                   lineTouchData: LineTouchData(
                     enabled: true,
                     handleBuiltInTouches: false,
@@ -1481,9 +1572,29 @@ class _TelemetryPanelState extends State<_TelemetryPanel> {
                         FlDotData(show: false),
                       )).toList();
                     },
+                    touchTooltipData: LineTouchTooltipData(
+                      getTooltipColor: (spot) => const Color(0xFF9C27B0).withAlpha(220),
+                      tooltipRoundedRadius: 8,
+                      tooltipPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      getTooltipItems: (touchedSpots) {
+                        return touchedSpots.map((spot) {
+                          if (spot.spotIndex == maxSpeedIndex) {
+                            return LineTooltipItem(
+                              'MAX: ${maxSpeed.toStringAsFixed(1)} km/h\nGiro ${_currentLap + 1}',
+                              const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w900,
+                                fontSize: 11,
+                              ),
+                            );
+                          }
+                          return null;
+                        }).toList();
+                      },
+                    ),
                   ),
                   lineBarsData: [
-                    _buildLine(speedSpots, const Color(0xFFFF4D4F), _focus == _MetricFocus.speed),
+                    _buildLine(speedSpots, const Color(0xFFFF4D4F), _focus == _MetricFocus.speed, maxSpeedIndex: maxSpeedIndex),
                     _buildLine(gSpots, const Color(0xFF4CD964), _focus == _MetricFocus.gForce),
                   ],
                 ),
@@ -1565,13 +1676,33 @@ class _TelemetryPanelState extends State<_TelemetryPanel> {
     );
   }
 
-  LineChartBarData _buildLine(List<FlSpot> spots, Color baseColor, bool focused) {
+  LineChartBarData _buildLine(List<FlSpot> spots, Color baseColor, bool focused, {int? maxSpeedIndex}) {
     return LineChartBarData(
       spots: spots,
       isCurved: false,
       color: focused ? baseColor : baseColor.withAlpha(50),
       barWidth: focused ? 2.5 : 1.5,
-      dotData: const FlDotData(show: false),
+      dotData: FlDotData(
+        show: true,
+        checkToShowDot: (spot, barData) {
+          // Mostra solo il punto viola per la velocità massima
+          if (maxSpeedIndex != null) {
+            return spots.indexOf(spot) == maxSpeedIndex;
+          }
+          return false;
+        },
+        getDotPainter: (spot, percent, barData, index) {
+          if (maxSpeedIndex != null && spots.indexOf(spot) == maxSpeedIndex) {
+            return FlDotCirclePainter(
+              radius: 6,
+              color: const Color(0xFF9C27B0),
+              strokeWidth: 3,
+              strokeColor: const Color(0xFF9C27B0).withAlpha(100),
+            );
+          }
+          return FlDotCirclePainter(radius: 0, color: Colors.transparent);
+        },
+      ),
       belowBarData: BarAreaData(show: focused, color: baseColor.withAlpha(20)),
     );
   }

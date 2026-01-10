@@ -61,9 +61,24 @@ class _GpsWaitPageState extends State<GpsWaitPage>
   TrackDefinition? _selectedTrack;
   StartMode? _selectedMode;
 
+  // Categoria veicolo
+  String? _selectedVehicleCategory;
+  final TextEditingController _vehicleSearchController = TextEditingController();
+  final List<String> _defaultCategories = [
+    'Kart rental',
+    'Kart',
+    'Auto',
+    'Rally',
+    'Moto rental',
+    'Moto',
+  ];
+  List<String> _filteredCategories = [];
+  bool _showCategoryDropdown = false;
+
   @override
   void initState() {
     super.initState();
+    _filteredCategories = List.from(_defaultCategories);
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),
@@ -76,6 +91,7 @@ class _GpsWaitPageState extends State<GpsWaitPage>
   @override
   void dispose() {
     _pulseController.dispose();
+    _vehicleSearchController.dispose();
     _gpsSub?.cancel();
     _bleGpsSub?.cancel();
     _bleDeviceSub?.cancel();
@@ -331,13 +347,26 @@ class _GpsWaitPageState extends State<GpsWaitPage>
       MaterialPageRoute(
         builder: (_) => LiveSessionPage(
           trackDefinition: _selectedTrack,
+          vehicleCategory: _selectedVehicleCategory,
         ),
       ),
     );
   }
 
   bool get _canStartRecording {
-    return _hasFix && _selectedTrack != null;
+    return _hasFix && _selectedTrack != null && _selectedVehicleCategory != null;
+  }
+
+  void _filterCategories(String query) {
+    setState(() {
+      if (query.isEmpty) {
+        _filteredCategories = List.from(_defaultCategories);
+      } else {
+        _filteredCategories = _defaultCategories
+            .where((cat) => cat.toLowerCase().contains(query.toLowerCase()))
+            .toList();
+      }
+    });
   }
 
   @override
@@ -359,6 +388,12 @@ class _GpsWaitPageState extends State<GpsWaitPage>
 
                   // GPS Status Card with circular indicator
                   _buildGpsStatusCard(),
+                  const SizedBox(height: 24),
+
+                  // Vehicle Category Section
+                  _buildSectionHeader('Categoria veicolo'),
+                  const SizedBox(height: 12),
+                  _buildVehicleCategorySelector(),
                   const SizedBox(height: 24),
 
                   // Circuit Selection Section
@@ -1244,6 +1279,215 @@ class _GpsWaitPageState extends State<GpsWaitPage>
     );
   }
 
+  Widget _buildVehicleCategorySelector() {
+    final hasCategory = _selectedVehicleCategory != null;
+
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _showCategoryDropdown = !_showCategoryDropdown;
+        });
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(18),
+          gradient: LinearGradient(
+            colors: [_kCardStart, _kCardEnd],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          border: Border.all(color: hasCategory ? kBrandColor.withAlpha(120) : _kBorderColor),
+          boxShadow: hasCategory
+              ? [
+                  BoxShadow(
+                    color: kBrandColor.withAlpha(30),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ]
+              : null,
+        ),
+        child: Column(
+          children: [
+            // Search bar con icona veicolo
+            Container(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: hasCategory ? kBrandColor.withAlpha(20) : kMutedColor.withAlpha(15),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: hasCategory ? kBrandColor.withAlpha(50) : kMutedColor.withAlpha(40),
+                      ),
+                    ),
+                    child: Icon(
+                      Icons.directions_car,
+                      size: 22,
+                      color: hasCategory ? kBrandColor : kMutedColor,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'VEICOLO',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            color: kMutedColor,
+                            letterSpacing: 1,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          hasCategory ? _selectedVehicleCategory! : 'Seleziona categoria',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w900,
+                            color: hasCategory ? kFgColor : kMutedColor,
+                            letterSpacing: -0.3,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(
+                    _showCategoryDropdown ? Icons.expand_less : Icons.expand_more,
+                    color: kMutedColor,
+                    size: 24,
+                  ),
+                ],
+              ),
+            ),
+
+            // Dropdown con categorie
+            if (_showCategoryDropdown) ...[
+            Container(
+              height: 1,
+              margin: const EdgeInsets.symmetric(horizontal: 16),
+              color: _kBorderColor,
+            ),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Search field
+                  Container(
+                    decoration: BoxDecoration(
+                      color: _kTileColor,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: _kBorderColor),
+                    ),
+                    child: TextField(
+                      controller: _vehicleSearchController,
+                      onChanged: _filterCategories,
+                      style: const TextStyle(
+                        color: kFgColor,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: 'Cerca categoria...',
+                        hintStyle: TextStyle(
+                          color: kMutedColor.withAlpha(150),
+                          fontSize: 14,
+                        ),
+                        prefixIcon: Icon(
+                          Icons.search,
+                          color: kMutedColor,
+                          size: 20,
+                        ),
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Categorie predefinite
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: _filteredCategories.map((category) {
+                      final isSelected = _selectedVehicleCategory == category;
+                      return GestureDetector(
+                        onTap: () {
+                          HapticFeedback.lightImpact();
+                          setState(() {
+                            _selectedVehicleCategory = category;
+                            _showCategoryDropdown = false;
+                            _vehicleSearchController.clear();
+                            _filteredCategories = List.from(_defaultCategories);
+                          });
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 10,
+                          ),
+                          decoration: BoxDecoration(
+                            gradient: isSelected
+                                ? LinearGradient(
+                                    colors: [
+                                      kBrandColor.withAlpha(40),
+                                      kBrandColor.withAlpha(25),
+                                    ],
+                                  )
+                                : null,
+                            color: isSelected ? null : Colors.white.withAlpha(8),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: isSelected
+                                  ? kBrandColor
+                                  : _kBorderColor,
+                              width: isSelected ? 1.5 : 1,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (isSelected)
+                                Padding(
+                                  padding: const EdgeInsets.only(right: 6),
+                                  child: Icon(
+                                    Icons.check_circle,
+                                    size: 16,
+                                    color: kBrandColor,
+                                  ),
+                                ),
+                              Text(
+                                category,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  color: isSelected ? kBrandColor : kFgColor,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ],
+              ),
+            ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildBottomButton() {
     final canStart = !_hasError && _canStartRecording;
 
@@ -1307,7 +1551,9 @@ class _GpsWaitPageState extends State<GpsWaitPage>
             !_hasFix && !_hasError
                 ? 'Attendi un buon segnale GPS...'
                 : (_hasFix && !_canStartRecording)
-                    ? 'Seleziona un circuito per attivare'
+                    ? (_selectedVehicleCategory == null
+                        ? 'Seleziona categoria veicolo'
+                        : 'Seleziona un circuito per attivare')
                     : _hasError
                         ? 'Risolvi il problema GPS per procedere'
                         : 'Tutto pronto!',

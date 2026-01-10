@@ -21,8 +21,13 @@ import 'session_recap_page.dart';
 /// Layout orizzontale ottimizzato per uso in pista.
 class LiveSessionPage extends StatefulWidget {
   final TrackDefinition? trackDefinition;
+  final String? vehicleCategory;
 
-  const LiveSessionPage({super.key, this.trackDefinition});
+  const LiveSessionPage({
+    super.key,
+    this.trackDefinition,
+    this.vehicleCategory,
+  });
 
   @override
   State<LiveSessionPage> createState() => _LiveSessionPageState();
@@ -513,6 +518,7 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
           timeHistory: _timeHistory,
           trackDefinition: widget.trackDefinition,
           usedBleDevice: _isUsingBleGps,
+          vehicleCategory: widget.vehicleCategory,
         ),
       ),
     );

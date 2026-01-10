@@ -32,6 +32,8 @@ class SessionService {
     required List<Duration> timeHistory,
     TrackDefinition? trackDefinition, // Optional: circuito tracciato usato
     bool usedBleDevice = false, // Indica se è stato usato un dispositivo BLE GPS
+    String? vehicleCategory, // Categoria veicolo
+    String? weather, // Condizioni meteo
     Function(double)? onProgress, // Callback per progresso (0.0 - 1.0)
   }) async {
     try {
@@ -98,6 +100,8 @@ class SessionService {
         displayPath: displayPath,
         trackDefinition: trackDefinition,
         usedBleDevice: usedBleDevice, // 👈 AGGIUNTO
+        vehicleCategory: vehicleCategory,
+        weather: weather,
       );
 
       onProgress?.call(0.4); // 40% - Modello creato
@@ -534,6 +538,88 @@ class SessionService {
       q = q.startAfterDocument(startAfter);
     }
     return q.get();
+  }
+
+  /// Query efficiente per sessioni di utenti specifici (followed)
+  ///
+  /// Usa whereIn che supporta max 30 elementi per query.
+  /// Per liste più grandi, esegue query multiple in parallelo.
+  Future<List<SessionModel>> fetchSessionsByUserIds({
+    required Set<String> userIds,
+    int limit = 20,
+    DateTime? olderThan,
+  }) async {
+    if (userIds.isEmpty) return [];
+
+    final userIdsList = userIds.toList();
+    final List<SessionModel> allSessions = [];
+
+    // Firestore whereIn supporta max 30 elementi
+    const chunkSize = 30;
+    final chunks = <List<String>>[];
+
+    for (int i = 0; i < userIdsList.length; i += chunkSize) {
+      final end = (i + chunkSize < userIdsList.length)
+          ? i + chunkSize
+          : userIdsList.length;
+      chunks.add(userIdsList.sublist(i, end));
+    }
+
+    // Esegui query in parallelo per ogni chunk
+    final futures = chunks.map((chunk) async {
+      Query<Map<String, dynamic>> q = _firestore
+          .collection('sessions')
+          .where('isPublic', isEqualTo: true)
+          .where('userId', whereIn: chunk)
+          .orderBy('dateTime', descending: true)
+          .limit(limit);
+
+      if (olderThan != null) {
+        q = q.where('dateTime', isLessThan: Timestamp.fromDate(olderThan));
+      }
+
+      final snap = await q.get();
+      return snap.docs
+          .map((doc) => SessionModel.fromFirestore(doc.id, doc.data()))
+          .toList();
+    });
+
+    final results = await Future.wait(futures);
+
+    for (final sessions in results) {
+      allSessions.addAll(sessions);
+    }
+
+    // Ordina per data e limita
+    allSessions.sort((a, b) => b.dateTime.compareTo(a.dateTime));
+
+    if (allSessions.length > limit) {
+      return allSessions.sublist(0, limit);
+    }
+
+    return allSessions;
+  }
+
+  /// Query per sessioni recenti (per nearby, scarica le più recenti e filtra client-side)
+  ///
+  /// Ottimizzato: scarica solo le sessioni delle ultime N ore per ridurre il set da filtrare
+  Future<List<SessionModel>> fetchRecentSessions({
+    int limit = 50,
+    int hoursBack = 72,
+  }) async {
+    final cutoffDate = DateTime.now().subtract(Duration(hours: hoursBack));
+
+    final snap = await _firestore
+        .collection('sessions')
+        .where('isPublic', isEqualTo: true)
+        .where('dateTime', isGreaterThan: Timestamp.fromDate(cutoffDate))
+        .orderBy('dateTime', descending: true)
+        .limit(limit)
+        .get();
+
+    return snap.docs
+        .map((doc) => SessionModel.fromFirestore(doc.id, doc.data()))
+        .toList();
   }
 
   /// Recupera i dati GPS di una sessione specifica (caricamento on-demand)

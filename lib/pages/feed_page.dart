@@ -123,15 +123,14 @@ class _FeedPageState extends State<FeedPage> with TickerProviderStateMixin {
   Set<String> _followingIds = {};
   Position? _userPosition;
   String? _locationError;
+  bool _isLoadingLocation = false; // Nuovo: traccia se stiamo caricando la posizione
 
-  DocumentSnapshot? _lastDoc;
   bool _isLoading = true;
   bool _isLoadingMore = false;
   bool _hasMore = true;
   bool _isRefreshing = false;
 
-  static const int _pageSize = 10;
-  static const int _fetchBatchSize = 25;
+  static const int _pageSize = 15;
   static const double _nearbyRadiusKm = 80;
 
   bool _showDisclaimer = false;
@@ -182,7 +181,6 @@ class _FeedPageState extends State<FeedPage> with TickerProviderStateMixin {
       if (_cacheService.hasCachedData) {
         print('📦 Caricamento feed da cache locale...');
         _followingIds = _cacheService.getCachedFollowingIds();
-        _userPosition = await _getUserLocation();
 
         final cachedSessions = _cacheService.getCachedFeed();
         _feedItems.clear();
@@ -192,11 +190,11 @@ class _FeedPageState extends State<FeedPage> with TickerProviderStateMixin {
           }
 
           final isFollowed = _followingIds.contains(session.userId);
-          final isNearby = _isNearby(session);
+          // Nearby sarà false finché non abbiamo la posizione
           _feedItems.add(_FeedSessionItem(
             session: session,
             isFollowed: isFollowed,
-            isNearby: isNearby,
+            isNearby: false,
           ));
         }
         _hasMore = cachedSessions.length >= _pageSize;
@@ -206,6 +204,9 @@ class _FeedPageState extends State<FeedPage> with TickerProviderStateMixin {
         if (mounted) {
           setState(() => _isLoading = false);
         }
+
+        // Carica posizione in background e aggiorna i badge nearby
+        _loadLocationInBackground();
         return;
       }
 
@@ -218,19 +219,67 @@ class _FeedPageState extends State<FeedPage> with TickerProviderStateMixin {
     }
   }
 
+  /// Carica la posizione GPS in background senza bloccare il feed
+  Future<void> _loadLocationInBackground() async {
+    if (_isLoadingLocation) return;
+
+    _isLoadingLocation = true;
+    try {
+      final position = await _getUserLocation();
+      _userPosition = position;
+
+      if (position != null && mounted) {
+        // Aggiorna i badge nearby per le sessioni già caricate
+        _updateNearbyBadges();
+      }
+    } finally {
+      _isLoadingLocation = false;
+    }
+  }
+
+  /// Aggiorna i badge "nearby" per le sessioni già in lista
+  void _updateNearbyBadges() {
+    if (_userPosition == null) return;
+
+    bool hasChanges = false;
+    final updatedItems = <_FeedSessionItem>[];
+
+    for (final item in _feedItems) {
+      final isNearby = _isNearby(item.session);
+      if (isNearby != item.isNearby) {
+        hasChanges = true;
+        updatedItems.add(_FeedSessionItem(
+          session: item.session,
+          isFollowed: item.isFollowed,
+          isNearby: isNearby,
+        ));
+      } else {
+        updatedItems.add(item);
+      }
+    }
+
+    if (hasChanges && mounted) {
+      setState(() {
+        _feedItems.clear();
+        _feedItems.addAll(updatedItems);
+      });
+      print('✅ Aggiornati ${updatedItems.where((i) => i.isNearby).length} badge nearby');
+    }
+  }
+
   Future<void> _refreshFromFirebase() async {
     setState(() => _isRefreshing = true);
     try {
       final currentUserId = FirebaseAuth.instance.currentUser?.uid;
 
-      final results = await Future.wait([
-        _cacheService.refreshFollowingIds(limit: 200),
-        _getUserLocation(),
-      ]);
+      // 1. Carica following IDs (veloce, non dipende da GPS)
+      _followingIds = await _cacheService.refreshFollowingIds(limit: 200);
 
-      _followingIds = results[0] as Set<String>;
-      _userPosition = results[1] as Position?;
+      // 2. Avvia caricamento posizione in parallelo (non bloccante)
+      final locationFuture = _getUserLocation();
 
+      // 3. Carica subito le sessioni dei followed (non serve GPS)
+      //    Per nearby, usa un filtro che ritorna sempre false se non abbiamo ancora la posizione
       final sessions = await _cacheService.refreshFeed(
         followingIds: _followingIds,
         isNearbyFilter: _isNearby,
@@ -238,7 +287,6 @@ class _FeedPageState extends State<FeedPage> with TickerProviderStateMixin {
       );
 
       _feedItems.clear();
-      _lastDoc = null;
       for (final session in sessions) {
         if (currentUserId != null && session.userId == currentUserId) {
           continue;
@@ -257,7 +305,19 @@ class _FeedPageState extends State<FeedPage> with TickerProviderStateMixin {
       print('✅ Feed refreshed da Firebase: ${_feedItems.length} sessioni');
 
       _cacheService.markFirstLoadComplete();
-    } finally {
+
+      // 4. Aggiorna UI subito (senza aspettare GPS)
+      if (mounted) {
+        setState(() => _isRefreshing = false);
+      }
+
+      // 5. Aspetta la posizione e aggiorna i badge nearby
+      _userPosition = await locationFuture;
+      if (_userPosition != null && mounted) {
+        _updateNearbyBadges();
+      }
+    } catch (e) {
+      print('❌ Errore refresh feed: $e');
       if (mounted) {
         setState(() => _isRefreshing = false);
       }
@@ -334,65 +394,52 @@ class _FeedPageState extends State<FeedPage> with TickerProviderStateMixin {
     if (_isLoadingMore) return;
     if (reset) {
       _feedItems.clear();
-      _lastDoc = null;
       _hasMore = true;
     }
     if (!_hasMore) return;
 
     if (!mounted) return;
     setState(() => _isLoadingMore = true);
-    int added = 0;
-    int attempts = 0;
 
     final currentUserId = FirebaseAuth.instance.currentUser?.uid;
 
     try {
-      while (added < _pageSize && _hasMore && attempts < 4) {
-        attempts++;
-        final snap = await _sessionService.fetchSessionsPage(
-          limit: _fetchBatchSize,
-          startAfter: _lastDoc,
-        );
+      // Trova la data più vecchia tra le sessioni caricate
+      DateTime? olderThan;
+      if (_feedItems.isNotEmpty) {
+        olderThan = _feedItems.last.session.dateTime;
+      }
 
-        if (snap.docs.isEmpty) {
-          _hasMore = false;
-          break;
-        }
+      final newSessions = await _cacheService.loadMoreFeed(
+        followingIds: _followingIds,
+        isNearbyFilter: _isNearby,
+        olderThan: olderThan,
+        pageSize: _pageSize,
+      );
 
-        _lastDoc = snap.docs.last;
-
-        for (final doc in snap.docs) {
-          final session = SessionModel.fromFirestore(doc.id, doc.data());
-
+      if (newSessions.isEmpty) {
+        _hasMore = false;
+      } else {
+        for (final session in newSessions) {
           if (currentUserId != null && session.userId == currentUserId) {
             continue;
           }
 
-          final isFollowed = _followingIds.contains(session.userId);
-          final isNearby = _isNearby(session);
-          if (!isFollowed && !isNearby) continue;
-
           final alreadyAdded = _feedItems
               .any((item) => item.session.sessionId == session.sessionId);
           if (alreadyAdded) continue;
+
+          final isFollowed = _followingIds.contains(session.userId);
+          final isNearby = _isNearby(session);
 
           _feedItems.add(_FeedSessionItem(
             session: session,
             isFollowed: isFollowed,
             isNearby: isNearby,
           ));
-          added++;
-
-          if (added >= _pageSize) break;
         }
 
-        if (snap.docs.length < _fetchBatchSize) {
-          _hasMore = false;
-        }
-      }
-
-      if (added == 0 || (added < _pageSize && attempts >= 4)) {
-        _hasMore = false;
+        _hasMore = newSessions.length >= _pageSize;
       }
     } finally {
       if (mounted) {

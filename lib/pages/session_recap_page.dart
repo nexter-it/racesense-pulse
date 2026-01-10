@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'dart:ui' as ui;
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -8,6 +9,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:http/http.dart' as http;
 
 import '../theme.dart';
 import '../widgets/session_metadata_dialog.dart';
@@ -37,6 +39,7 @@ class SessionRecapPage extends StatefulWidget {
   final List<Duration> timeHistory;
   final TrackDefinition? trackDefinition;
   final bool usedBleDevice;
+  final String? vehicleCategory;
 
   const SessionRecapPage({
     super.key,
@@ -51,6 +54,7 @@ class SessionRecapPage extends StatefulWidget {
     required this.timeHistory,
     this.trackDefinition,
     this.usedBleDevice = false,
+    this.vehicleCategory,
   });
 
   @override
@@ -62,6 +66,8 @@ class _SessionRecapPageState extends State<SessionRecapPage>
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
   bool _isSaving = false;
+  String? _detectedWeather;
+  bool _isLoadingWeather = true;
 
   @override
   void initState() {
@@ -74,6 +80,24 @@ class _SessionRecapPageState extends State<SessionRecapPage>
     _pulseAnimation = Tween<double>(begin: 0.8, end: 1.2).animate(
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
+
+    // Rileva il meteo all'avvio
+    _loadWeather();
+  }
+
+  Future<void> _loadWeather() async {
+    print('🌤️ [SessionRecap] Inizio rilevamento meteo...');
+    final weather = await _detectWeather();
+    print('🌤️ [SessionRecap] Meteo rilevato: $weather');
+    if (mounted) {
+      setState(() {
+        _detectedWeather = weather;
+        _isLoadingWeather = false;
+        print('🌤️ [SessionRecap] Stato aggiornato - weather: $_detectedWeather, loading: $_isLoadingWeather');
+      });
+    } else {
+      print('❌ [SessionRecap] Widget non più montato, impossibile aggiornare lo stato');
+    }
   }
 
   @override
@@ -154,6 +178,82 @@ class _SessionRecapPageState extends State<SessionRecapPage>
     return (1000 / avgMs).round();
   }
 
+  Future<String?> _detectWeather() async {
+    // Rileva meteo basandosi sulla posizione GPS della sessione
+    print('🌍 [Weather] Controllo GPS track...');
+    if (widget.gpsTrack.isEmpty) {
+      print('❌ [Weather] GPS track vuoto');
+      return null;
+    }
+
+    try {
+      // Prendi la posizione centrale della sessione
+      final firstPos = widget.gpsTrack.first;
+      final lat = firstPos.latitude;
+      final lon = firstPos.longitude;
+      print('📍 [Weather] Posizione: lat=$lat, lon=$lon');
+
+      // Usa Open-Meteo API (gratuita, senza API key)
+      final url = 'https://api.open-meteo.com/v1/forecast?latitude=$lat&longitude=$lon&current_weather=true';
+      print('🌐 [Weather] Chiamata API: $url');
+
+      final response = await http.get(Uri.parse(url)).timeout(
+        const Duration(seconds: 5),
+        onTimeout: () {
+          print('⏱️ [Weather] Timeout dopo 5 secondi');
+          return http.Response('{"error": "timeout"}', 408);
+        },
+      );
+
+      print('📡 [Weather] Risposta HTTP: ${response.statusCode}');
+      print('📄 [Weather] Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final currentWeather = data['current_weather'];
+
+        print('☁️ [Weather] Current weather data: $currentWeather');
+
+        if (currentWeather != null) {
+          final weatherCode = currentWeather['weathercode'] as int;
+          final temp = currentWeather['temperature'];
+
+          print('🌡️ [Weather] Weather code: $weatherCode, Temperature: $temp°C');
+
+          // Mappa weather code a descrizione italiana
+          String weatherDesc = _weatherCodeToDescription(weatherCode);
+
+          final result = '$weatherDesc • ${temp.round()}°C';
+          print('✅ [Weather] Risultato finale: $result');
+          return result;
+        } else {
+          print('⚠️ [Weather] current_weather è null nella risposta');
+        }
+      } else {
+        print('❌ [Weather] Status code non 200: ${response.statusCode}');
+      }
+    } catch (e, stackTrace) {
+      print('💥 [Weather] Errore rilevamento meteo: $e');
+      print('📚 [Weather] Stack trace: $stackTrace');
+    }
+
+    print('❌ [Weather] Ritorno null');
+    return null;
+  }
+
+  String _weatherCodeToDescription(int code) {
+    // WMO Weather interpretation codes
+    if (code == 0) return 'Sereno';
+    if (code <= 3) return 'Parzialmente nuvoloso';
+    if (code <= 48) return 'Nebbioso';
+    if (code <= 67) return 'Piovoso';
+    if (code <= 77) return 'Neve';
+    if (code <= 82) return 'Pioggia intensa';
+    if (code <= 86) return 'Neve intensa';
+    if (code <= 99) return 'Temporale';
+    return 'Variabile';
+  }
+
   Future<void> _handleSaveSession(BuildContext context) async {
     if (_isSaving) return;
 
@@ -185,6 +285,9 @@ class _SessionRecapPageState extends State<SessionRecapPage>
     );
 
     try {
+      // Usa il meteo già rilevato o rilevalo ora se non disponibile
+      final weather = _detectedWeather ?? await _detectWeather();
+
       final sessionService = SessionService();
       final fsService = FirestoreService();
       final userData = await fsService.getUserData(user.uid);
@@ -210,6 +313,8 @@ class _SessionRecapPageState extends State<SessionRecapPage>
         timeHistory: widget.timeHistory,
         trackDefinition: widget.trackDefinition,
         usedBleDevice: widget.usedBleDevice,
+        vehicleCategory: widget.vehicleCategory,
+        weather: weather,
         onProgress: (progress) {
           progressNotifier.value = progress;
         },
@@ -327,6 +432,9 @@ class _SessionRecapPageState extends State<SessionRecapPage>
                     bestLap: widget.bestLap,
                     lapCount: widget.laps.length,
                     usedBleDevice: widget.usedBleDevice,
+                    vehicleCategory: widget.vehicleCategory,
+                    weather: _detectedWeather,
+                    isLoadingWeather: _isLoadingWeather,
                   ),
                   const SizedBox(height: 16),
 
@@ -521,11 +629,17 @@ class _SuccessBanner extends StatelessWidget {
   final Duration? bestLap;
   final int lapCount;
   final bool usedBleDevice;
+  final String? vehicleCategory;
+  final String? weather;
+  final bool isLoadingWeather;
 
   const _SuccessBanner({
     required this.bestLap,
     required this.lapCount,
     required this.usedBleDevice,
+    this.vehicleCategory,
+    this.weather,
+    this.isLoadingWeather = false,
   });
 
   String _formatDuration(Duration d) {
@@ -695,6 +809,82 @@ class _SuccessBanner extends StatelessWidget {
               ],
             ),
           ),
+
+          // Vehicle category and weather info
+          if (vehicleCategory != null || weather != null || isLoadingWeather)
+            Container(
+              margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                color: _kTileColor,
+                border: Border.all(color: _kBorderColor),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (vehicleCategory != null) ...[
+                    const Icon(
+                      Icons.directions_car,
+                      color: kBrandColor,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      vehicleCategory!,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: kBrandColor,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                  if (vehicleCategory != null && (weather != null || isLoadingWeather))
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: Container(
+                        width: 1,
+                        height: 16,
+                        color: _kBorderColor,
+                      ),
+                    ),
+                  if (isLoadingWeather) ...[
+                    const SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFFA726)),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Rilevamento meteo...',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: kMutedColor,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ] else if (weather != null) ...[
+                    const Icon(
+                      Icons.wb_sunny,
+                      color: Color(0xFFFFA726),
+                      size: 18,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      weather!,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: kFgColor,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
         ],
       ),
     );
@@ -893,6 +1083,18 @@ class _TelemetryPanelState extends State<_TelemetryPanel> {
       return FlSpot(xs[j], widget.gForceHistory[idx]);
     });
 
+    // Trova il punto di velocità massima nel giro corrente
+    double maxSpeed = speedSpots.first.y;
+    int maxSpeedIndex = 0;
+    for (int j = 0; j < speedSpots.length; j++) {
+      if (speedSpots[j].y > maxSpeed) {
+        maxSpeed = speedSpots[j].y;
+        maxSpeedIndex = j;
+      }
+    }
+    final maxSpeedSpot = speedSpots[maxSpeedIndex];
+    final maxSpeedGlobalIdx = indices[maxSpeedIndex];
+
     double minY = speedSpots.first.y;
     double maxY = speedSpots.first.y;
     for (final s in [...speedSpots, ...gSpots]) {
@@ -1023,7 +1225,25 @@ class _TelemetryPanelState extends State<_TelemetryPanel> {
                     verticalLines: [
                       VerticalLine(x: cursorX, color: kBrandColor.withAlpha(180), strokeWidth: 1.5, dashArray: [6, 3]),
                     ],
+                    horizontalLines: [
+                      // Linea orizzontale tratteggiata per la velocità massima
+                      HorizontalLine(
+                        y: maxSpeed,
+                        color: const Color(0xFF9C27B0).withAlpha(100),
+                        strokeWidth: 1,
+                        dashArray: [4, 4],
+                      ),
+                    ],
                   ),
+                  showingTooltipIndicators: [
+                    ShowingTooltipIndicators([
+                      LineBarSpot(
+                        _buildLine(speedSpots, const Color(0xFFFF4D4F), _focus == _MetricFocus.speed),
+                        maxSpeedIndex,
+                        maxSpeedSpot,
+                      ),
+                    ]),
+                  ],
                   lineTouchData: LineTouchData(
                     enabled: true,
                     handleBuiltInTouches: false,
@@ -1039,9 +1259,29 @@ class _TelemetryPanelState extends State<_TelemetryPanel> {
                         FlDotData(show: false),
                       )).toList();
                     },
+                    touchTooltipData: LineTouchTooltipData(
+                      getTooltipColor: (spot) => const Color(0xFF9C27B0).withAlpha(220),
+                      tooltipRoundedRadius: 8,
+                      tooltipPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      getTooltipItems: (touchedSpots) {
+                        return touchedSpots.map((spot) {
+                          if (spot.spotIndex == maxSpeedIndex) {
+                            return LineTooltipItem(
+                              'MAX: ${maxSpeed.toStringAsFixed(1)} km/h\nGiro ${_currentLap + 1}',
+                              const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w900,
+                                fontSize: 11,
+                              ),
+                            );
+                          }
+                          return null;
+                        }).toList();
+                      },
+                    ),
                   ),
                   lineBarsData: [
-                    _buildLine(speedSpots, const Color(0xFFFF4D4F), _focus == _MetricFocus.speed),
+                    _buildLine(speedSpots, const Color(0xFFFF4D4F), _focus == _MetricFocus.speed, maxSpeedIndex: maxSpeedIndex),
                     _buildLine(gSpots, const Color(0xFF4CD964), _focus == _MetricFocus.gForce),
                   ],
                 ),
@@ -1123,13 +1363,33 @@ class _TelemetryPanelState extends State<_TelemetryPanel> {
     );
   }
 
-  LineChartBarData _buildLine(List<FlSpot> spots, Color baseColor, bool focused) {
+  LineChartBarData _buildLine(List<FlSpot> spots, Color baseColor, bool focused, {int? maxSpeedIndex}) {
     return LineChartBarData(
       spots: spots,
       isCurved: false,
       color: focused ? baseColor : baseColor.withAlpha(50),
       barWidth: focused ? 2.5 : 1.5,
-      dotData: const FlDotData(show: false),
+      dotData: FlDotData(
+        show: true,
+        checkToShowDot: (spot, barData) {
+          // Mostra solo il punto viola per la velocità massima
+          if (maxSpeedIndex != null) {
+            return spots.indexOf(spot) == maxSpeedIndex;
+          }
+          return false;
+        },
+        getDotPainter: (spot, percent, barData, index) {
+          if (maxSpeedIndex != null && spots.indexOf(spot) == maxSpeedIndex) {
+            return FlDotCirclePainter(
+              radius: 6,
+              color: const Color(0xFF9C27B0),
+              strokeWidth: 3,
+              strokeColor: const Color(0xFF9C27B0).withAlpha(100),
+            );
+          }
+          return FlDotCirclePainter(radius: 0, color: Colors.transparent);
+        },
+      ),
       belowBarData: BarAreaData(show: focused, color: baseColor.withAlpha(20)),
     );
   }

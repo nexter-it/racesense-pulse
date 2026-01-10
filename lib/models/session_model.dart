@@ -72,6 +72,12 @@ class SessionModel {
   // Indica se è stato usato un dispositivo BLE GPS
   final bool usedBleDevice;
 
+  // Categoria veicolo (kart rental, kart, auto, rally, moto rental, moto)
+  final String? vehicleCategory;
+
+  // Condizioni meteo
+  final String? weather;
+
   SessionModel({
     required this.sessionId,
     required this.userId,
@@ -96,6 +102,8 @@ class SessionModel {
     this.displayPath,
     this.trackDefinition,
     this.usedBleDevice = false,
+    this.vehicleCategory,
+    this.weather,
   });
 
   // Converti in Map per Firestore
@@ -127,6 +135,14 @@ class SessionModel {
     // 👇 AGGIUNTO
     if (displayPath != null) {
       data['displayPath'] = displayPath;
+    }
+
+    if (vehicleCategory != null) {
+      data['vehicleCategory'] = vehicleCategory;
+    }
+
+    if (weather != null) {
+      data['weather'] = weather;
     }
 
     // Salva trackDefinition se presente
@@ -165,6 +181,8 @@ class SessionModel {
       displayPath: displayPath,
       trackDefinition: trackDefinition,
       usedBleDevice: usedBleDevice,
+      vehicleCategory: vehicleCategory,
+      weather: weather,
     );
   }
 
@@ -225,6 +243,8 @@ class SessionModel {
       displayPath: displayPath,
       trackDefinition: trackDefinition, // 👈 AGGIUNTO
       usedBleDevice: data['usedBleDevice'] as bool? ?? false,
+      vehicleCategory: data['vehicleCategory'] as String?,
+      weather: data['weather'] as String?,
     );
   }
 
@@ -254,6 +274,8 @@ class SessionModel {
       'gpsSampleRateHz': gpsSampleRateHz,
       'usedBleDevice': usedBleDevice,
       if (displayPath != null) 'displayPath': displayPath,
+      if (vehicleCategory != null) 'vehicleCategory': vehicleCategory,
+      if (weather != null) 'weather': weather,
     };
   }
 
@@ -298,6 +320,8 @@ class SessionModel {
       gpsSampleRateHz: json['gpsSampleRateHz'] as int,
       displayPath: displayPath,
       usedBleDevice: json['usedBleDevice'] as bool? ?? false,
+      vehicleCategory: json['vehicleCategory'] as String?,
+      weather: json['weather'] as String?,
     );
   }
 }
