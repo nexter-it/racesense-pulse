@@ -30,6 +30,7 @@ class SessionService {
     required List<double> gForceHistory, // fused accel/decel in g
     required List<double> gpsAccuracyHistory,
     required List<Duration> timeHistory,
+    required List<double> rollAngleHistory, // angolo inclinazione in gradi
     TrackDefinition? trackDefinition, // Optional: circuito tracciato usato
     bool usedBleDevice = false, // Indica se è stato usato un dispositivo BLE GPS
     String? vehicleCategory, // Categoria veicolo
@@ -132,6 +133,7 @@ class SessionService {
         gpsTrack,
         speedHistory,
         gForceHistory,
+        rollAngleHistory,
       );
 
       onProgress?.call(0.9); // 90% - Dati GPS salvati
@@ -254,6 +256,7 @@ class SessionService {
     List<Position> gpsTrack,
     List<double> speedHistory,
     List<double> gForceHistory,
+    List<double> rollAngleHistory,
   ) async {
     const chunkSize = 100;
     final chunks = <GpsDataChunk>[];
@@ -265,12 +268,14 @@ class SessionService {
       for (int j = i; j < end; j++) {
         final speed = j < speedHistory.length ? speedHistory[j] : 0.0;
         final g = j < gForceHistory.length ? gForceHistory[j] : null;
+        final roll = j < rollAngleHistory.length ? rollAngleHistory[j] : null;
         final roundedSpeed = speed.roundToDouble(); // 👈 velocità intera
         chunkPoints.add(
           GpsPoint.fromPosition(
             gpsTrack[j],
             roundedSpeed,
             longitudinalG: g,
+            rollAngle: roll,
           ),
         );
       }

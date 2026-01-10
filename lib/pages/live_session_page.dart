@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -68,12 +69,14 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
   double _gForceX = 0.0;
   double _gForceY = 0.0;
   double _gForceMagnitude = 1.0;
+  double _currentRollAngle = 0.0; // Angolo inclinazione corrente in gradi
 
   // Dati storici per recap
   final List<double> _speedHistory = [];
   final List<double> _gForceHistory = [];
   final List<double> _gpsAccuracyHistory = [];
   final List<Duration> _timeHistory = [];
+  final List<double> _rollAngleHistory = []; // Storia angolo inclinazione
 
   // IMU buffer per calcolo G-force
   final List<_ImuSample> _imuBuffer = [];
@@ -83,6 +86,7 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
   // Subscriptions
   StreamSubscription<Position>? _gpsSub;
   StreamSubscription<UserAccelerometerEvent>? _accelSub;
+  StreamSubscription<GyroscopeEvent>? _gyroSub;
   StreamSubscription<Map<String, GpsData>>? _bleGpsSub;
   StreamSubscription<Map<String, BleDeviceSnapshot>>? _bleDeviceStreamSub;
 
@@ -275,6 +279,10 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
         z: event.z,
       ));
 
+      // Calcola angolo di inclinazione (roll) dall'accelerometro
+      // Roll angle in gradi: 0° = verticale, positivo = inclinazione destra, negativo = inclinazione sinistra
+      _currentRollAngle = _calculateRollAngle(event.x, event.y, event.z);
+
       // Mantieni buffer ultimi 2 secondi
       final cutoff = _sessionWatch.elapsed - const Duration(seconds: 2);
       _imuBuffer.removeWhere((s) => s.time < cutoff);
@@ -285,6 +293,7 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
     _gpsSub?.cancel();
     _bleGpsSub?.cancel();
     _accelSub?.cancel();
+    _gyroSub?.cancel();
     _bleDeviceStreamSub?.cancel();
   }
 
@@ -346,6 +355,7 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
       _gForceHistory.add(gForce);
       _gpsAccuracyHistory.add(pos.accuracy);
       _timeHistory.add(_sessionWatch.elapsed);
+      _rollAngleHistory.add(_currentRollAngle); // Salva angolo inclinazione
     }
 
     // Salva punto GPS per delta live (solo se il timer è partito e non siamo in formation lap)
@@ -415,6 +425,21 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
     }
 
     return (sumX / samples.length) / 9.81;
+  }
+
+  /// Calcola l'angolo di inclinazione (roll) dal accelerometro
+  /// Ritorna l'angolo in gradi: 0° = verticale, +/- indica inclinazione sinistra/destra
+  double _calculateRollAngle(double x, double y, double z) {
+    // Calcola il roll angle usando atan2
+    // x = accelerazione laterale, y = accelerazione longitudinale, z = accelerazione verticale
+    // Roll = arctan(y / z) * 180 / pi
+    // Usiamo abs() per ottenere sempre un valore positivo che rappresenta l'inclinazione totale
+    final rollRadians = math.atan2(y, z);
+    final rollDegrees = rollRadians * 180 / math.pi;
+
+    // Restituiamo il valore assoluto dell'angolo perché ci interessa quanto si inclina
+    // indipendentemente dalla direzione (sinistra/destra)
+    return rollDegrees.abs().clamp(0.0, 90.0);
   }
 
   void _onLapCompleted(Duration lapTime) {
@@ -516,6 +541,7 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
           gForceHistory: _gForceHistory,
           gpsAccuracyHistory: _gpsAccuracyHistory,
           timeHistory: _timeHistory,
+          rollAngleHistory: _rollAngleHistory, // Passa storia angolo inclinazione
           trackDefinition: widget.trackDefinition,
           usedBleDevice: _isUsingBleGps,
           vehicleCategory: widget.vehicleCategory,

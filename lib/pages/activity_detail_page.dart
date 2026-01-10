@@ -192,6 +192,8 @@ class _ActivityDetailPageState extends State<ActivityDetailPage>
         .toList();
     final List<double> gForceHistory =
         _gpsData.map((p) => p.longitudinalG ?? 0.0).toList();
+    final List<double> rollAngleHistory =
+        _gpsData.map((p) => p.rollAngle ?? 0.0).toList();
     final List<ll.LatLng> smoothPath =
         _gpsData.map((p) => ll.LatLng(p.latitude, p.longitude)).toList();
     final List<Position> gpsTrack = _gpsData
@@ -249,6 +251,7 @@ class _ActivityDetailPageState extends State<ActivityDetailPage>
                         gForceHistory: gForceHistory,
                         gpsAccuracyHistory: accuracyHistory,
                         timeHistory: timeHistory,
+                        rollAngleHistory: rollAngleHistory,
                         laps: _laps.map((l) => l.duration).toList(),
                       ),
                     if (gpsTrack.isNotEmpty && _laps.isNotEmpty)
@@ -1311,7 +1314,7 @@ class _StatChip extends StatelessWidget {
    TELEMETRY PANEL - Circuito + Grafico Sincronizzato
 ============================================================ */
 
-enum _MetricFocus { speed, gForce }
+enum _MetricFocus { speed, gForce, rollAngle }
 
 class _TelemetryPanel extends StatefulWidget {
   final List<Position> gpsTrack;
@@ -1320,6 +1323,7 @@ class _TelemetryPanel extends StatefulWidget {
   final List<double> gForceHistory;
   final List<double> gpsAccuracyHistory;
   final List<Duration> timeHistory;
+  final List<double> rollAngleHistory;
   final List<Duration> laps;
 
   const _TelemetryPanel({
@@ -1329,6 +1333,7 @@ class _TelemetryPanel extends StatefulWidget {
     required this.gForceHistory,
     required this.gpsAccuracyHistory,
     required this.timeHistory,
+    required this.rollAngleHistory,
     required this.laps,
   });
 
@@ -1397,6 +1402,11 @@ class _TelemetryPanelState extends State<_TelemetryPanel> {
       return FlSpot(xs[j], widget.gForceHistory[idx]);
     });
 
+    final List<FlSpot> rollSpots = List.generate(len, (j) {
+      final idx = indices[j];
+      return FlSpot(xs[j], widget.rollAngleHistory[idx]);
+    });
+
     // Trova il punto di velocità massima nel giro corrente
     double maxSpeed = speedSpots.first.y;
     int maxSpeedIndex = 0;
@@ -1410,7 +1420,7 @@ class _TelemetryPanelState extends State<_TelemetryPanel> {
 
     double minY = speedSpots.first.y;
     double maxY = speedSpots.first.y;
-    for (final s in [...speedSpots, ...gSpots]) {
+    for (final s in [...speedSpots, ...gSpots, ...rollSpots]) {
       if (s.y < minY) minY = s.y;
       if (s.y > maxY) maxY = s.y;
     }
@@ -1438,6 +1448,7 @@ class _TelemetryPanelState extends State<_TelemetryPanel> {
 
     final double curSpeed = widget.speedHistory[globalIdx];
     final double curG = widget.gForceHistory[globalIdx];
+    final double curRoll = widget.rollAngleHistory[globalIdx];
 
     return Container(
       decoration: BoxDecoration(
@@ -1596,6 +1607,7 @@ class _TelemetryPanelState extends State<_TelemetryPanel> {
                   lineBarsData: [
                     _buildLine(speedSpots, const Color(0xFFFF4D4F), _focus == _MetricFocus.speed, maxSpeedIndex: maxSpeedIndex),
                     _buildLine(gSpots, const Color(0xFF4CD964), _focus == _MetricFocus.gForce),
+                    _buildLine(rollSpots, const Color(0xFF00B8D4), _focus == _MetricFocus.rollAngle), // Colore ciano per roll angle
                   ],
                 ),
               ),
@@ -1616,6 +1628,10 @@ class _TelemetryPanelState extends State<_TelemetryPanel> {
                 _metricChip('G-Force', const Color(0xFF4CD964), _focus == _MetricFocus.gForce, () {
                   HapticFeedback.selectionClick();
                   setState(() => _focus = _MetricFocus.gForce);
+                }),
+                _metricChip('Roll', const Color(0xFF00B8D4), _focus == _MetricFocus.rollAngle, () {
+                  HapticFeedback.selectionClick();
+                  setState(() => _focus = _MetricFocus.rollAngle);
                 }),
               ],
             ),
@@ -1639,6 +1655,8 @@ class _TelemetryPanelState extends State<_TelemetryPanel> {
                 _valueDisplay('v', '${curSpeed.toStringAsFixed(1)} km/h', const Color(0xFFFF4D4F)),
                 Container(width: 1, height: 24, color: const Color(0xFF2A2A2A)),
                 _valueDisplay('g', '${curG.toStringAsFixed(2)} g', const Color(0xFF4CD964)),
+                Container(width: 1, height: 24, color: const Color(0xFF2A2A2A)),
+                _valueDisplay('r', '${curRoll.toStringAsFixed(1)}°', const Color(0xFF00B8D4)),
                 Container(width: 1, height: 24, color: const Color(0xFF2A2A2A)),
                 _valueDisplay('t', '${xs[_selectedIndex].toStringAsFixed(1)}s', kBrandColor),
               ],

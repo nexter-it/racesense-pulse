@@ -6,6 +6,7 @@ import '../services/firestore_service.dart';
 import '../theme.dart';
 import 'ble_scan_page.dart';
 import 'device_check_page.dart';
+import 'compatible_devices_page.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // PREMIUM UI CONSTANTS
@@ -376,10 +377,15 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
   }
 
   Widget _buildEmptyState() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        // Box informativo GPS Esterno
+        _buildBleInfoMessage(),
+        const SizedBox(height: 32),
+
+        // Empty state content centrato
+        Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
@@ -463,20 +469,27 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
             ),
           ],
         ),
-      ),
+      ],
     );
   }
 
   Widget _buildDevicesList(Map<String, BleDeviceSnapshot> scans) {
     final deviceEntries = _devices.entries.toList();
-    return ListView.separated(
+    return ListView(
       padding: const EdgeInsets.all(16),
-      itemBuilder: (context, index) {
-        final entry = deviceEntries[index];
-        return _buildDeviceCard(entry.key, entry.value, scans[entry.key]);
-      },
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
-      itemCount: _devices.length,
+      children: [
+        // Box informativo GPS Esterno
+        _buildBleInfoMessage(),
+        const SizedBox(height: 16),
+
+        // Lista dispositivi
+        ...deviceEntries.map((entry) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: _buildDeviceCard(entry.key, entry.value, scans[entry.key]),
+          );
+        }).toList(),
+      ],
     );
   }
 
@@ -765,6 +778,167 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildBleInfoMessage() {
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => const CompatibleDevicesPage(),
+          ),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(18),
+          gradient: LinearGradient(
+            colors: [
+              const Color(0xFFFFA726).withAlpha(25),
+              const Color(0xFFFFA726).withAlpha(12),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          border: Border.all(
+            color: const Color(0xFFFFA726).withAlpha(120),
+            width: 2,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFFFFA726).withAlpha(30),
+              blurRadius: 16,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: const Color(0xFFFFA726).withAlpha(30),
+                    border: Border.all(color: const Color(0xFFFFA726).withAlpha(60)),
+                  ),
+                  child: const Icon(
+                    Icons.info_outline,
+                    color: Color(0xFFFFA726),
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Text(
+                    'Funzionalità in arrivo',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w900,
+                      color: kFgColor,
+                      letterSpacing: -0.3,
+                    ),
+                  ),
+                ),
+                Icon(
+                  Icons.arrow_forward_ios,
+                  color: kMutedColor,
+                  size: 16,
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Text(
+              'La connessione a dispositivi GPS esterni è in fase di implementazione e sarà disponibile nelle prossime versioni.',
+              style: TextStyle(
+                fontSize: 13,
+                color: kMutedColor,
+                fontWeight: FontWeight.w600,
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                color: Colors.white.withAlpha(4),
+                border: Border.all(color: _kBorderColor),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.devices, size: 14, color: kBrandColor),
+                      const SizedBox(width: 8),
+                      const Text(
+                        'Dispositivi compatibili:',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: kFgColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  _buildDeviceRow('Racesense Track'),
+                  _buildDeviceRow('Racebox Mini / Mini S'),
+                  _buildDeviceRow('Dragy'),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Icon(Icons.touch_app, size: 14, color: kBrandColor),
+                const SizedBox(width: 8),
+                Text(
+                  'Tocca per vedere i dettagli dei dispositivi',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: kBrandColor,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDeviceRow(String name) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        children: [
+          Container(
+            width: 5,
+            height: 5,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: kBrandColor,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            name,
+            style: TextStyle(
+              fontSize: 12,
+              color: kMutedColor,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ),
     );
   }

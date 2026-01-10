@@ -394,6 +394,7 @@ class GpsPoint {
   final DateTime timestamp;
   final double accuracy;
   final double? longitudinalG; // accelerazione long./decel fusion in g
+  final double? rollAngle; // angolo inclinazione veicolo in gradi (0° = verticale, +/- = sinistra/destra)
 
   GpsPoint({
     required this.latitude,
@@ -402,6 +403,7 @@ class GpsPoint {
     required this.timestamp,
     required this.accuracy,
     this.longitudinalG,
+    this.rollAngle,
   });
 
   Map<String, dynamic> toMap() {
@@ -413,6 +415,8 @@ class GpsPoint {
       'acc': _roundDouble(accuracy, 1), // 👈 accuracy 1 decimale (es. 4.5)
       if (longitudinalG != null)
         'ag': _roundDouble(longitudinalG!, 3), // 👈 accel/decel fusion in g
+      if (rollAngle != null)
+        'roll': _roundDouble(rollAngle!, 2), // 👈 angolo inclinazione in gradi (es. 15.50)
     };
   }
 
@@ -424,6 +428,7 @@ class GpsPoint {
       timestamp: (map['ts'] as Timestamp).toDate(),
       accuracy: (map['acc'] as num).toDouble(),
       longitudinalG: map['ag'] != null ? (map['ag'] as num).toDouble() : null,
+      rollAngle: map['roll'] != null ? (map['roll'] as num).toDouble() : null,
     );
   }
 
@@ -431,6 +436,7 @@ class GpsPoint {
     Position pos,
     double speedKmh, {
     double? longitudinalG,
+    double? rollAngle,
   }) {
     return GpsPoint(
       latitude: pos.latitude,
@@ -439,6 +445,7 @@ class GpsPoint {
       timestamp: pos.timestamp ?? DateTime.now(),
       accuracy: pos.accuracy,
       longitudinalG: longitudinalG,
+      rollAngle: rollAngle,
     );
   }
 }
