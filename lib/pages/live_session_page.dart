@@ -433,19 +433,46 @@ class _LiveSessionPageState extends State<LiveSessionPage> {
     return (sumX / samples.length) / 9.81;
   }
 
-  /// Calcola l'angolo di inclinazione (roll) dal accelerometro
-  /// Ritorna l'angolo in gradi: 0° = verticale, +/- indica inclinazione sinistra/destra
+  /// Calcola l'angolo di inclinazione laterale (lean angle) dall'accelerometro.
+  ///
+  /// Funziona indipendentemente dall'orientamento del telefono:
+  /// - Moto: telefono orizzontale con schermo verso l'alto
+  /// - Auto/Kart: telefono verticale con schermo verso il pilota
+  ///
+  /// L'asse X dell'accelerometro misura l'accelerazione laterale.
+  /// In rettilineo senza curve: X ≈ 0
+  /// In curva: X aumenta (forza centrifuga + inclinazione)
+  ///
+  /// Ritorna l'angolo in gradi: 0° = dritto, valori maggiori = più inclinazione
   double _calculateRollAngle(double x, double y, double z) {
-    // Calcola il roll angle usando atan2
-    // x = accelerazione laterale, y = accelerazione longitudinale, z = accelerazione verticale
-    // Roll = arctan(y / z) * 180 / pi
-    // Usiamo abs() per ottenere sempre un valore positivo che rappresenta l'inclinazione totale
-    final rollRadians = math.atan2(y, z);
-    final rollDegrees = rollRadians * 180 / math.pi;
+    // Calcola la magnitudine totale dell'accelerazione (dovrebbe essere ~9.81 m/s² a riposo)
+    final totalAccel = math.sqrt(x * x + y * y + z * z);
 
-    // Restituiamo il valore assoluto dell'angolo perché ci interessa quanto si inclina
-    // indipendentemente dalla direzione (sinistra/destra)
-    return rollDegrees.abs().clamp(0.0, 90.0);
+    // Se l'accelerazione totale è troppo bassa, ritorna 0 (dati non validi)
+    if (totalAccel < 1.0) return 0.0;
+
+    // L'asse X misura l'accelerazione laterale del dispositivo.
+    // In curva, la forza centrifuga + l'inclinazione del veicolo causano un'accelerazione laterale.
+    //
+    // Lean angle = arcsin(x / g) dove g è la gravità (~9.81)
+    // Questo funziona perché:
+    // - In rettilineo: x ≈ 0, quindi lean ≈ 0°
+    // - In curva: x aumenta proporzionalmente all'inclinazione e alla forza centrifuga
+    //
+    // Per semplificare e rendere il calcolo robusto, usiamo la componente X
+    // normalizzata rispetto all'accelerazione totale.
+
+    // Calcola il rapporto tra accelerazione laterale e totale
+    // Clamp per evitare valori fuori range per asin (deve essere tra -1 e 1)
+    final lateralRatio = (x / totalAccel).clamp(-1.0, 1.0);
+
+    // Converti in angolo usando arcsin
+    final leanRadians = math.asin(lateralRatio);
+    final leanDegrees = leanRadians * 180 / math.pi;
+
+    // Restituiamo il valore assoluto perché ci interessa la magnitudine dell'inclinazione,
+    // non la direzione (sinistra/destra)
+    return leanDegrees.abs().clamp(0.0, 90.0);
   }
 
   void _onLapCompleted(Duration lapTime) {

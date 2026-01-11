@@ -1138,39 +1138,39 @@ class _SearchUserProfilePageState extends State<SearchUserProfilePage> {
                     ),
                   ),
                   // Max speed
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      gradient: LinearGradient(
-                        colors: [
-                          kBrandColor.withAlpha(30),
-                          kBrandColor.withAlpha(15),
-                        ],
-                      ),
-                      border: Border.all(color: kBrandColor.withAlpha(60)),
-                    ),
-                    child: Column(
-                      children: [
-                        Text(
-                          session.maxSpeedKmh.toStringAsFixed(0),
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w900,
-                            color: kBrandColor,
-                          ),
-                        ),
-                        Text(
-                          'km/h',
-                          style: TextStyle(
-                            fontSize: 9,
-                            fontWeight: FontWeight.w700,
-                            color: kBrandColor.withAlpha(180),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                  // Container(
+                  //   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  //   decoration: BoxDecoration(
+                  //     borderRadius: BorderRadius.circular(12),
+                  //     gradient: LinearGradient(
+                  //       colors: [
+                  //         kBrandColor.withAlpha(30),
+                  //         kBrandColor.withAlpha(15),
+                  //       ],
+                  //     ),
+                  //     border: Border.all(color: kBrandColor.withAlpha(60)),
+                  //   ),
+                  //   child: Column(
+                  //     children: [
+                  //       Text(
+                  //         session.maxSpeedKmh.toStringAsFixed(0),
+                  //         style: TextStyle(
+                  //           fontSize: 18,
+                  //           fontWeight: FontWeight.w900,
+                  //           color: kBrandColor,
+                  //         ),
+                  //       ),
+                  //       Text(
+                  //         'km/h',
+                  //         style: TextStyle(
+                  //           fontSize: 9,
+                  //           fontWeight: FontWeight.w700,
+                  //           color: kBrandColor.withAlpha(180),
+                  //         ),
+                  //       ),
+                  //     ],
+                  //   ),
+                  // ),
                 ],
               ),
             ),
