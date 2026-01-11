@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'theme.dart';
@@ -12,6 +13,12 @@ import 'pages/auth_gate.dart';
 import 'pages/search_page.dart';
 import 'pages/splash_screen.dart';
 import 'pages/events_page.dart';
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PREMIUM NAV BAR CONSTANTS
+// ═══════════════════════════════════════════════════════════════════════════
+const Color _kNavBgColor = Color(0xFF0A0A0A);
+const Color _kNavBorderColor = Color(0xFF1A1A1A);
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -115,40 +122,110 @@ class _RootShellState extends State<RootShell> {
           children: stackChildren,
         ),
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _index,
-        backgroundColor: const Color(0xFF040404),
-        selectedItemColor: kBrandColor,
-        unselectedItemColor: kMutedColor,
-        type: BottomNavigationBarType.fixed,
-        onTap: (i) => setState(() => _index = i),
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.timeline_outlined),
-            activeIcon: Icon(Icons.timeline),
-            label: 'Feed',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.event_outlined),
-            activeIcon: Icon(Icons.event),
-            label: 'Eventi',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.add_circle_outline),
-            activeIcon: Icon(Icons.add_circle),
-            label: 'Nuova',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.search_outlined),
-            activeIcon: Icon(Icons.search),
-            label: 'Cerca',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            activeIcon: Icon(Icons.person),
-            label: 'Profilo',
+      bottomNavigationBar: _buildPremiumNavBar(),
+    );
+  }
+
+  Widget _buildPremiumNavBar() {
+    return Container(
+      decoration: BoxDecoration(
+        color: _kNavBgColor,
+        border: const Border(
+          top: BorderSide(color: _kNavBorderColor, width: 1),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(100),
+            blurRadius: 20,
+            offset: const Offset(0, -5),
           ),
         ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildNavItem(0, Icons.home_outlined, Icons.home_rounded),
+              _buildNavItem(1, Icons.event_outlined, Icons.event),
+              _buildCenterNavItem(),
+              _buildNavItem(3, Icons.search_outlined, Icons.search),
+              _buildNavItem(4, Icons.person_outline, Icons.person),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavItem(int index, IconData icon, IconData activeIcon) {
+    final isSelected = _index == index;
+
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        setState(() => _index = index);
+      },
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(14),
+          color: isSelected ? kBrandColor.withAlpha(15) : Colors.transparent,
+          border: Border.all(
+            color: isSelected ? kBrandColor.withAlpha(40) : Colors.transparent,
+            width: 1.5,
+          ),
+        ),
+        child: Icon(
+          isSelected ? activeIcon : icon,
+          color: isSelected ? kBrandColor : kMutedColor,
+          size: 26,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCenterNavItem() {
+    final isSelected = _index == 2;
+
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.mediumImpact();
+        setState(() => _index = 2);
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: LinearGradient(
+            colors: isSelected
+                ? [kBrandColor, kBrandColor.withAlpha(200)]
+                : [kBrandColor.withAlpha(30), kBrandColor.withAlpha(15)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          border: Border.all(
+            color: kBrandColor.withAlpha(isSelected ? 255 : 80),
+            width: 2,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: kBrandColor.withAlpha(isSelected ? 80 : 30),
+              blurRadius: isSelected ? 16 : 8,
+              spreadRadius: isSelected ? 2 : 0,
+            ),
+          ],
+        ),
+        child: Icon(
+          Icons.add_rounded,
+          color: isSelected ? Colors.black : kBrandColor,
+          size: 28,
+        ),
       ),
     );
   }
