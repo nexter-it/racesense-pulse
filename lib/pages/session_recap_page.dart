@@ -1058,12 +1058,18 @@ class _SuccessBanner extends StatelessWidget {
                       size: 18,
                     ),
                     const SizedBox(width: 8),
-                    Text(
-                      weather!,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: kFgColor,
-                        fontWeight: FontWeight.w700,
+                    Flexible(
+                      child: Text(
+                        _formatWeatherCompact(weather!),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: kFgColor,
+                          fontWeight: FontWeight.w700,
+                          height: 1.2,
+                        ),
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
@@ -1073,6 +1079,32 @@ class _SuccessBanner extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  /// Formatta il meteo in modo compatto e leggibile
+  /// Esempio: "Parzialmente nuvoloso 6° C" → "Parz. nuvoloso\n6°C"
+  String _formatWeatherCompact(String weather) {
+    // Sostituisci parole lunghe con abbreviazioni
+    String formatted = weather
+        .replaceAll('Parzialmente', 'Parz.')
+        .replaceAll('parzialmente', 'parz.')
+        .replaceAll('Prevalentemente', 'Prev.')
+        .replaceAll('prevalentemente', 'prev.')
+        .replaceAll('Completamente', 'Compl.')
+        .replaceAll('completamente', 'compl.');
+
+    // Cerca la temperatura e separa con newline se il testo è lungo
+    final tempRegex = RegExp(r'(\d+°?\s*C)');
+    final match = tempRegex.firstMatch(formatted);
+
+    if (match != null && formatted.length > 18) {
+      // Testo lungo con temperatura - separa in due righe
+      final temp = match.group(1)!;
+      final condition = formatted.substring(0, match.start).trim();
+      return '$condition\n$temp';
+    }
+
+    return formatted;
   }
 }
 

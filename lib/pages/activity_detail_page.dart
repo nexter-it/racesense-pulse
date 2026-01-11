@@ -1103,16 +1103,22 @@ class _HeroSessionCardState extends State<_HeroSessionCard> {
                           const Icon(Icons.wb_sunny, color: Color(0xFFFFA726), size: 18),
                           const SizedBox(width: 8),
                           Flexible(
-                            child: Text(
-                              widget.session.weather!,
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                fontSize: 13,
-                                color: kFgColor,
-                                fontWeight: FontWeight.w800,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  _formatWeatherCompact(widget.session.weather!),
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    color: kFgColor,
+                                    fontWeight: FontWeight.w800,
+                                    height: 1.2,
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
                             ),
                           ),
                         ],
@@ -1154,6 +1160,32 @@ class _HeroSessionCardState extends State<_HeroSessionCard> {
           ),
       ],
     );
+  }
+
+  /// Formatta il meteo in modo compatto e leggibile
+  /// Esempio: "Parzialmente nuvoloso 6° C" → "Parz. nuvoloso\n6°C"
+  String _formatWeatherCompact(String weather) {
+    // Sostituisci parole lunghe con abbreviazioni
+    String formatted = weather
+        .replaceAll('Parzialmente', 'Parz.')
+        .replaceAll('parzialmente', 'parz.')
+        .replaceAll('Prevalentemente', 'Prev.')
+        .replaceAll('prevalentemente', 'prev.')
+        .replaceAll('Completamente', 'Compl.')
+        .replaceAll('completamente', 'compl.');
+
+    // Cerca la temperatura e separa con newline se il testo è lungo
+    final tempRegex = RegExp(r'(\d+°?\s*C)');
+    final match = tempRegex.firstMatch(formatted);
+
+    if (match != null && formatted.length > 18) {
+      // Testo lungo con temperatura - separa in due righe
+      final temp = match.group(1)!;
+      final condition = formatted.substring(0, match.start).trim();
+      return '$condition\n$temp';
+    }
+
+    return formatted;
   }
 }
 
