@@ -463,9 +463,9 @@ class _SessionMetadataDialogState extends State<SessionMetadataDialog> {
                       elevation: 0,
                     ),
                     child: const Text(
-                      'SALVA SESSIONE',
+                      'SALVA',
                       style: TextStyle(
-                        fontSize: 16,
+                        fontSize: 15,
                         fontWeight: FontWeight.w900,
                         letterSpacing: 1.2,
                       ),

@@ -528,12 +528,12 @@ class _SearchPageState extends State<SearchPage>
   Widget _buildUserCard(Map<String, dynamic> user, {int? position}) {
     final fullName = user['fullName'] ?? user['name'] ?? '';
     final stats = user['stats'] as Map<String, dynamic>? ?? {};
-    final totalSessions = stats['totalSessions'] ?? user['sessions'] ?? 0;
+    final followerCount = stats['followerCount'] ?? 0;
+    final followingCount = stats['followingCount'] ?? 0;
     final initials = user['initials'] ??
         (fullName.isNotEmpty ? fullName[0].toUpperCase() : '?');
     final profileImageUrl = user['profileImageUrl'] as String?;
     final userId = user['id']?.toString();
-    final followerCount = stats['followerCount'] ?? 0;
     final isMe = _currentUserId != null && _currentUserId == userId;
     final isFollowing = userId != null && _followingIds.contains(userId);
 
@@ -638,9 +638,9 @@ class _SearchPageState extends State<SearchPage>
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      _buildMiniStat(Icons.directions_run, '$totalSessions', kBrandColor),
+                      _buildMiniStat(Icons.people, '$followerCount', kBrandColor),
                       const SizedBox(width: 8),
-                      _buildMiniStat(Icons.people, '$followerCount', kPulseColor),
+                      _buildMiniStat(Icons.person_add_alt_1, '$followingCount', kPulseColor),
                     ],
                   ),
                 ],

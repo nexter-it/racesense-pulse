@@ -699,404 +699,460 @@ class _HeroSessionCardState extends State<_HeroSessionCard> {
     final bestLapText = widget.session.bestLap != null
         ? _formatDuration(widget.session.bestLap!)
         : '--:--';
-    final formattedDate = DateFormat('dd MMM yyyy').format(widget.session.dateTime);
+    final formattedDate = DateFormat('dd MMMM yyyy', 'it_IT').format(widget.session.dateTime);
     final formattedTime = DateFormat('HH:mm').format(widget.session.dateTime);
     final track2d = _buildTrack2d();
 
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        gradient: const LinearGradient(
-          colors: [Color(0xFF1A1A1A), Color(0xFF141414)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        border: Border.all(color: const Color(0xFF2A2A2A)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha(80),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // === HEADER PILOTA ===
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: GestureDetector(
-              onTap: () {
-                HapticFeedback.lightImpact();
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => SearchUserProfilePage(
-                      userId: widget.session.userId,
-                      fullName: widget.session.driverFullName,
-                    ),
-                  ),
-                );
-              },
-              child: Row(
-                children: [
-                  _AvatarWidget(userId: widget.session.userId),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          widget.session.driverFullName,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w900,
-                            fontSize: 16,
-                            color: kFgColor,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '@${widget.session.driverUsername}',
-                          style: TextStyle(
-                            color: kMutedColor,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: kBrandColor.withAlpha(20),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: kBrandColor.withAlpha(50)),
-                    ),
-                    child: const Icon(Icons.chevron_right, color: kBrandColor, size: 20),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          // === TRACK VISUAL ===
-          Container(
-            margin: const EdgeInsets.symmetric(horizontal: 16),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFF2A2A2A), width: 1.5),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withAlpha(100),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
+    // Design COMPLETAMENTE DIVERSO dal feed
+    return Column(
+      children: [
+        // === CARD PILOTA (separata in alto) ===
+        Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            gradient: LinearGradient(
+              colors: [
+                kBrandColor.withAlpha(25),
+                kBrandColor.withAlpha(10),
               ],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
             ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: Container(
-                height: 200,
-                decoration: BoxDecoration(
-                  gradient: RadialGradient(
-                    center: Alignment.center,
-                    radius: 1.2,
-                    colors: [
-                      const Color(0xFF0F1015),
-                      const Color(0xFF080A0E),
-                    ],
+            border: Border.all(color: kBrandColor.withAlpha(80), width: 2),
+            boxShadow: [
+              BoxShadow(
+                color: kBrandColor.withAlpha(30),
+                blurRadius: 20,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: GestureDetector(
+            onTap: () {
+              HapticFeedback.lightImpact();
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => SearchUserProfilePage(
+                    userId: widget.session.userId,
+                    fullName: widget.session.driverFullName,
                   ),
                 ),
-                child: Stack(
+              );
+            },
+            child: Column(
+              children: [
+                Row(
                   children: [
-                    CustomPaint(
-                      painter: _TrackPainter(path: track2d),
-                      child: const SizedBox.expand(),
-                    ),
-                    // Gradient bottom
-                    Positioned(
-                      bottom: 0,
-                      left: 0,
-                      right: 0,
-                      child: Container(
-                        height: 100,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              Colors.transparent,
-                              const Color(0xFF080A0E).withAlpha(250),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                    // Best lap overlay
-                    Positioned(
-                      bottom: 14,
-                      right: 14,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(14),
-                          gradient: LinearGradient(
-                            colors: [
-                              kPulseColor.withAlpha(40),
-                              kPulseColor.withAlpha(20),
-                            ],
-                          ),
-                          border: Border.all(color: kPulseColor.withAlpha(120), width: 1.5),
-                          boxShadow: [
-                            BoxShadow(
-                              color: kPulseColor.withAlpha(50),
-                              blurRadius: 16,
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.timer, color: kPulseColor, size: 18),
-                            const SizedBox(height: 4),
-                            Text(
-                              bestLapText,
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w900,
-                                color: kPulseColor,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'BEST LAP',
-                              style: TextStyle(
-                                fontSize: 9,
-                                letterSpacing: 0.8,
-                                color: kPulseColor.withAlpha(180),
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    // Track name overlay
-                    Positioned(
-                      bottom: 14,
-                      left: 14,
+                    _AvatarWidget(userId: widget.session.userId),
+                    const SizedBox(width: 16),
+                    Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            widget.session.trackName,
+                            widget.session.driverFullName,
                             style: const TextStyle(
                               fontWeight: FontWeight.w900,
-                              fontSize: 16,
+                              fontSize: 18,
                               color: kFgColor,
+                              letterSpacing: -0.5,
                             ),
                           ),
-                          const SizedBox(height: 4),
-                          Row(
-                            children: [
-                              Icon(Icons.location_on, color: kMutedColor, size: 12),
-                              const SizedBox(width: 4),
-                              Text(
-                                widget.session.location,
-                                style: TextStyle(
-                                  color: kMutedColor,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
+                          const SizedBox(height: 6),
+                          Text(
+                            '@${widget.session.driverUsername}',
+                            style: TextStyle(
+                              color: kBrandColor,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                         ],
                       ),
                     ),
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: kBrandColor.withAlpha(30),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: kBrandColor, width: 2),
+                      ),
+                      child: const Icon(Icons.arrow_forward_rounded, color: kBrandColor, size: 22),
+                    ),
                   ],
                 ),
-              ),
+                const SizedBox(height: 14),
+                // Data e ora nella card pilota
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0D0D0D),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFF2A2A2A)),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.calendar_today_rounded, color: kMutedColor, size: 14),
+                      const SizedBox(width: 8),
+                      Text(
+                        formattedDate,
+                        style: TextStyle(
+                          color: kMutedColor,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 12),
+                        width: 4,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: kBrandColor,
+                        ),
+                      ),
+                      Icon(Icons.access_time_rounded, color: kMutedColor, size: 14),
+                      const SizedBox(width: 6),
+                      Text(
+                        formattedTime,
+                        style: TextStyle(
+                          color: kMutedColor,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
+        ),
 
-          const SizedBox(height: 14),
+        // === CARD TRACCIATO CON BEST LAP (design verticale) ===
+        // Container(
+        //   decoration: BoxDecoration(
+        //     borderRadius: BorderRadius.circular(24),
+        //     gradient: const LinearGradient(
+        //       colors: [Color(0xFF1C1C1E), Color(0xFF0D0D0D)],
+        //       begin: Alignment.topLeft,
+        //       end: Alignment.bottomRight,
+        //     ),
+        //     border: Border.all(color: const Color(0xFF3A3A3C), width: 2),
+        //     boxShadow: [
+        //       BoxShadow(
+        //         color: Colors.black.withAlpha(120),
+        //         blurRadius: 24,
+        //         offset: const Offset(0, 10),
+        //       ),
+        //     ],
+        //   ),
+        //   child: Column(
+        //     crossAxisAlignment: CrossAxisAlignment.start,
+        //     children: [
+        //       // Nome circuito in alto
+        //       Padding(
+        //         padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+        //         child: Column(
+        //           crossAxisAlignment: CrossAxisAlignment.start,
+        //           children: [
+        //             Row(
+        //               children: [
+        //                 Container(
+        //                   padding: const EdgeInsets.all(10),
+        //                   decoration: BoxDecoration(
+        //                     color: kPulseColor.withAlpha(25),
+        //                     borderRadius: BorderRadius.circular(12),
+        //                     border: Border.all(color: kPulseColor.withAlpha(80)),
+        //                   ),
+        //                   child: const Icon(Icons.flag_rounded, color: kPulseColor, size: 20),
+        //                 ),
+        //                 const SizedBox(width: 14),
+        //                 Expanded(
+        //                   child: Column(
+        //                     crossAxisAlignment: CrossAxisAlignment.start,
+        //                     children: [
+        //                       Text(
+        //                         widget.session.trackName,
+        //                         style: const TextStyle(
+        //                           fontWeight: FontWeight.w900,
+        //                           fontSize: 19,
+        //                           color: kFgColor,
+        //                           letterSpacing: -0.5,
+        //                         ),
+        //                       ),
+        //                       const SizedBox(height: 4),
+        //                       Row(
+        //                         children: [
+        //                           Icon(Icons.place, color: kMutedColor, size: 14),
+        //                           const SizedBox(width: 6),
+        //                           Expanded(
+        //                             child: Text(
+        //                               widget.session.location,
+        //                               style: TextStyle(
+        //                                 color: kMutedColor,
+        //                                 fontSize: 13,
+        //                                 fontWeight: FontWeight.w600,
+        //                               ),
+        //                             ),
+        //                           ),
+        //                         ],
+        //                       ),
+        //                     ],
+        //                   ),
+        //                 ),
+        //               ],
+        //             ),
+        //           ],
+        //         ),
+        //       ),
 
-          // === ACTION BUTTONS ===
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              children: [
-                // Like button con stream
-                Expanded(
-                  child: StreamBuilder<bool>(
-                    stream: _engagementService.watchLikeStatus(widget.session.sessionId),
-                    initialData: false,
-                    builder: (context, likeSnapshot) {
-                      final liked = likeSnapshot.data ?? false;
-                      return StreamBuilder<int>(
-                        stream: _engagementService.watchSessionLikesCount(widget.session.sessionId),
-                        initialData: widget.session.likesCount,
-                        builder: (context, countSnapshot) {
-                          final likesCount = countSnapshot.data ?? widget.session.likesCount;
-                          return _ActionButton(
-                            icon: liked ? Icons.favorite : Icons.favorite_border,
-                            label: 'Mi piace',
-                            count: likesCount,
-                            isActive: liked,
-                            activeColor: kBrandColor,
-                            onTap: widget.onToggleLike,
-                          );
-                        },
+        //       // Visualizzazione tracciato
+        //       Container(
+        //         margin: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+        //         height: 180,
+        //         decoration: BoxDecoration(
+        //           borderRadius: BorderRadius.circular(18),
+        //           color: const Color(0xFF000000),
+        //           border: Border.all(color: const Color(0xFF2A2A2A), width: 1.5),
+        //         ),
+        //         child: ClipRRect(
+        //           borderRadius: BorderRadius.circular(18),
+        //           child: CustomPaint(
+        //             painter: _TrackPainter(path: track2d),
+        //             child: const SizedBox.expand(),
+        //           ),
+        //         ),
+        //       ),
+
+        //       // Best lap in basso (grande e prominente)
+        //       Container(
+        //         margin: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+        //         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+        //         decoration: BoxDecoration(
+        //           borderRadius: BorderRadius.circular(18),
+        //           gradient: LinearGradient(
+        //             colors: [
+        //               kPulseColor.withAlpha(50),
+        //               kPulseColor.withAlpha(25),
+        //             ],
+        //           ),
+        //           border: Border.all(color: kPulseColor, width: 2),
+        //           boxShadow: [
+        //             BoxShadow(
+        //               color: kPulseColor.withAlpha(40),
+        //               blurRadius: 20,
+        //               spreadRadius: 2,
+        //             ),
+        //           ],
+        //         ),
+        //         child: Row(
+        //           mainAxisAlignment: MainAxisAlignment.center,
+        //           children: [
+        //             Column(
+        //               children: [
+        //                 const Icon(Icons.emoji_events_rounded, color: kPulseColor, size: 28),
+        //                 const SizedBox(height: 4),
+        //                 Text(
+        //                   'BEST LAP',
+        //                   style: TextStyle(
+        //                     fontSize: 10,
+        //                     letterSpacing: 1.2,
+        //                     color: kPulseColor.withAlpha(200),
+        //                     fontWeight: FontWeight.w900,
+        //                   ),
+        //                 ),
+        //               ],
+        //             ),
+        //             const SizedBox(width: 20),
+        //             Text(
+        //               bestLapText,
+        //               style: const TextStyle(
+        //                 fontSize: 32,
+        //                 fontWeight: FontWeight.w900,
+        //                 color: kPulseColor,
+        //                 fontFeatures: [ui.FontFeature.tabularFigures()],
+        //                 letterSpacing: -1,
+        //               ),
+        //             ),
+        //           ],
+        //         ),
+        //       ),
+        //     ],
+        //   ),
+        // ),
+
+        // === ACTION BUTTONS E INFO (fuori dai box) ===
+        const SizedBox(height: 5),
+
+        // Action buttons
+        Row(
+          children: [
+            // Like button con stream
+            Expanded(
+              child: StreamBuilder<bool>(
+                stream: _engagementService.watchLikeStatus(widget.session.sessionId),
+                initialData: false,
+                builder: (context, likeSnapshot) {
+                  final liked = likeSnapshot.data ?? false;
+                  return StreamBuilder<int>(
+                    stream: _engagementService.watchSessionLikesCount(widget.session.sessionId),
+                    initialData: widget.session.likesCount,
+                    builder: (context, countSnapshot) {
+                      final likesCount = countSnapshot.data ?? widget.session.likesCount;
+                      return _ActionButton(
+                        icon: liked ? Icons.favorite : Icons.favorite_border,
+                        label: 'Mi piace',
+                        count: likesCount,
+                        isActive: liked,
+                        activeColor: kBrandColor,
+                        onTap: widget.onToggleLike,
                       );
                     },
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _ActionButton(
-                    icon: Icons.share,
-                    label: 'Condividi',
-                    count: null,
-                    isActive: false,
-                    activeColor: kBrandColor,
-                    onTap: widget.onShare,
-                  ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _ActionButton(
+                icon: Icons.share,
+                label: 'Condividi',
+                count: null,
+                isActive: false,
+                activeColor: kBrandColor,
+                onTap: widget.onShare,
+              ),
+            ),
+          ],
+        ),
+
+        // Vehicle category, weather and BLE info (largo tutto lo schermo)
+        if (widget.session.vehicleCategory != null ||
+            widget.session.weather != null ||
+            widget.session.usedBleDevice)
+          Container(
+            margin: const EdgeInsets.only(top: 15),
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              gradient: const LinearGradient(
+                colors: [Color(0xFF1C1C1E), Color(0xFF141414)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              border: Border.all(color: const Color(0xFF3A3A3C), width: 1.5),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withAlpha(80),
+                  blurRadius: 16,
+                  offset: const Offset(0, 6),
                 ),
               ],
-            ),
-          ),
-
-          // Vehicle category and weather info
-          if (widget.session.vehicleCategory != null || widget.session.weather != null)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-              child: Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  color: const Color(0xFF1A1A1A),
-                  border: Border.all(color: const Color(0xFF2A2A2A)),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    if (widget.session.vehicleCategory != null) ...[
-                      const Icon(
-                        Icons.directions_car,
-                        color: kBrandColor,
-                        size: 16,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        widget.session.vehicleCategory!,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: kBrandColor,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
-                    if (widget.session.vehicleCategory != null && widget.session.weather != null)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        child: Container(
-                          width: 1,
-                          height: 14,
-                          color: const Color(0xFF2A2A2A),
-                        ),
-                      ),
-                    if (widget.session.weather != null) ...[
-                      const Icon(
-                        Icons.wb_sunny,
-                        color: Color(0xFFFFA726),
-                        size: 16,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        widget.session.weather!,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: kFgColor,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ),
-
-          // === FOOTER ===
-          Container(
-            margin: const EdgeInsets.only(top: 14),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              color: Colors.white.withAlpha(4),
-              borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(20),
-                bottomRight: Radius.circular(20),
-              ),
-              border: const Border(
-                top: BorderSide(color: Color(0xFF2A2A2A)),
-              ),
             ),
             child: Row(
               children: [
-                Icon(Icons.calendar_today_rounded, color: kMutedColor, size: 12),
-                const SizedBox(width: 6),
-                Text(
-                  formattedDate,
-                  style: TextStyle(color: kMutedColor, fontSize: 12, fontWeight: FontWeight.w600),
-                ),
-                Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 8),
-                  width: 4,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: kMutedColor.withAlpha(100),
-                  ),
-                ),
-                Icon(Icons.access_time_rounded, color: kMutedColor, size: 12),
-                const SizedBox(width: 4),
-                Text(
-                  formattedTime,
-                  style: TextStyle(color: kMutedColor, fontSize: 12, fontWeight: FontWeight.w600),
-                ),
-                const Spacer(),
-                if (widget.session.usedBleDevice)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(8),
-                      color: const Color(0xFFFF9500).withAlpha(20),
-                      border: Border.all(color: const Color(0xFFFF9500).withAlpha(100)),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.bluetooth, color: Color(0xFFFF9500), size: 12),
-                        const SizedBox(width: 4),
-                        const Text(
-                          'BLE 15Hz',
-                          style: TextStyle(
-                            color: Color(0xFFFF9500),
-                            fontSize: 10,
-                            fontWeight: FontWeight.w800,
+                if (widget.session.vehicleCategory != null)
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        color: kBrandColor.withAlpha(15),
+                        border: Border.all(color: kBrandColor.withAlpha(60)),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.directions_car, color: kBrandColor, size: 18),
+                          const SizedBox(width: 8),
+                          Flexible(
+                            child: Text(
+                              widget.session.vehicleCategory!,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                color: kBrandColor,
+                                fontWeight: FontWeight.w800,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
+                    ),
+                  ),
+                if (widget.session.vehicleCategory != null && widget.session.weather != null)
+                  const SizedBox(width: 10),
+                if (widget.session.weather != null)
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        color: const Color(0xFFFFA726).withAlpha(15),
+                        border: Border.all(color: const Color(0xFFFFA726).withAlpha(60)),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.wb_sunny, color: Color(0xFFFFA726), size: 18),
+                          const SizedBox(width: 8),
+                          Flexible(
+                            child: Text(
+                              widget.session.weather!,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                color: kFgColor,
+                                fontWeight: FontWeight.w800,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                if ((widget.session.vehicleCategory != null || widget.session.weather != null) &&
+                    widget.session.usedBleDevice)
+                  const SizedBox(width: 10),
+                if (widget.session.usedBleDevice)
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        color: const Color(0xFFFF9500).withAlpha(15),
+                        border: Border.all(color: const Color(0xFFFF9500).withAlpha(60)),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.bluetooth, color: Color(0xFFFF9500), size: 18),
+                          const SizedBox(width: 6),
+                          const Text(
+                            'BLE 15Hz',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Color(0xFFFF9500),
+                              fontSize: 13,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
               ],
             ),
           ),
-
-          
-        ],
-      ),
+      ],
     );
   }
 }

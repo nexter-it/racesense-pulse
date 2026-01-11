@@ -9,6 +9,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../theme.dart';
 import '../models/track_definition.dart';
@@ -129,6 +130,8 @@ class _GrandPrixLivePageState extends State<GrandPrixLivePage> {
       DeviceOrientation.landscapeRight,
     ]);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    // Mantieni lo schermo acceso durante la sessione live
+    WakelockPlus.enable();
     _loadLobbyAndStart();
   }
 
@@ -276,6 +279,9 @@ class _GrandPrixLivePageState extends State<GrandPrixLivePage> {
       DeviceOrientation.landscapeRight,
     ]);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+
+    // Disattiva wakelock quando si esce dalla sessione
+    WakelockPlus.disable();
 
     _stopAllStreams();
     _sessionWatch.stop();

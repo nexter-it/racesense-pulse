@@ -3,6 +3,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../models/live_driver_model.dart';
 import '../models/live_race_model.dart';
@@ -65,6 +66,9 @@ class _LiveTimingDashboardPageState extends State<LiveTimingDashboardPage>
     ]);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
 
+    // Mantieni lo schermo acceso durante la sessione live
+    WakelockPlus.enable();
+
     _flagAnimController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 500),
@@ -85,6 +89,9 @@ class _LiveTimingDashboardPageState extends State<LiveTimingDashboardPage>
       DeviceOrientation.landscapeRight,
     ]);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+
+    // Disattiva wakelock quando si esce dalla sessione
+    WakelockPlus.disable();
 
     _raceSub?.cancel();
     _driverSub?.cancel();

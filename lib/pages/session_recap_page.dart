@@ -376,6 +376,158 @@ class _SessionRecapPageState extends State<SessionRecapPage>
     );
   }
 
+  void _showExitConfirmDialog(BuildContext context) {
+    HapticFeedback.lightImpact();
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(24),
+            gradient: const LinearGradient(
+              colors: [Color(0xFF1A1A1A), Color(0xFF0D0D0D)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            border: Border.all(color: const Color(0xFF3A3A3C), width: 2),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withAlpha(150),
+                blurRadius: 30,
+                offset: const Offset(0, 15),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Icon
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    colors: [
+                      kBrandColor.withAlpha(30),
+                      kBrandColor.withAlpha(15),
+                    ],
+                  ),
+                  border: Border.all(color: kBrandColor, width: 2),
+                ),
+                child: const Icon(Icons.warning_amber_rounded, color: kBrandColor, size: 36),
+              ),
+              const SizedBox(height: 20),
+
+              // Title
+              const Text(
+                'Salvare la sessione?',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w900,
+                  color: kFgColor,
+                  letterSpacing: -0.5,
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // Message
+              Text(
+                'Vuoi salvare questa sessione prima di uscire? Se non la salvi, i dati andranno persi.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: kMutedColor,
+                  fontWeight: FontWeight.w600,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 28),
+
+              // Buttons
+              Row(
+                children: [
+                  // Annulla - torna indietro senza salvare
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () {
+                        HapticFeedback.selectionClick();
+                        Navigator.of(ctx).pop(); // Chiudi dialog
+                        Navigator.of(context).pop(); // Torna indietro dalla recap page
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(14),
+                          color: kErrorColor.withAlpha(20),
+                          border: Border.all(color: kErrorColor, width: 2),
+                        ),
+                        child: const Text(
+                          'Non salvare',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: kErrorColor,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+
+                  // Salva - apri il dialog di salvataggio
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () {
+                        HapticFeedback.selectionClick();
+                        Navigator.of(ctx).pop(); // Chiudi dialog
+                        _handleSaveSession(context); // Apri il dialog di salvataggio
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(14),
+                          gradient: LinearGradient(
+                            colors: [
+                              kBrandColor.withAlpha(40),
+                              kBrandColor.withAlpha(20),
+                            ],
+                          ),
+                          border: Border.all(color: kBrandColor, width: 2),
+                          boxShadow: [
+                            BoxShadow(
+                              color: kBrandColor.withAlpha(40),
+                              blurRadius: 16,
+                              spreadRadius: 2,
+                            ),
+                          ],
+                        ),
+                        child: const Text(
+                          'Salva',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: kBrandColor,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final distance = _calculateDistance();
@@ -532,11 +684,11 @@ class _SessionRecapPageState extends State<SessionRecapPage>
       ),
       child: Row(
         children: [
-          // Back button
+          // Back button (con dialog di conferma)
           GestureDetector(
             onTap: () {
               HapticFeedback.lightImpact();
-              Navigator.of(context).pop();
+              _showExitConfirmDialog(context);
             },
             child: Container(
               padding: const EdgeInsets.all(10),
@@ -580,12 +732,12 @@ class _SessionRecapPageState extends State<SessionRecapPage>
               ],
             ),
           ),
-          // Save button
+          // Save button (più largo e con testo ridotto)
           GestureDetector(
             onTap: _isSaving ? null : () => _handleSaveSession(context),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
-              padding: const EdgeInsets.all(10),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(12),
                 gradient: LinearGradient(
@@ -608,15 +760,44 @@ class _SessionRecapPageState extends State<SessionRecapPage>
                       ],
               ),
               child: _isSaving
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(kMutedColor),
-                      ),
+                  ? const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(kMutedColor),
+                          ),
+                        ),
+                        SizedBox(width: 8),
+                        Text(
+                          'Salvataggio...',
+                          style: TextStyle(
+                            color: kMutedColor,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ],
                     )
-                  : const Icon(Icons.save_alt, color: kBrandColor, size: 20),
+                  : const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.save_alt, color: kBrandColor, size: 18),
+                        SizedBox(width: 8),
+                        Text(
+                          'Salva',
+                          style: TextStyle(
+                            color: kBrandColor,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ],
+                    ),
             ),
           ),
         ],
@@ -2327,7 +2508,7 @@ class _SaveButton extends StatelessWidget {
               style: TextStyle(
                 color: isSaving ? kMutedColor : Colors.black,
                 fontWeight: FontWeight.w900,
-                fontSize: 16,
+                fontSize: 14,
                 letterSpacing: 0.8,
               ),
             ),
