@@ -144,7 +144,7 @@ class _RootShellState extends State<RootShell> {
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+          padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
